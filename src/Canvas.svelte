@@ -2,14 +2,15 @@
 	const vertex = /* glsl */ `
 		attribute vec2 position;
 		attribute vec2 uv;
+		attribute float bufferSource;
 
-		varying vec2 vPosition;
+		varying vec2 vUv;
 
 		uniform vec2 uTranslate;
 		uniform vec2 uScale;
 
 		void main() {
-			vPosition = uv;
+			vUv = uv;
 			gl_Position = vec4(uScale * (position + uTranslate), 0.0, 1.0);
 		}
 	`;
@@ -17,10 +18,15 @@
 	const fragment = /* glsl */ `
 		precision highp float;
 				
-		varying vec2 vPosition;
+		varying vec2 vUv;
+		
+		uniform sampler2D tPalette;
+		uniform sampler2D tCanvas;
 
 		void main() {
-			gl_FragColor = vec4(vPosition, 0.0, 1.0);
+			vec4 canvasdata = texture2D(tCanvas, vUv);
+			float index = floor(canvasdata.r * 255.0 + 0.5) / 3.0;
+			gl_FragColor = texture2D(tPalette, vec2(index, 0.0));
 		}
 	`;
 
@@ -32,7 +38,7 @@
 </script>
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { Renderer, Program, Mesh, Geometry, Vec2 } from "ogl-typescript";
+	import { Renderer, Program, Mesh, Geometry, Vec2, Texture } from "ogl-typescript";
 
 	let canvas: HTMLCanvasElement;
 	let renderer: Renderer;
@@ -41,7 +47,7 @@
 	let translate: Vec2;
 	let scale: Vec2;
 
-	function update(timestamp: DOMHighResTimeStamp) {
+	function render(timestamp: DOMHighResTimeStamp) {
 		renderer.render({
 			scene: mesh,
 		});
@@ -51,7 +57,7 @@
 		if (event.buttons & MOUSE_BUTTON_PRIMARY) {
 			translate[0] += 2 * event.movementX / canvas.width / scale[0];
 			translate[1] += -2 * event.movementY / canvas.height / scale[1];
-			requestAnimationFrame(update);
+			requestAnimationFrame(render);
 		}
 	}
 
@@ -85,7 +91,7 @@
 		translate[1] -= zoomCenterY / oldScale[1];
 		translate[1] += zoomCenterY / scale[1];
 		
-		requestAnimationFrame(update);
+		requestAnimationFrame(render);
 	}
 
 	function resize() {
@@ -93,7 +99,7 @@
 		
 		scale[0] = scale[1] * window.innerHeight / window.innerWidth;
 
-		requestAnimationFrame(update);
+		requestAnimationFrame(render);
 	}
 
 	onMount(() => {
@@ -118,12 +124,36 @@
 			index: { data: new Uint16Array([0, 1, 2, 3, 2, 1]) },
 		});
 
+		const palette = new Texture(gl, {
+			magFilter: gl.NEAREST,
+			minFilter: gl.NEAREST,
+		});
+		const paletteImage = new Image();
+		paletteImage.onload = () => {
+			palette.image = paletteImage;
+			requestAnimationFrame(render);
+		};
+		paletteImage.src = "./palette.png"
+
+		const canvasdata = new Texture(gl, {
+			magFilter: gl.NEAREST,
+			minFilter: gl.NEAREST,
+		});
+		const canvasdataImage = new Image();
+		canvasdataImage.onload = () => {
+			canvasdata.image = canvasdataImage;
+			requestAnimationFrame(render);
+		};
+		canvasdataImage.src = "./canvas.png"
+
 		program = new Program(gl, {
 			vertex,
 			fragment,
 			uniforms: {
 				uTranslate: { value: new Vec2(0, 0) },
 				uScale: { value: new Vec2(0.5, 0.5) },
+				tPalette: { value: palette },
+				tCanvas: { value: canvasdata },
 			},
 		});
 
@@ -132,7 +162,6 @@
 		scale = program.uniforms.uScale.value as Vec2;
 
 		resize();
-		requestAnimationFrame(update);
 	})
 </script>
 
