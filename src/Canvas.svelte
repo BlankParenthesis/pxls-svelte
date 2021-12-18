@@ -16,11 +16,13 @@
 	let renderIdentity = false;
 	let autoDetail = false;
 	let detailLevel = 0;
+	let scaleBase = 3;
 
 	$: renderOptions = {
 		renderIdentity,
 		autoDetail,
 		detailLevel,
+		scaleBase,
 	};
 
 	$: dummy = canvas && canvas.render(renderOptions)
@@ -82,6 +84,11 @@
 
 <canvas on:mousemove="{drag}" on:wheel="{zoom}" bind:this={canvasElement} />
 <aside id="buttons">
+	<div>
+		<output>Subdivisions: {scaleBase - 1}</output>
+		<button on:click="{() => scaleBase += 1}">+</button>
+		<button on:click="{() => scaleBase -= 1}">-</button>
+	</div>
 	<div>
 		<output><abbr title="Level of Detail">LoD</abbr>: {renderOptions.detailLevel}</output>
 		<label><input bind:checked="{autoDetail}" type="checkbox"/>Auto LoD</label>

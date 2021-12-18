@@ -1,9 +1,8 @@
-import { Geometry, Texture, Vec2, Renderer, Program, Mesh } from "ogl-typescript";
+import { Geometry, Texture, Vec2, Renderer, Program, Mesh, OGLRenderingContext } from "ogl-typescript";
 
-const vertex = /* glsl */ `
+const VERTEX_SHADER = /* glsl */ `
 	attribute vec2 position;
 	attribute vec2 uv;
-	attribute float bufferSource;
 
 	varying vec2 vUv;
 
@@ -16,9 +15,9 @@ const vertex = /* glsl */ `
 	}
 `;
 
-const fragment = /* glsl */ `
+const FRAGMENT_SHADER = /* glsl */ `
 	precision highp float;
-			
+	
 	varying vec2 vUv;
 
 	uniform sampler2D tPalette;
@@ -47,12 +46,56 @@ const QUAD_NORMALS = [
 	1, 1,
 	0, 0,
 ];
-const SCALE_BASE = 3;
+
+class CanvasGeometry extends Geometry {
+	constructor(gl: OGLRenderingContext, size: number) {
+		const sizeOffset = (size - 1) / 2;
+		const spreadX = new Array(size)
+			.fill(QUAD)
+			.map((quad: number[], i) => {
+				const position = i - sizeOffset;
+				return quad.map((coord, i2) => {
+					if (i2 % 2 === 0) {
+						return coord + position * 2;
+					} else {
+						return coord;
+					}
+				});
+			})
+			.flat();
+		const spreadXY = new Array(size)
+			.fill(spreadX)
+			.map((quad: number[], i) => {
+				const position = i - sizeOffset;
+				return quad.map((coord, i2) => {
+					if (i2 % 2 === 1) {
+						return coord + position * 2;
+					} else {
+						return coord;
+					}
+				});
+			})
+			.flat();
+
+		super(gl, {
+			position: { size: 2, data: new Float32Array(spreadXY) },
+			uv: {
+				size: 2,
+				data: new Float32Array(
+					new Array(size * size)
+						.fill(QUAD_NORMALS)
+						.flat(),
+				),
+			},
+		});
+	}
+}
 
 export class Canvas {
 	private readonly renderer: Renderer;
 	private readonly program: Program;
-	private readonly mesh: Mesh;
+	private meshNumQuads: number;
+	private mesh: Mesh;
 
 	scale = new Vec2(0.5, 0.5);
 	translate = new Vec2(0, 0);
@@ -62,32 +105,6 @@ export class Canvas {
 		
 		const gl = this.renderer.gl;
 		gl.clearColor(0, 0, 0, 1);
-
-		// 3×3 quad grid
-		const geometry = new Geometry(gl, {
-			position: { size: 2, data: new Float32Array([
-				...QUAD.map((c) => c - 2),
-				...QUAD.map((c, i) => i % 2 ? c - 2 : c),
-				...QUAD.map((c, i) => i % 2 ? c - 2 : c + 2),
-				...QUAD.map((c, i) => i % 2 ? c : c - 2),
-				...QUAD,
-				...QUAD.map((c, i) => i % 2 ? c: c + 2),
-				...QUAD.map((c, i) => i % 2 ? c + 2 : c - 2),
-				...QUAD.map((c, i) => i % 2 ? c + 2 : c),
-				...QUAD.map((c) => c + 2),
-			]) },
-			uv: { size: 2, data: new Float32Array([
-				...QUAD_NORMALS,
-				...QUAD_NORMALS,
-				...QUAD_NORMALS,
-				...QUAD_NORMALS,
-				...QUAD_NORMALS,
-				...QUAD_NORMALS,
-				...QUAD_NORMALS,
-				...QUAD_NORMALS,
-				...QUAD_NORMALS,
-			]) },
-		});
 
 		const palette = new Texture(gl, {
 			magFilter: gl.NEAREST,
@@ -112,8 +129,8 @@ export class Canvas {
 		canvasdataImage.src = "./canvas.png"
 
 		this.program = new Program(gl, {
-			vertex,
-			fragment,
+			vertex: VERTEX_SHADER,
+			fragment: FRAGMENT_SHADER,
 			uniforms: {
 				uTranslate: { value: new Vec2(this.translate[0], this.translate[1]) },
 				uScale: { value: new Vec2(this.scale[0], this.scale[1]) },
@@ -121,8 +138,6 @@ export class Canvas {
 				tCanvas: { value: canvasdata },
 			},
 		});
-		
-		this.mesh = new Mesh(gl, { geometry, program: this.program });
 	}
 
 	setSize(width: number, height: number) {
@@ -137,36 +152,44 @@ export class Canvas {
 	}
 
 	render(options = {
+		scaleBase: 3,
 		detailLevel: 0,
 		autoDetail: false,
 		renderIdentity: false,
 	}) {
 		if (options.autoDetail) {
 			const minScale = Math.min(this.scale[0], this.scale[1]);
-			options.detailLevel = Math.max(0, Math.floor(Math.log(minScale) / Math.log(SCALE_BASE)));
+			options.detailLevel = Math.max(0, Math.floor(Math.log(minScale) / Math.log(options.scaleBase)));
+		}
+
+		if (this.meshNumQuads !== options.scaleBase) {
+			// reconstruct mesh
+			this.meshNumQuads = options.scaleBase;
+			const geometry = new CanvasGeometry(this.renderer.gl, this.meshNumQuads);
+			this.mesh = new Mesh(this.renderer.gl, { geometry, program: this.program });
 		}
 
 		return requestAnimationFrame((timestamp: DOMHighResTimeStamp) => {
-	
-			const scaleModifier = SCALE_BASE ** options.detailLevel;
+			const scaleModifier = options.scaleBase ** options.detailLevel;
 	
 			this.program.uniforms.uTranslate.value = new Vec2(...[this.translate[0], this.translate[1]].map(translate => {
-				// Tiles are -1 to 1 (a length of 2).
-				// So our magic numbers of 2 here are tile length.
-				let excess = 0;
-				let scaledTranslate = translate * scaleModifier
+				const scaledTranslate = translate * scaleModifier;
+				// The rounding of modulo means that our translate will always
+				// be off-center towards the origin. This shifts it away from
+				// the origin by that offset.
+				const offset = Math.sign(Math.trunc(scaledTranslate));
 				// Worked this out through experimenting, so I don't know quite why.
 				// this works.
-				const scaleEdge = SCALE_BASE ** (options.detailLevel + 1) - 1;
-				if (Math.abs(scaledTranslate) >= scaleEdge) {
-					// Since I don't know why scaleEdge is what it is, I don't quite 
-					// know why it works out here. Though I imagine the -2 is actually
-					// a -3 when combined with the -1 on scaleEdge, which would be -scaleBase.
-					// Yay; programming through trial-and-error.
-					excess = scaledTranslate - (scaleEdge - 2) * Math.sign(scaledTranslate);
-					scaledTranslate = 0;
+				// Update: I still don't know why it works, but I did some more
+				// experimenting and it seems more correct now.
+				// Also the control flow and naming is a bit more clear:
+				// this condition is more obviously a type of clipping.
+				const scaleEdge = options.scaleBase ** (options.detailLevel + 1);
+				if (Math.abs(scaledTranslate + offset) >= (scaleEdge + 2 - options.scaleBase)) {
+					return scaledTranslate - (scaleEdge - options.scaleBase) * Math.sign(scaledTranslate);
+				} else {
+					return (scaledTranslate + offset) % 2 - offset;
 				}
-				return scaledTranslate % 2 + excess;
 			}));
 			this.program.uniforms.uScale.value = new Vec2(...[this.scale[0], this.scale[1]].map(scale => {
 				return scale / scaleModifier;
