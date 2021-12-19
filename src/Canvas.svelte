@@ -14,15 +14,17 @@
 	let canvas: Canvas;
 
 	let renderIdentity = false;
-	let autoDetail = false;
-	let detailLevel = 0;
-	let scaleBase = 3;
+	let autoDetail = true;
+	let detailLevel = 1;
+	let outline = 0.05;
+	let outlineStripe = 8;
 
 	$: renderOptions = {
 		renderIdentity,
 		autoDetail,
 		detailLevel,
-		scaleBase,
+		outline,
+		outlineStripe,
 	};
 
 	$: dummy = canvas && canvas.render(renderOptions)
@@ -85,18 +87,61 @@
 <canvas on:mousemove="{drag}" on:wheel="{zoom}" bind:this={canvasElement} />
 <aside id="buttons">
 	<div>
+		<label>Loaded Data:</label>
+		<div class="vertical">
+			<label>LoD 0</label>
+			<div class="grid one-by-one">
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(0, 0, 0, e.target.checked ? "./canvas.png" : null)}" />
+			</div>
+		</div>
+		<div class="vertical">
+			<label>LoD 1</label>
+			<div class="grid two-by-two">
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(1, 0, 0, e.target.checked ? "./canvas_tl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(1, 1, 0, e.target.checked ? "./canvas_tr.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(1, 0, 1, e.target.checked ? "./canvas_bl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(1, 1, 1, e.target.checked ? "./canvas_br.png" : null)}" />
+			</div>
+		</div>
+		<div class="vertical">
+			<label>LoD 2</label>
+			<div class="grid four-by-four">
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 0, 0, e.target.checked ? "./canvas_tl_tl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 1, 0, e.target.checked ? "./canvas_tl_tr.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 2, 0, e.target.checked ? "./canvas_tr_tl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 3, 0, e.target.checked ? "./canvas_tr_tr.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 0, 1, e.target.checked ? "./canvas_tl_bl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 1, 1, e.target.checked ? "./canvas_tl_br.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 2, 1, e.target.checked ? "./canvas_tr_bl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 3, 1, e.target.checked ? "./canvas_tr_br.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 0, 2, e.target.checked ? "./canvas_bl_tl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 1, 2, e.target.checked ? "./canvas_bl_tr.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 2, 2, e.target.checked ? "./canvas_br_tl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 3, 2, e.target.checked ? "./canvas_br_tr.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 0, 3, e.target.checked ? "./canvas_bl_bl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 1, 3, e.target.checked ? "./canvas_bl_br.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 2, 3, e.target.checked ? "./canvas_br_bl.png" : null)}" />
+				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 3, 3, e.target.checked ? "./canvas_br_br.png" : null)}" />
+			</div>
+		</div>
+	</div>
+	<!--<div>
 		<output>Subdivisions: {scaleBase - 1}</output>
 		<button on:click="{() => scaleBase += 1}">+</button>
 		<button on:click="{() => scaleBase -= 1}">-</button>
-	</div>
+	</div>-->
 	<div>
 		<output><abbr title="Level of Detail">LoD</abbr>: {renderOptions.detailLevel}</output>
-		<label><input bind:checked="{autoDetail}" type="checkbox"/>Auto LoD</label>
+		<label><input bind:checked="{autoDetail}" type="checkbox"/>Auto</label>
 		<button disabled="{autoDetail}" on:click="{() => detailLevel += 1}">+</button>
 		<button disabled="{autoDetail}" on:click="{() => detailLevel -= 1}">-</button>
 	</div>
 	<div>
 		<label><input bind:checked="{renderIdentity}" type="checkbox"/>Show Reference</label>
+	</div>
+	<div>
+		<label>Outline: <input bind:value="{outline}" type="range" min="0" step="0.01" max="1" /></label>
+		<label>Stripes: <input bind:value="{outlineStripe}" type="number" min="2" step="1"/></label>
 	</div>
 </aside>
 
@@ -137,5 +182,31 @@
 
 	input[type="checkbox"] {
 		margin-left: 0;
+	}
+
+	input[type="number"] {
+		width: 3em;
+	}
+
+	.vertical {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.grid {
+		display: grid;
+		align-self: center;
+	}
+
+	.one-by-one {
+		grid-template-columns: 1fr;
+	}
+
+	.two-by-two {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.four-by-four {
+		grid-template-columns: 1fr 1fr 1fr 1fr;
 	}
 </style>
