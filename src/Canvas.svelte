@@ -7,17 +7,17 @@
 </script>
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { Canvas } from "./canvas";
-	import { Vec2 } from "ogl-typescript";
+	import { Canvas, DEFAULT_SHAPE, DEFAULT_RENDER_SETTINGS, Shape, RenderSettings } from "./canvas";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
 
-	let renderIdentity = false;
-	let autoDetail = true;
-	let detailLevel = 1;
-	let outline = 0.05;
-	let outlineStripe = 8;
+	let renderIdentity = DEFAULT_RENDER_SETTINGS.renderIdentity;
+	let autoDetail = DEFAULT_RENDER_SETTINGS.autoDetail;
+	let detailLevel = DEFAULT_RENDER_SETTINGS.detailLevel;
+	let outline = DEFAULT_RENDER_SETTINGS.outline;
+	let outlineStripe = DEFAULT_RENDER_SETTINGS.outlineStripe;
+	let shapeValid = true;
 
 	$: renderOptions = {
 		renderIdentity,
@@ -27,19 +27,42 @@
 		outlineStripe,
 	};
 
-	$: dummy = canvas && canvas.render(renderOptions)
-		&& (renderOptions = renderOptions);
+	function updateShape(shape: string) {
+		try {
+			const parsed = JSON.parse(shape) as unknown;
+			if (!Array.isArray(parsed)) {
+				throw new Error();
+			}
+			if (!parsed.every(e => Array.isArray(e)
+				&& e.length === 2
+				&& e.every(n => typeof n === "number"))
+			) {
+				throw new Error();
+			}
+			
+			shapeValid = true;
+			canvas.reshape(parsed as Shape);
+			canvas.render(renderOptions as RenderSettings);
+		} catch(e) {
+			shapeValid = false;
+		}
+	}
+
+	$: if (canvas) {
+		canvas.render(renderOptions as RenderSettings);
+		renderOptions = renderOptions;
+	}
 
 	function drag(event: MouseEvent) {
 		if (event.buttons & MOUSE_BUTTON_PRIMARY) {
 			canvas.translate[0] += 2 * event.movementX / canvasElement.width / canvas.scale[0];
 			canvas.translate[1] += -2 * event.movementY / canvasElement.height / canvas.scale[1];
-			canvas.render(renderOptions);
 		}
 	}
 
 	function zoom(event: WheelEvent) {
-		const oldScale = new Vec2(canvas.scale[0], canvas.scale[1]);
+		const oldScaleX = canvas.scale[0];
+		const oldScaleY = canvas.scale[1];
 
 		let delta = -event.deltaY;
 
@@ -57,23 +80,21 @@
 				break;
 		}
 
-		canvas.scale[0] *= 1.15 ** delta;
-		canvas.scale[1] *= 1.15 ** delta;
+		canvas.zoomScale[0] *= 1.15 ** delta;
+		canvas.zoomScale[1] *= 1.15 ** delta;
 
 		const zoomCenterX = 2 * (event.clientX / canvasElement.width) - 1;
 		const zoomCenterY = -2 * (event.clientY / canvasElement.height) + 1;
 		
-		canvas.translate[0] -= zoomCenterX / oldScale[0];
+		canvas.translate[0] -= zoomCenterX / oldScaleX;
 		canvas.translate[0] += zoomCenterX / canvas.scale[0];
-		canvas.translate[1] -= zoomCenterY / oldScale[1];
+		canvas.translate[1] -= zoomCenterY / oldScaleY;
 		canvas.translate[1] += zoomCenterY / canvas.scale[1];
-		
-		canvas.render(renderOptions);
 	}
 
 	function resize() {
 		canvas.setSize(window.innerWidth, window.innerHeight);
-		canvas.render(renderOptions);
+		canvas = canvas;
 	}
 
 	onMount(() => {
@@ -84,52 +105,17 @@
 
 <svelte:window on:resize="{resize}" />
 
-<canvas on:mousemove="{drag}" on:wheel="{zoom}" bind:this={canvasElement} />
+<canvas on:mousemove="{drag}" on:wheel="{zoom}" bind:this="{canvasElement}" />
 <aside id="buttons">
 	<div>
-		<label>Loaded Data:</label>
-		<div class="vertical">
-			<label>LoD 0</label>
-			<div class="grid one-by-one">
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(0, 0, 0, e.target.checked ? "./canvas.png" : null)}" />
-			</div>
-		</div>
-		<div class="vertical">
-			<label>LoD 1</label>
-			<div class="grid two-by-two">
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(1, 0, 0, e.target.checked ? "./canvas_tl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(1, 1, 0, e.target.checked ? "./canvas_tr.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(1, 0, 1, e.target.checked ? "./canvas_bl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(1, 1, 1, e.target.checked ? "./canvas_br.png" : null)}" />
-			</div>
-		</div>
-		<div class="vertical">
-			<label>LoD 2</label>
-			<div class="grid four-by-four">
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 0, 0, e.target.checked ? "./canvas_tl_tl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 1, 0, e.target.checked ? "./canvas_tl_tr.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 2, 0, e.target.checked ? "./canvas_tr_tl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 3, 0, e.target.checked ? "./canvas_tr_tr.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 0, 1, e.target.checked ? "./canvas_tl_bl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 1, 1, e.target.checked ? "./canvas_tl_br.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 2, 1, e.target.checked ? "./canvas_tr_bl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 3, 1, e.target.checked ? "./canvas_tr_br.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 0, 2, e.target.checked ? "./canvas_bl_tl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 1, 2, e.target.checked ? "./canvas_bl_tr.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 2, 2, e.target.checked ? "./canvas_br_tl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 3, 2, e.target.checked ? "./canvas_br_tr.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 0, 3, e.target.checked ? "./canvas_bl_bl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 1, 3, e.target.checked ? "./canvas_bl_br.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 2, 3, e.target.checked ? "./canvas_br_bl.png" : null)}" />
-				<input type="checkbox" on:click="{(e) => canvas.setSampler(2, 3, 3, e.target.checked ? "./canvas_br_br.png" : null)}" />
-			</div>
-		</div>
+		<label>
+			{#if !shapeValid }
+			<span style="font-size: xxx-large; margin-right: 0.15em; margin-top:-.15em; line-height:.5em" title="Invalid shape">⚠</span>
+			{/if}
+			<span style="margin-right: 0.15em;">Shape</span>
+			<input type="text" value="{JSON.stringify(DEFAULT_SHAPE)}" on:change="{e => updateShape(e.target.value)}" />
+		</label>
 	</div>
-	<!--<div>
-		<output>Subdivisions: {scaleBase - 1}</output>
-		<button on:click="{() => scaleBase += 1}">+</button>
-		<button on:click="{() => scaleBase -= 1}">-</button>
-	</div>-->
 	<div>
 		<output><abbr title="Level of Detail">LoD</abbr>: {renderOptions.detailLevel}</output>
 		<label><input bind:checked="{autoDetail}" type="checkbox"/>Auto</label>

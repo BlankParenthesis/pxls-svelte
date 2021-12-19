@@ -74,57 +74,63 @@ const QUAD_NORMALS = [
 	0, 0,
 ];
 
-const SHAPE: Array<[number, number]> = [[2,2], [2,2], [4,4]];
-
-type Shape = Array<[number, number]>;
-
-class Sampler {
-	readonly texture: Texture;
-	private readonly image: HTMLImageElement;
-
-	constructor(gl: OGLRenderingContext) {
-		const image = this.image = new Image();
-		const texture = this.texture = new Texture(gl, {
-			magFilter: gl.NEAREST,
-			minFilter: gl.NEAREST,
-		});
-		image.onload = () => {
-			texture.image = image;
-		};
-	}
-
-	load(src?: string) {
-		if (src === null) {
-			this.texture.image = undefined;
-		} else{
-			this.image.src = src;
-		}
-	}
-}
+export type Shape = Array<[number, number]>;
+export const DEFAULT_SHAPE: Shape = [[5, 4], [2, 2], [8, 8]];
+export type RenderSettings = {
+	detailLevel: number,
+	autoDetail: boolean,
+	renderIdentity: boolean,
+	outline: number,
+	outlineStripe: number,
+};
+export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
+	detailLevel: 1,
+	autoDetail: true,
+	renderIdentity: false,
+	outline: 0.05,
+	outlineStripe: 8,
+};
 
 class LoDSampler {
-	levels: Array<Sampler[][]>;
+	readonly levels: Array<Texture[][]>;
+	readonly width: number;
+	readonly height: number;
 
 	constructor(gl: OGLRenderingContext, shape: Shape) {
-		const dimensions = shape
-			.slice(0, shape.length - 1)
-			.map((_, i, shape) => shape.slice(i))
-			.reverse()
-			.map(sizes => sizes.reduce((acc, next) => [acc[0] * next[0], acc[1] * next[1]], [1, 1]));
+		this.width = shape.reduce((width, dim) => width * dim[0], 1);
+		this.height = shape.reduce((height, dim) => height * dim[1], 1);
 
-		dimensions.unshift([1, 1]);
+		this.levels = new Array(shape.length)
+			.fill(shape)
+			.map((shape: Shape, lod) => {
+				const chunkArragement = shape
+					.slice(0, lod)
+					.reduce((acc, next) => [acc[0] * next[0], acc[1] * next[1]], [1, 1]);
+				const chunkSize = shape
+					.slice(lod, shape.length)
+					.reduce((acc, next) => [acc[0] * next[0], acc[1] * next[1]], [1, 1]);
 
-		this.levels = new Array(dimensions.length) as Array<Sampler[][]>;
-		for (const [detail, [width, height]] of dimensions.entries()) {
-			this.levels[detail] = new Array(height)
-				.fill(null)
-				.map(_ => new Array(width)
+				const textureSettings = {
+					image: new Uint8Array(new Array(chunkSize[0] * chunkSize[1]).fill([
+						2, 2, 2, 255,
+					]).flat()),
+					width: chunkSize[0],
+					height: chunkSize[1],
+					magFilter: gl.NEAREST,
+					minFilter: gl.NEAREST,
+				};
+
+				return new Array(chunkArragement[1])
 					.fill(null)
-					.map(_ => new Sampler(gl)),
-				)
-		}
+					.map(_ => new Array(chunkArragement[0])
+						.fill(null)
+						.map(_ => {
+							const texture = new Texture(gl, textureSettings);
 
-		console.debug(this.levels);
+							return texture;
+						}),
+					)
+			}) 
 	}
 }
 
@@ -145,7 +151,9 @@ export class Canvas {
 	private mesh: Mesh;
 	private samplers: LoDSampler;
 
-	scale = new Vec2(0.5, 0.5);
+	zoomScale = new Vec2(0.5, 0.5);
+	screenScale = new Vec2(1, 1);
+	ratioScale = new Vec2(1, 1);
 	translate = new Vec2(-0.5, -0.5);
 
 	constructor(canvas?: HTMLCanvasElement) {
@@ -155,17 +163,19 @@ export class Canvas {
 		gl.clearColor(0, 0, 0, 1);
 
 		const palette = new Texture(gl, {
+			image: new Uint8Array([
+				255, 255, 255, 255,
+				30, 120, 255, 255,
+				255, 120, 180, 255,
+				100, 255, 140, 255,
+			]),
+			width: 3,
+			height: 1,
 			magFilter: gl.NEAREST,
 			minFilter: gl.NEAREST,
 		});
-		const paletteImage = new Image();
-		paletteImage.onload = () => {
-			palette.image = paletteImage;
-			this.render();
-		};
-		paletteImage.src = "./palette.png"
 
-		this.samplers = new LoDSampler(gl, SHAPE);
+		this.samplers = new LoDSampler(gl, DEFAULT_SHAPE);
 
 		const uniforms: Uniforms = {
 			uTranslate: { value: new Vec2(this.translate[0], this.translate[1]) },
@@ -188,76 +198,95 @@ export class Canvas {
 		this.mesh = new Mesh(this.renderer.gl, { geometry, program: this.program });
 	}
 
+	reshape(shape: Shape) {
+		this.samplers = new LoDSampler(this.renderer.gl, shape);
+		this.setSize(this.renderer.gl.canvas.width, this.renderer.gl.canvas.height);
+	}
+
+	get scale() {
+		return new Vec2(
+			this.zoomScale[0] * this.screenScale[0] * this.ratioScale[0],
+			this.zoomScale[1] * this.screenScale[1] * this.ratioScale[1],
+		)
+	}
+
 	setSize(width: number, height: number) {
-		this.renderer.setSize(width, height);
-		
-		// sets the aspect ratio to match screen.
-		if (this.scale[0] > this.scale[1]) {
-			this.scale[0] = this.scale[1] * window.innerHeight / window.innerWidth;
+		if (this.renderer.gl.canvas.width !== width || this.renderer.gl.canvas.height !== height) {
+			this.renderer.setSize(width, height);
+			
+			if (width > height) {
+				this.screenScale[0] = 1;
+				this.screenScale[1] = width / height;
+			} else {
+				this.screenScale[0] = height / width;
+				this.screenScale[1] = 1;
+			}
+		}
+
+		if(this.samplers.width > this.samplers.height) {
+			this.ratioScale[0] = this.samplers.width / this.samplers.height;
+			this.ratioScale[1] = 1;
 		} else {
-			this.scale[1] = this.scale[0] * window.innerWidth / window.innerHeight;
+			this.ratioScale[0] = 1;
+			this.ratioScale[1] = this.samplers.height / this.samplers.width;
 		}
 	}
 
 	private renderIdentity() {
 		this.program.uniforms.uTranslate.value = this.translate;
 		this.program.uniforms.uScale.value = this.scale;
-		this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0].texture;
+		this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0];
 		this.renderer.render({
 			scene: this.mesh,
 		});
 	}
 
-	render(options = {
-		detailLevel: 1,
-		autoDetail: true,
-		renderIdentity: false,
-		outline: 0.05,
-		outlineStripe: 8,
-	}) {
+	render(options = DEFAULT_RENDER_SETTINGS) {
 		let detailLevel = options.detailLevel;
 		if (options.autoDetail) {
-			const minScale = Math.min(this.scale[0], this.scale[1]);
-			if (minScale > 1) {
-				const safeMargin = 2;
-				const level = Math.log(minScale) / Math.log(2);
-				detailLevel = Math.max(0, Math.ceil(level - safeMargin));
-			} else {
-				detailLevel = 0;
+			detailLevel = 0;
+			let [x, y] = this.scale;
+			x /= 2;
+			y /= 2;
+			let lod = this.samplers.levels[detailLevel + 1];
+			while (lod && x > lod.length && y > lod[0].length) {
+				detailLevel += 1;
+				lod = this.samplers.levels[detailLevel + 1];
 			}
 		}
-		detailLevel = Math.max(0, Math.min(detailLevel, this.samplers.levels.length - 1));
+		options.detailLevel = detailLevel = Math.max(0, Math.min(detailLevel, this.samplers.levels.length - 1));
 
 		return requestAnimationFrame((timestamp: DOMHighResTimeStamp) => {
-			const scaleModifier = 2 ** detailLevel;
-	
 			this.program.uniforms.uOutline.value = 0.5 - (options.outline / 2);
 			this.program.uniforms.uOutlineStripe.value = options.outlineStripe * Math.PI * 2;
+
 			if (detailLevel > 0) {
-				const translate = new Vec2(...[this.translate[0], this.translate[1]].map(translate => {
-					const scaledTranslate = translate * scaleModifier;
+				const lod = this.samplers.levels[detailLevel];
+
+				const scaleModifier = [lod.length, lod[0].length];
+				const translate = new Vec2(...[this.translate[0], this.translate[1]].map((translate, i) => {
+					const scaledTranslate = translate * scaleModifier[i];
 					
 					const offset = scaledTranslate > -0.5 ? 1.5 : 0.5;
 
 					return (scaledTranslate + offset) % 1 - offset;
 				}));
-				this.program.uniforms.uScale.value = new Vec2(...[this.scale[0], this.scale[1]].map(scale => {
-					return scale / scaleModifier;
+				this.program.uniforms.uScale.value = new Vec2(...[this.scale[0], this.scale[1]].map((scale, i) => {
+					return scale / scaleModifier[i];
 				}));
 
-				const x = -fromTranslateToTile(this.translate[0], scaleModifier);
-				const y = scaleModifier + fromTranslateToTile(this.translate[1], scaleModifier) - 1;
+				const x = -fromTranslateToTile(this.translate[0], scaleModifier[0]);
+				const y = scaleModifier[1] + fromTranslateToTile(this.translate[1], scaleModifier[1]) - 1;
 
-				const levelSamplers = this.samplers.levels[detailLevel];
 				
 				this.renderer.gl.clear(this.renderer.gl.COLOR_BUFFER_BIT | this.renderer.gl.DEPTH_BUFFER_BIT);
 
 				for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
 					const ox = x + dx;
 					const oy = y - dy;
-					if (levelSamplers[ox] && levelSamplers[ox][oy]) {
+					if (lod[ox] && lod[ox][oy]) {
 						this.program.uniforms.uTranslate.value = new Vec2(translate[0] + dx, translate[1] + dy);
-						this.program.uniforms.tCanvas.value = levelSamplers[ox][oy].texture;
+						this.program.uniforms.tCanvas.value = lod[ox][oy];
 						
 						this.renderer.render({
 							scene: this.mesh,
@@ -267,7 +296,7 @@ export class Canvas {
 			} else {
 				this.program.uniforms.uTranslate.value = new Vec2(this.translate[0], this.translate[1]);
 				this.program.uniforms.uScale.value = this.scale;
-				this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0].texture;
+				this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0];
 				this.renderer.render({
 					scene: this.mesh,
 					clear: true,
@@ -278,9 +307,5 @@ export class Canvas {
 				this.renderIdentity();
 			}
 		})
-	}
-
-	setSampler(level: number, x: number, y: number, src?: string) {
-		this.samplers.levels[level][x][y].load(src);
 	}
 }
