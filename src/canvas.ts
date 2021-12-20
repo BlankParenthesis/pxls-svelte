@@ -107,14 +107,9 @@ class LoDSampler {
 		this.width = shape.reduce((width, dim) => width * dim[0], 1);
 		this.height = shape.reduce((height, dim) => height * dim[1], 1);
 
-		const paletteAsIndices = DEFAULT_PALETTE.map((_, i) => [
-			...new Array(3).fill(i) as number[],
-			255,
-		]);
-
 		const imageData = new Array(this.width * this.height)
 			.fill(null)
-			.map(() => paletteAsIndices[Math.floor(Math.random() * paletteAsIndices.length)])
+			.map(() => Math.floor(Math.random() * DEFAULT_PALETTE.length));
 
 		const configuration = new Array(shape.length)
 			.fill(shape)
@@ -138,6 +133,8 @@ class LoDSampler {
 				};
 			});
 
+		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
 		const imageWidth = this.width;
 		this.levels = configuration.map(({ chunkCountX, chunkCountY, textureSettings }) => 
 			new Array(chunkCountY)
@@ -155,7 +152,7 @@ class LoDSampler {
 									chunkPos + y * imageWidth,
 									chunkPos + y * imageWidth + width,
 								))
-								.flat(2),
+								.flat(),
 						);
 
 						return new Texture(gl, {
@@ -164,10 +161,14 @@ class LoDSampler {
 							height,
 							magFilter,
 							minFilter,
+							format: gl.LUMINANCE,
+							internalFormat: gl.LUMINANCE,
 						});
 					}),
 				),
 		);
+
+		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
 	}
 }
 
