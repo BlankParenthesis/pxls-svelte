@@ -90,6 +90,13 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
 	outline: 0.05,
 	outlineStripe: 8,
 };
+export type Palette = Array<[number, number, number, number]>
+export const DEFAULT_PALETTE = [
+	[255, 255, 255, 255],
+	[30, 120, 255, 255],
+	[255, 120, 180, 255],
+	[100, 255, 140, 255],
+];
 
 class LoDSampler {
 	readonly levels: Array<Texture[][]>;
@@ -100,7 +107,16 @@ class LoDSampler {
 		this.width = shape.reduce((width, dim) => width * dim[0], 1);
 		this.height = shape.reduce((height, dim) => height * dim[1], 1);
 
-		this.levels = new Array(shape.length)
+		const paletteAsIndices = DEFAULT_PALETTE.map((_, i) => [
+			...new Array(3).fill(i) as number[],
+			255,
+		]);
+
+		const imageData = new Array(this.width * this.height)
+			.fill(null)
+			.map(() => paletteAsIndices[Math.floor(Math.random() * paletteAsIndices.length)])
+
+		const configuration = new Array(shape.length)
 			.fill(shape)
 			.map((shape: Shape, lod) => {
 				const chunkArragement = shape
@@ -110,27 +126,48 @@ class LoDSampler {
 					.slice(lod, shape.length)
 					.reduce((acc, next) => [acc[0] * next[0], acc[1] * next[1]], [1, 1]);
 
-				const textureSettings = {
-					image: new Uint8Array(new Array(chunkSize[0] * chunkSize[1]).fill([
-						2, 2, 2, 255,
-					]).flat()),
-					width: chunkSize[0],
-					height: chunkSize[1],
-					magFilter: gl.NEAREST,
-					minFilter: gl.NEAREST,
+				return {
+					chunkCountX: chunkArragement[0],
+					chunkCountY: chunkArragement[1],
+					textureSettings: {
+						width: chunkSize[0],
+						height: chunkSize[1],
+						magFilter: gl.NEAREST,
+						minFilter: gl.NEAREST,
+					},
 				};
+			});
 
-				return new Array(chunkArragement[1])
+		const imageWidth = this.width;
+		this.levels = configuration.map(({ chunkCountX, chunkCountY, textureSettings }) => 
+			new Array(chunkCountY)
+				.fill(null)
+				.map((_, chunkY) => new Array(chunkCountX)
 					.fill(null)
-					.map(_ => new Array(chunkArragement[0])
-						.fill(null)
-						.map(_ => {
-							const texture = new Texture(gl, textureSettings);
+					.map((_, chunkX) => {
+						const { width, height, magFilter, minFilter } = textureSettings;
+						
+						const chunkPos = (chunkX * width) + (chunkY * width * height * chunkCountX);
+						const image = new Uint8Array(
+							new Array(height)
+								.fill(null)
+								.map((_, y) => imageData.slice(
+									chunkPos + y * imageWidth,
+									chunkPos + y * imageWidth + width,
+								))
+								.flat(2),
+						);
 
-							return texture;
-						}),
-					)
-			}) 
+						return new Texture(gl, {
+							image,
+							width,
+							height,
+							magFilter,
+							minFilter,
+						});
+					}),
+				),
+		);
 	}
 }
 
@@ -163,13 +200,8 @@ export class Canvas {
 		gl.clearColor(0, 0, 0, 1);
 
 		const palette = new Texture(gl, {
-			image: new Uint8Array([
-				255, 255, 255, 255,
-				30, 120, 255, 255,
-				255, 120, 180, 255,
-				100, 255, 140, 255,
-			]),
-			width: 3,
+			image: new Uint8Array(DEFAULT_PALETTE.flat()),
+			width: DEFAULT_PALETTE.length,
 			height: 1,
 			magFilter: gl.NEAREST,
 			minFilter: gl.NEAREST,
@@ -249,7 +281,7 @@ export class Canvas {
 			x /= 2;
 			y /= 2;
 			let lod = this.samplers.levels[detailLevel + 1];
-			while (lod && x > lod.length && y > lod[0].length) {
+			while (lod && x > lod[0].length && y > lod.length) {
 				detailLevel += 1;
 				lod = this.samplers.levels[detailLevel + 1];
 			}
@@ -263,7 +295,7 @@ export class Canvas {
 			if (detailLevel > 0) {
 				const lod = this.samplers.levels[detailLevel];
 
-				const scaleModifier = [lod.length, lod[0].length];
+				const scaleModifier = [lod[0].length, lod.length];
 				const translate = new Vec2(...[this.translate[0], this.translate[1]].map((translate, i) => {
 					const scaledTranslate = translate * scaleModifier[i];
 					
@@ -284,9 +316,9 @@ export class Canvas {
 				for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
 					const ox = x + dx;
 					const oy = y - dy;
-					if (lod[ox] && lod[ox][oy]) {
+					if (lod[oy] && lod[oy][ox]) {
 						this.program.uniforms.uTranslate.value = new Vec2(translate[0] + dx, translate[1] + dy);
-						this.program.uniforms.tCanvas.value = lod[ox][oy];
+						this.program.uniforms.tCanvas.value = lod[oy][ox];
 						
 						this.renderer.render({
 							scene: this.mesh,
