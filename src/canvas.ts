@@ -75,7 +75,7 @@ const QUAD_NORMALS = [
 ];
 
 export type Shape = Array<[number, number]>;
-export const DEFAULT_SHAPE: Shape = [[5, 4], [2, 2], [8, 8]];
+export const DEFAULT_SHAPE: Shape = [[500, 500], [500, 500]];
 export type RenderSettings = {
 	detailLevel: number,
 	autoDetail: boolean,
@@ -98,8 +98,61 @@ export const DEFAULT_PALETTE = [
 	[100, 255, 140, 255],
 ];
 
+type ChunkMetadata = {
+	gl: OGLRenderingContext;
+	arrangementWidth: number;
+	arrangementHeight: number;
+	pixelsWidth: number;
+	pixelsHeight: number;
+};
+
+class Sampler {
+	private texture?: Texture = null;
+
+	constructor(
+		// There's going to be quite a few of these Sampler objects.
+		// They could all store copies of all the metadata in a flat structure,
+		// but since they share the same data, it's more memory efficient for them
+		// all to store a reference to a shared object.
+		private readonly chunkMetadata: ChunkMetadata,
+	) {}
+
+	load(x: number, y: number): Texture {
+		if(this.texture === null) {
+			const gl = this.chunkMetadata.gl;
+			const width = this.chunkMetadata.pixelsWidth;
+			const height = this.chunkMetadata.pixelsHeight;
+			this.texture = new Texture(gl, {
+				image: new Uint8Array(
+					new Array(width * height)
+						.fill(null)
+						.map((_, i) => (x * width + i % width) % 4),
+				),
+				width,
+				height,
+				minFilter: gl.NEAREST,
+				magFilter: gl.NEAREST,
+				format: gl.LUMINANCE,
+				internalFormat: gl.LUMINANCE,
+			});
+		}
+		return this.texture;
+	}
+
+	get loaded() {
+		return this.texture !== null;
+	}
+
+	unload() {
+		if (this.loaded) {
+			this.texture
+			this.texture = null;
+		}
+	}
+}
+
 class LoDSampler {
-	readonly levels: Array<Texture[][]>;
+	readonly levels: Array<Sampler[][]>;
 	readonly width: number;
 	readonly height: number;
 
@@ -107,11 +160,7 @@ class LoDSampler {
 		this.width = shape.reduce((width, dim) => width * dim[0], 1);
 		this.height = shape.reduce((height, dim) => height * dim[1], 1);
 
-		const imageData = new Array(this.width * this.height)
-			.fill(null)
-			.map(() => Math.floor(Math.random() * DEFAULT_PALETTE.length));
-
-		const configuration = new Array(shape.length)
+		const configuration: ChunkMetadata[] = new Array(shape.length)
 			.fill(shape)
 			.map((shape: Shape, lod) => {
 				const chunkArragement = shape
@@ -122,48 +171,23 @@ class LoDSampler {
 					.reduce((acc, next) => [acc[0] * next[0], acc[1] * next[1]], [1, 1]);
 
 				return {
-					chunkCountX: chunkArragement[0],
-					chunkCountY: chunkArragement[1],
-					textureSettings: {
-						width: chunkSize[0],
-						height: chunkSize[1],
-						magFilter: gl.NEAREST,
-						minFilter: gl.NEAREST,
-					},
+					gl,
+					arrangementWidth: chunkArragement[0],
+					arrangementHeight: chunkArragement[1],
+					pixelsWidth: chunkSize[0],
+					pixelsHeight: chunkSize[1],
 				};
 			});
 
 		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
-		const imageWidth = this.width;
-		this.levels = configuration.map(({ chunkCountX, chunkCountY, textureSettings }) => 
-			new Array(chunkCountY)
+		this.levels = configuration.map(meta => 
+			new Array(meta.arrangementHeight)
 				.fill(null)
-				.map((_, chunkY) => new Array(chunkCountX)
+				.map((_, chunkY) => new Array(meta.arrangementWidth)
 					.fill(null)
 					.map((_, chunkX) => {
-						const { width, height, magFilter, minFilter } = textureSettings;
-						
-						const chunkPos = (chunkX * width) + (chunkY * width * height * chunkCountX);
-						const image = new Uint8Array(
-							new Array(height)
-								.fill(null)
-								.map((_, y) => imageData.slice(
-									chunkPos + y * imageWidth,
-									chunkPos + y * imageWidth + width,
-								))
-								.flat(),
-						);
-
-						return new Texture(gl, {
-							image,
-							width,
-							height,
-							magFilter,
-							minFilter,
-							format: gl.LUMINANCE,
-							internalFormat: gl.LUMINANCE,
-						});
+						return new Sampler(meta);
 					}),
 				),
 		);
@@ -189,10 +213,10 @@ export class Canvas {
 	private mesh: Mesh;
 	private samplers: LoDSampler;
 
-	zoomScale = new Vec2(0.5, 0.5);
+	zoomScale = new Vec2(1000, 1000);
 	screenScale = new Vec2(1, 1);
 	ratioScale = new Vec2(1, 1);
-	translate = new Vec2(-0.5, -0.5);
+	translate = new Vec2(0, -1);
 
 	constructor(canvas?: HTMLCanvasElement) {
 		this.renderer = new Renderer({ canvas, autoClear: false });
@@ -268,7 +292,7 @@ export class Canvas {
 	private renderIdentity() {
 		this.program.uniforms.uTranslate.value = this.translate;
 		this.program.uniforms.uScale.value = this.scale;
-		this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0];
+		this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0].load(0, 0);
 		this.renderer.render({
 			scene: this.mesh,
 		});
@@ -287,7 +311,7 @@ export class Canvas {
 				lod = this.samplers.levels[detailLevel + 1];
 			}
 		}
-		options.detailLevel = detailLevel = Math.max(0, Math.min(detailLevel, this.samplers.levels.length - 1));
+		options.detailLevel = detailLevel = Math.max(1, Math.min(detailLevel, this.samplers.levels.length - 1));
 
 		return requestAnimationFrame((timestamp: DOMHighResTimeStamp) => {
 			this.program.uniforms.uOutline.value = 0.5 - (options.outline / 2);
@@ -319,17 +343,27 @@ export class Canvas {
 					const oy = y - dy;
 					if (lod[oy] && lod[oy][ox]) {
 						this.program.uniforms.uTranslate.value = new Vec2(translate[0] + dx, translate[1] + dy);
-						this.program.uniforms.tCanvas.value = lod[oy][ox];
+						this.program.uniforms.tCanvas.value = lod[oy][ox].load(ox, oy);
 						
 						this.renderer.render({
 							scene: this.mesh,
 						});
 					}
 				}
+
+				const radius = 2;
+
+				for (let oy = 0; oy < lod.length; oy++) {
+					for (let ox = 0; ox < lod[oy].length; ox++) {
+						if (lod[oy][ox].loaded && (Math.abs(y - oy) > radius || Math.abs(x - ox) > radius)) {
+							lod[oy][ox].unload();
+						}
+					}
+				}
 			} else {
 				this.program.uniforms.uTranslate.value = new Vec2(this.translate[0], this.translate[1]);
 				this.program.uniforms.uScale.value = this.scale;
-				this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0];
+				this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0].load(0, 0);
 				this.renderer.render({
 					scene: this.mesh,
 					clear: true,

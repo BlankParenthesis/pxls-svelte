@@ -122,9 +122,9 @@
 		<button disabled="{autoDetail}" on:click="{() => detailLevel += 1}">+</button>
 		<button disabled="{autoDetail}" on:click="{() => detailLevel -= 1}">-</button>
 	</div>
-	<div>
+	<!--<div>
 		<label><input bind:checked="{renderIdentity}" type="checkbox"/>Show Reference</label>
-	</div>
+	</div>-->
 	<div>
 		<label>Outline: <input bind:value="{outline}" type="range" min="0" step="0.01" max="1" /></label>
 		<label>Stripes: <input bind:value="{outlineStripe}" type="number" min="2" step="1"/></label>
