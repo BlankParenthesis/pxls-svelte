@@ -6,8 +6,17 @@
 	const MOUSE_BUTTON_FIVE = 16;
 </script>
 <script lang="ts">
+	import { Texture } from "ogl-typescript";
 	import { onMount } from "svelte";
-	import { Canvas, DEFAULT_SHAPE, DEFAULT_RENDER_SETTINGS, Shape, RenderSettings } from "./canvas";
+
+	import {
+		Canvas,
+		DEFAULT_SHAPE,
+		DEFAULT_RENDER_SETTINGS,
+		Shape,
+		RenderSettings,
+		Template,
+	} from "./canvas";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
@@ -17,6 +26,7 @@
 	let detailLevel = DEFAULT_RENDER_SETTINGS.detailLevel;
 	let outline = DEFAULT_RENDER_SETTINGS.outline;
 	let outlineStripe = DEFAULT_RENDER_SETTINGS.outlineStripe;
+	let templates = DEFAULT_RENDER_SETTINGS.templates;
 	let shapeValid = true;
 
 	$: renderOptions = {
@@ -25,6 +35,7 @@
 		detailLevel,
 		outline,
 		outlineStripe,
+		templates,
 	};
 
 	function updateShape(shape: string) {
@@ -99,6 +110,20 @@
 
 	onMount(() => {
 		canvas = new Canvas(canvasElement);
+		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 1);
+		const template = new Template(new Texture(canvas.gl, {
+			image: new Uint8Array(new Array(200 * 200).fill(1).map((_, i) => i % 4)),
+			width: 200,
+			height: 200,
+			format: canvas.gl.LUMINANCE,
+			internalFormat: canvas.gl.LUMINANCE,
+			minFilter: canvas.gl.NEAREST,
+			magFilter: canvas.gl.NEAREST,
+		}));
+		template.x = 10;
+		template.y = 100;
+		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 4);
+		templates.push(template);
 		resize();
 	})
 </script>
