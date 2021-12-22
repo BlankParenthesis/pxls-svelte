@@ -1,73 +1,21 @@
-import { Geometry, Texture, Vec2, Renderer, Program, Mesh, OGLRenderingContext } from "ogl-typescript";
-
-const VERTEX_SHADER = /* glsl */ `
-	attribute vec2 position;
-	attribute vec2 uv;
-
-	varying vec2 vUv;
-
-	uniform vec2 uTranslate;
-	uniform vec2 uScale;
-
-	void main() {
-		vUv = uv;
-		gl_Position = vec4(uScale * (position + uTranslate), 0.0, 1.0);
-	}
-`;
+import { Texture, Vec2, Renderer, Program, Mesh, OGLRenderingContext } from "ogl-typescript";
+import { QUAD_VERTEX_SHADER, Quad } from "./gl";
+import { newTemplateProgram, Template, TemplateProgram } from "./template";
 
 const CANVAS_FRAGMENT_SHADER = /* glsl */ `
-	precision highp float;
+precision highp float;
 
-	#define OUTLINE_COL1 vec3(0.1)
-	#define OUTLINE_COL2 vec3(0.9, 0.8, 0.3)
-	
-	varying vec2 vUv;
+varying vec2 vUv;
 
-	uniform sampler2D tPalette;
-	uniform float uPaletteSize;
-	uniform sampler2D tCanvas;
-	uniform float uOutline;
-	uniform float uOutlineStripe;
+uniform sampler2D tPalette;
+uniform float uPaletteSize;
+uniform sampler2D tCanvas;
 
-	void main() {
-		vec2 magnitude = abs(vUv - 0.5);
-		if (magnitude.x > uOutline || magnitude.y > uOutline) {
-			float colorSelector = sin((vUv.x + vUv.y) * uOutlineStripe) > 0.16 ? 1.0 : 0.0;
-			gl_FragColor = vec4(mix(OUTLINE_COL1, OUTLINE_COL2, colorSelector), 1.0);
-		} else {
-			vec4 canvasdata = texture2D(tCanvas, vUv);
-			float index = floor(canvasdata.r * 255.0 + 0.5);
-			gl_FragColor = texture2D(tPalette, vec2(index / uPaletteSize, 0.0));
-		}
-	}
-`;
-
-const TEMPLATE_FRAGMENT_SHADER = /* glsl */ `
-	precision highp float;
-
-	#define PALETTE_STYLE_WIDTH 16.0
-	
-	varying vec2 vUv;
-
-	uniform sampler2D tPalette;
-	uniform float uPaletteSize;
-	uniform vec2 uTemplateSize;
-	uniform sampler2D tTemplate;
-	uniform sampler2D tStyle;
-
-	void main() {
-		vec4 templatedata = texture2D(tTemplate, vUv);
-		float index = floor(templatedata.r * 255.0 + 0.5);
-		vec2 indexTranslate = vec2(
-			mod(index, PALETTE_STYLE_WIDTH),
-			// flip y position but not inter-pixel
-			floor(index / PALETTE_STYLE_WIDTH - 1.0) + PALETTE_STYLE_WIDTH
-		) / PALETTE_STYLE_WIDTH;
-		gl_FragColor = texture2D(tPalette, vec2(index / uPaletteSize, 0.0));
-		vec2 normalizedUv = mod(vUv * uTemplateSize, 1.0) / PALETTE_STYLE_WIDTH;
-		vec2 styleUv = normalizedUv + indexTranslate;
-		gl_FragColor.a *= texture2D(tStyle, styleUv).a;
-	}
+void main() {
+	vec4 canvasdata = texture2D(tCanvas, vUv);
+	float index = floor(canvasdata.r * 255.0 + 0.5);
+	gl_FragColor = texture2D(tPalette, vec2(index / uPaletteSize, 0.0));
+}
 `;
 
 function fromTranslateToTile(coord, scaleModifier) {
@@ -86,39 +34,16 @@ function fromTranslateToTile(coord, scaleModifier) {
 	}
 }
 
-const QUAD = [
-	0, 1,
-	0, 0,
-	1, 1,
-	1, 0,
-	1, 1,
-	0, 0,
-];
-const QUAD_NORMALS = [
-	0, 1,
-	0, 0,
-	1, 1,
-	1, 0,
-	1, 1,
-	0, 0,
-];
-
 export type Shape = Array<[number, number]>;
 export const DEFAULT_SHAPE: Shape = [[1, 1],[4, 4], [200, 200]];
 export type RenderSettings = {
 	detailLevel: number,
 	autoDetail: boolean,
-	renderIdentity: boolean,
-	outline: number,
-	outlineStripe: number,
 	templates: Template[],
 };
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
 	detailLevel: 1,
 	autoDetail: true,
-	renderIdentity: false,
-	outline: 0.05,
-	outlineStripe: 8,
 	templates: [],
 };
 export type Palette = Array<[number, number, number, number]>
@@ -136,15 +61,6 @@ type ChunkMetadata = {
 	pixelsWidth: number;
 	pixelsHeight: number;
 };
-
-export class Template {
-	x = 0;
-	y = 0;
-
-	constructor(
-		readonly image: Texture,
-	) {}
-}
 
 class Sampler {
 	private texture?: Texture = null;
@@ -245,17 +161,7 @@ type CanvasUniforms = {
 	uPaletteSize: { value: number };
 	tCanvas: { value: Texture };
 };
-type TemplateUniforms = {
-	uTranslate: { value: Vec2 };
-	uScale: { value: Vec2 };
-	tPalette: { value: Texture };
-	uPaletteSize: { value: number };
-	tTemplate: { value: Texture };
-	uTemplateSize: { value: Vec2 };
-	tStyle: { value: Texture }
-};
 type CanvasProgram = Program & { uniforms: CanvasUniforms };
-type TemplateProgram = Program & { uniforms: TemplateUniforms };
 
 export class Canvas {
 	private readonly renderer: Renderer;
@@ -304,46 +210,15 @@ export class Canvas {
 			tCanvas: { value: new Texture(gl) },
 		};
 
-		// NOTE: this would be more efficient as a single channel texture,
-		// webgl doesn't support conversion and it's hard to do in js.
-		const templateStyle = new Texture(gl, {
-			width: 32,
-			height: 32,
-			magFilter: gl.NEAREST,
-		});
-		const styleImage = new Image();
-		styleImage.onload = () => {
-			templateStyle.image = styleImage;
-		}
-		styleImage.src = "./large_template_style.png";
-		
-		const templateUniforms: TemplateUniforms = {
-			uTranslate: { value: new Vec2(this.translate[0], this.translate[1]) },
-			uScale: { value: new Vec2(this.scale[0], this.scale[1]) },
-			tPalette: { value: palette },
-			uPaletteSize: { value: palette.width },
-			tTemplate: { value: new Texture(gl) },
-			uTemplateSize: { value: new Vec2(1, 1) },
-			tStyle: { value: templateStyle },
-		};
-
 		this.program = new Program(gl, {
-			vertex: VERTEX_SHADER,
+			vertex: QUAD_VERTEX_SHADER,
 			fragment: CANVAS_FRAGMENT_SHADER,
 			uniforms,
 		}) as CanvasProgram;
 
-		this.templateProgram = new Program(gl, {
-			vertex: VERTEX_SHADER,
-			fragment: TEMPLATE_FRAGMENT_SHADER,
-			uniforms: templateUniforms,
-			transparent: true,
-		}) as TemplateProgram;
+		this.templateProgram = newTemplateProgram(gl, palette);
 
-		const geometry = new Geometry(gl, {
-			position: { size: 2, data: new Float32Array(QUAD) },
-			uv: { size: 2, data: new Float32Array(QUAD_NORMALS) },
-		});
+		const geometry = new Quad(gl);
 		this.mesh = new Mesh(this.gl, { geometry, program: this.program });
 		this.templateMesh = new Mesh(this.gl, { geometry, program: this.templateProgram });
 	}
@@ -382,15 +257,6 @@ export class Canvas {
 		}
 	}
 
-	private renderIdentity() {
-		this.program.uniforms.uTranslate.value = this.translate;
-		this.program.uniforms.uScale.value = this.scale;
-		this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0].load(0, 0);
-		this.renderer.render({
-			scene: this.mesh,
-		});
-	}
-
 	render(options = DEFAULT_RENDER_SETTINGS) {
 		let detailLevel = options.detailLevel;
 		if (options.autoDetail) {
@@ -406,11 +272,8 @@ export class Canvas {
 		}
 		options.detailLevel = detailLevel = Math.max(1, Math.min(detailLevel, this.samplers.levels.length - 1));
 		
-		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-
 		return requestAnimationFrame((timestamp: DOMHighResTimeStamp) => {
-			this.program.uniforms.uOutline.value = 0.5 - (options.outline / 2);
-			this.program.uniforms.uOutlineStripe.value = options.outlineStripe * Math.PI * 2;
+			this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);			
 
 			if (detailLevel > 0) {
 				const lod = this.samplers.levels[detailLevel];
@@ -459,11 +322,6 @@ export class Canvas {
 				this.renderer.render({
 					scene: this.mesh,
 				});
-			}
-
-			if (options.renderIdentity) {
-				this.renderer.depth
-				this.renderIdentity();
 			}
 
 			for (const template of options.templates) {

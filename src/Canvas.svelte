@@ -15,26 +15,20 @@
 		DEFAULT_RENDER_SETTINGS,
 		Shape,
 		RenderSettings,
-		Template,
 	} from "./canvas";
+import { Template } from "./template";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
 
-	let renderIdentity = DEFAULT_RENDER_SETTINGS.renderIdentity;
 	let autoDetail = DEFAULT_RENDER_SETTINGS.autoDetail;
 	let detailLevel = DEFAULT_RENDER_SETTINGS.detailLevel;
-	let outline = DEFAULT_RENDER_SETTINGS.outline;
-	let outlineStripe = DEFAULT_RENDER_SETTINGS.outlineStripe;
 	let templates = DEFAULT_RENDER_SETTINGS.templates;
 	let shapeValid = true;
 
 	$: renderOptions = {
-		renderIdentity,
 		autoDetail,
 		detailLevel,
-		outline,
-		outlineStripe,
 		templates,
 	};
 
@@ -146,13 +140,6 @@
 		<label><input bind:checked="{autoDetail}" type="checkbox"/>Auto</label>
 		<button disabled="{autoDetail}" on:click="{() => detailLevel += 1}">+</button>
 		<button disabled="{autoDetail}" on:click="{() => detailLevel -= 1}">-</button>
-	</div>
-	<!--<div>
-		<label><input bind:checked="{renderIdentity}" type="checkbox"/>Show Reference</label>
-	</div>-->
-	<div>
-		<label>Outline: <input bind:value="{outline}" type="range" min="0" step="0.01" max="1" /></label>
-		<label>Stripes: <input bind:value="{outlineStripe}" type="number" min="2" step="1"/></label>
 	</div>
 </aside>
 
