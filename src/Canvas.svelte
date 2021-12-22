@@ -60,8 +60,13 @@ import { Template } from "./template";
 
 	function drag(event: MouseEvent) {
 		if (event.buttons & MOUSE_BUTTON_PRIMARY) {
-			canvas.translate[0] += 2 * event.movementX / canvasElement.width / canvas.scale[0];
-			canvas.translate[1] += -2 * event.movementY / canvasElement.height / canvas.scale[1];
+			if (event.altKey || event.ctrlKey) {
+				templates[0].x += canvas.width * 2 * event.movementX / canvasElement.width / canvas.scale[0];
+				templates[0].y += canvas.height * 2 * event.movementY / canvasElement.height / canvas.scale[1];
+			} else {
+				canvas.translate[0] += 2 * event.movementX / canvasElement.width / canvas.scale[0];
+				canvas.translate[1] += -2 * event.movementY / canvasElement.height / canvas.scale[1];
+			}
 		}
 	}
 

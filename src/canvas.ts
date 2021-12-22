@@ -180,6 +180,14 @@ export class Canvas {
 		return this.renderer.gl;
 	}
 
+	get width() {
+		return this.samplers.width;
+	}
+
+	get height() {
+		return this.samplers.height;
+	}
+
 	constructor(canvas?: HTMLCanvasElement) {
 		this.renderer = new Renderer({
 			canvas,
@@ -248,12 +256,12 @@ export class Canvas {
 			}
 		}
 
-		if(this.samplers.width > this.samplers.height) {
-			this.ratioScale[0] = this.samplers.width / this.samplers.height;
+		if(this.width > this.height) {
+			this.ratioScale[0] = this.width / this.height;
 			this.ratioScale[1] = 1;
 		} else {
 			this.ratioScale[0] = 1;
-			this.ratioScale[1] = this.samplers.height / this.samplers.width;
+			this.ratioScale[1] = this.height / this.width;
 		}
 	}
 
@@ -326,14 +334,14 @@ export class Canvas {
 
 			for (const template of options.templates) {
 				this.templateProgram.uniforms.uScale.value = new Vec2(
-					this.scale[0] * template.image.width / this.samplers.width,
-					this.scale[1] * template.image.height / this.samplers.height,
+					this.scale[0] * template.image.width / this.width,
+					this.scale[1] * template.image.height / this.height,
 				);
 				this.templateProgram.uniforms.uTranslate.value = new Vec2(
-					(this.translate[0] + template.x / this.samplers.width) * this.samplers.width / template.image.width,
+					(this.translate[0] + Math.round(template.x) / this.width) * this.width / template.image.width,
 					// This will probably get better if canvas begins working in
 					// pixel-space rather than 0.0 – 1.0. Until then: 🤢
-					(this.translate[1] + 1 - (template.image.height + template.y) / this.samplers.height) * this.samplers.height / template.image.height,
+					(this.translate[1] + 1 - (template.image.height + Math.round(template.y)) / this.height) * this.height / template.image.height,
 				);
 				this.templateProgram.uniforms.tTemplate.value = template.image;
 				this.templateProgram.uniforms.uTemplateSize.value = new Vec2(
