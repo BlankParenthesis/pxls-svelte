@@ -13,6 +13,7 @@ uniform float uPaletteSize;
 uniform vec2 uTemplateSize;
 uniform sampler2D tTemplate;
 uniform sampler2D tStyle;
+uniform float uHeatmapDim;
 
 void main() {
 	vec4 templatedata = texture2D(tTemplate, vUv);
@@ -23,6 +24,7 @@ void main() {
 		floor(index / PALETTE_STYLE_WIDTH - 1.0) + PALETTE_STYLE_WIDTH
 	) / PALETTE_STYLE_WIDTH;
 	gl_FragColor = texture2D(tPalette, vec2(index / uPaletteSize, 0.0));
+	gl_FragColor.rgb *= uHeatmapDim;
 	vec2 normalizedUv = mod(vUv * uTemplateSize, 1.0) / PALETTE_STYLE_WIDTH;
 	vec2 styleUv = normalizedUv + indexTranslate;
 	gl_FragColor.a *= texture2D(tStyle, styleUv).a;
@@ -37,6 +39,7 @@ type TemplateUniforms = {
 	tTemplate: { value: Texture };
 	uTemplateSize: { value: Vec2 };
 	tStyle: { value: Texture }
+	uHeatmapDim: { value: number };
 };
 
 export class Template {
@@ -48,7 +51,7 @@ export class Template {
 	) {}
 }
 
-export type TemplateProgram = Program & { uniforms: TemplateUniforms };
+export type TemplateProgram = Omit<Program, "uniforms"> & { uniforms: TemplateUniforms };
 export function newTemplateProgram(gl: OGLRenderingContext, palette: Texture): TemplateProgram {
 	// NOTE: this would be more efficient as a single channel texture,
 	// webgl doesn't support conversion and it's hard to do in js.
@@ -74,7 +77,8 @@ export function newTemplateProgram(gl: OGLRenderingContext, palette: Texture): T
 			tTemplate: { value: new Texture(gl) },
 			uTemplateSize: { value: new Vec2(1, 1) },
 			tStyle: { value: templateStyle },
-		},
+			uHeatmapDim: { value: 0 },
+		} as TemplateUniforms,
 		transparent: true,
 	}) as TemplateProgram;
 }

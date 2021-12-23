@@ -6,7 +6,7 @@
 	const MOUSE_BUTTON_FIVE = 16;
 </script>
 <script lang="ts">
-	import { Texture } from "ogl-typescript";
+	import { Texture, Vec2 } from "ogl-typescript";
 	import { onMount } from "svelte";
 
 	import {
@@ -25,11 +25,17 @@ import { Template } from "./template";
 	let detailLevel = DEFAULT_RENDER_SETTINGS.detailLevel;
 	let templates = DEFAULT_RENDER_SETTINGS.templates;
 	let shapeValid = true;
+	let timestampStart = DEFAULT_RENDER_SETTINGS.timestampRange[0];
+	let timestampEnd = DEFAULT_RENDER_SETTINGS.timestampRange[1];
+	$: timestampRange = new Vec2(timestampStart, timestampEnd);
+	let heatmapDim = DEFAULT_RENDER_SETTINGS.heatmapDim
 
 	$: renderOptions = {
 		autoDetail,
 		detailLevel,
 		templates,
+		timestampRange,
+		heatmapDim,
 	};
 
 	function updateShape(shape: string) {
@@ -146,6 +152,11 @@ import { Template } from "./template";
 		<button disabled="{autoDetail}" on:click="{() => detailLevel += 1}">+</button>
 		<button disabled="{autoDetail}" on:click="{() => detailLevel -= 1}">-</button>
 	</div>
+	<div class="vertical">
+		<label>Heatmap Start<input type="range" min="0" max="3000" bind:value="{timestampStart}"/></label>
+		<label>Heatmap End<input type="range" min="0" max="3000" bind:value="{timestampEnd}"/></label>
+		<label>Heatmap Dimming<input type="range" min="0" max="1" step="0.01" bind:value="{heatmapDim}"/></label>
+	</div>
 </aside>
 
 <style>
@@ -194,22 +205,6 @@ import { Template } from "./template";
 	.vertical {
 		display: flex;
 		flex-direction: column;
-	}
-
-	.grid {
-		display: grid;
-		align-self: center;
-	}
-
-	.one-by-one {
-		grid-template-columns: 1fr;
-	}
-
-	.two-by-two {
-		grid-template-columns: 1fr 1fr;
-	}
-
-	.four-by-four {
-		grid-template-columns: 1fr 1fr 1fr 1fr;
+		align-items: flex-end;
 	}
 </style>

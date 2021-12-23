@@ -5,16 +5,43 @@ import { newTemplateProgram, Template, TemplateProgram } from "./template";
 const CANVAS_FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
 
+#define HEATMAP_COLOR vec3(0.8, 0.2, 0.3)
+
 varying vec2 vUv;
 
 uniform sampler2D tPalette;
 uniform float uPaletteSize;
-uniform sampler2D tCanvas;
+uniform sampler2D tIndices;
+uniform sampler2D tTimestamps;
+uniform vec2 uTimestampRange;
+// FIXME: this is a bad uniform name since it's actually the inverse of what it claims
+uniform float uHeatmapDim;
 
 void main() {
-	vec4 canvasdata = texture2D(tCanvas, vUv);
+	vec4 canvasdata = texture2D(tIndices, vUv);
 	float index = floor(canvasdata.r * 255.0 + 0.5);
-	gl_FragColor = texture2D(tPalette, vec2(index / uPaletteSize, 0.0));
+	vec4 timestampBytes = texture2D(tTimestamps, vUv);
+	vec4 color = texture2D(tPalette, vec2(index / uPaletteSize, 0.0));
+
+	// Our timestamp is packed into a RGBA color.
+	// It's an unsigned 32-bit integer in little endian form.
+	// To unpack it, we have to multiply each value by 256 and shift it left
+	// based on that byte's position. WebGL can't do bitshifting but it turns
+	// out that's the same thing as multiplying by 2 to the power of your
+	// bitshift. We can combine our 256 normalization multiplication and our
+	// bitshift into a single multiplication for each component.
+	float timestamp =
+		timestampBytes.r * 256.0 + // 256 * 2^0
+		timestampBytes.g * 65536.0 + // 256 * 2^8
+		timestampBytes.b * 16777216.0 + // 256 * 2^16
+		timestampBytes.a * 4294967296.0; // 256 * 2^24
+
+	float heatmapIntensity = (timestamp - uTimestampRange.x) / (uTimestampRange.y - uTimestampRange.x);
+	
+	if (heatmapIntensity > 1.0 || heatmapIntensity < 0.0) {
+		heatmapIntensity = 0.0;
+	}
+	gl_FragColor = vec4(mix(color.rgb * uHeatmapDim, HEATMAP_COLOR, heatmapIntensity), color.a);
 }
 `;
 
@@ -40,11 +67,15 @@ export type RenderSettings = {
 	detailLevel: number,
 	autoDetail: boolean,
 	templates: Template[],
+	timestampRange: Vec2,
+	heatmapDim: number,
 };
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
 	detailLevel: 1,
 	autoDetail: true,
 	templates: [],
+	timestampRange: new Vec2(0, 3000),
+	heatmapDim: 0,
 };
 export type Palette = Array<[number, number, number, number]>
 export const DEFAULT_PALETTE = [
@@ -63,7 +94,8 @@ type ChunkMetadata = {
 };
 
 class Sampler {
-	private texture?: Texture = null;
+	private canvas?: Texture = null;
+	private heatmap?: Texture = null;
 
 	constructor(
 		// There's going to be quite a few of these Sampler objects.
@@ -74,11 +106,11 @@ class Sampler {
 	) {}
 
 	load(x: number, y: number): Texture {
-		if(this.texture === null) {
+		if(this.canvas === null) {
 			const gl = this.chunkMetadata.gl;
 			const width = this.chunkMetadata.pixelsWidth;
 			const height = this.chunkMetadata.pixelsHeight;
-			this.texture = new Texture(gl, {
+			this.canvas = new Texture(gl, {
 				image: new Uint8Array(
 					new Array(width * height)
 						.fill(null)
@@ -92,18 +124,55 @@ class Sampler {
 				internalFormat: gl.LUMINANCE,
 			});
 		}
-		return this.texture;
+		return this.canvas;
+	}
+
+	loadHeatmap(x: number, y: number): Texture {
+		if(this.heatmap === null) {
+			const gl = this.chunkMetadata.gl;
+			const width = this.chunkMetadata.pixelsWidth;
+			const height = this.chunkMetadata.pixelsHeight;
+
+			const randomTimestamp = () => {
+				if (Math.random() < 0.05) {
+					const timestamp = Math.floor(Math.random() * 3000);
+					// u32, LE
+					return [
+						timestamp & 255,
+						(timestamp >> 8) & 255,
+						(timestamp >> 16) & 255,
+						(timestamp >> 24) & 255,
+					];
+				} else {
+					return [0, 0, 0, 0];
+				}
+			};
+
+			this.heatmap = new Texture(gl, {
+				image: new Uint8Array(
+					new Array(width * height)
+						.fill(null)
+						.map((_, i) => randomTimestamp())
+						.flat(),
+				),
+				width,
+				height,
+				minFilter: gl.NEAREST,
+				magFilter: gl.NEAREST,
+				format: gl.RGBA,
+				internalFormat: gl.RGBA,
+			});
+		}
+		return this.heatmap;
 	}
 
 	get loaded() {
-		return this.texture !== null;
+		return this.canvas !== null || this.heatmap !== null;
 	}
 
 	unload() {
-		if (this.loaded) {
-			this.texture
-			this.texture = null;
-		}
+		this.canvas = null;
+		this.heatmap = null;
 	}
 }
 
@@ -159,9 +228,12 @@ type CanvasUniforms = {
 	uOutlineStripe: { value: number };
 	tPalette: { value: Texture };
 	uPaletteSize: { value: number };
-	tCanvas: { value: Texture };
+	tIndices: { value: Texture };
+	tTimestamps: { value: Texture };
+	uTimestampRange: { value: Vec2 };
+	uHeatmapDim: { value: number };
 };
-type CanvasProgram = Program & { uniforms: CanvasUniforms };
+type CanvasProgram = Omit<Program, "uniforms"> & { uniforms: CanvasUniforms };
 
 export class Canvas {
 	private readonly renderer: Renderer;
@@ -215,7 +287,10 @@ export class Canvas {
 			uOutlineStripe: { value: 8 },
 			tPalette: { value: palette },
 			uPaletteSize: { value: palette.width },
-			tCanvas: { value: new Texture(gl) },
+			tIndices: { value: new Texture(gl) },
+			tTimestamps: { value: new Texture(gl) },
+			uTimestampRange: { value: DEFAULT_RENDER_SETTINGS.timestampRange },
+			uHeatmapDim: { value: 1 - DEFAULT_RENDER_SETTINGS.heatmapDim },
 		};
 
 		this.program = new Program(gl, {
@@ -281,7 +356,11 @@ export class Canvas {
 		options.detailLevel = detailLevel = Math.max(1, Math.min(detailLevel, this.samplers.levels.length - 1));
 		
 		return requestAnimationFrame((timestamp: DOMHighResTimeStamp) => {
-			this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);			
+			this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+			
+			this.program.uniforms.uTimestampRange.value = options.timestampRange;
+			this.program.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
+			this.templateProgram.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
 
 			if (detailLevel > 0) {
 				const lod = this.samplers.levels[detailLevel];
@@ -306,7 +385,8 @@ export class Canvas {
 					const oy = y - dy;
 					if (lod[oy] && lod[oy][ox]) {
 						this.program.uniforms.uTranslate.value = new Vec2(translate[0] + dx, translate[1] + dy);
-						this.program.uniforms.tCanvas.value = lod[oy][ox].load(ox, oy);
+						this.program.uniforms.tIndices.value = lod[oy][ox].load(ox, oy);
+						this.program.uniforms.tTimestamps.value = lod[oy][ox].loadHeatmap(ox, oy);
 						
 						this.renderer.render({
 							scene: this.mesh,
@@ -326,7 +406,8 @@ export class Canvas {
 			} else {
 				this.program.uniforms.uTranslate.value = new Vec2(this.translate[0], this.translate[1]);
 				this.program.uniforms.uScale.value = this.scale;
-				this.program.uniforms.tCanvas.value = this.samplers.levels[0][0][0].load(0, 0);
+				this.program.uniforms.tIndices.value = this.samplers.levels[0][0][0].load(0, 0);
+				this.program.uniforms.tTimestamps.value = this.samplers.levels[0][0][0].loadHeatmap(0, 0);
 				this.renderer.render({
 					scene: this.mesh,
 				});
