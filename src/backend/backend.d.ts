@@ -64,5 +64,5 @@ export interface Board {
 	timestamps(sectorIndices: number[]): Promise<Uint32Array[]>;
 	mask(sectorIndices: number[]): Promise<Uint8Array[]>;
 	// Not exposed by the old Pxls API.
-	initial(sectorIndices: number[]): Promise<Uint8Array[] | null>;
+	initial(sectorIndices: number[]): Promise<Uint8Array[]> | null;
 }

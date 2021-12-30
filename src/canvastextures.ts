@@ -21,7 +21,8 @@ class SectorTextures {
 	) {}
 
 	private newTexture8(): Texture {
-		return new Texture(this.gl, {
+		this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
+		const texture = new Texture(this.gl, {
 			image: new Uint8Array(1),
 			width: 1,
 			height: 1,
@@ -30,6 +31,8 @@ class SectorTextures {
 			format: this.gl.LUMINANCE,
 			internalFormat: this.gl.LUMINANCE,
 		});
+		this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 4);
+		return texture;
 	}
 
 	private newTexture32(): Texture {
@@ -44,23 +47,29 @@ class SectorTextures {
 		});
 	}
 
+	private lazyMerge(texture: Texture, data: Promise<Uint8Array[] | Uint32Array[]>) {
+		const gl = this.gl;
+		const width = this.width;
+		const height = this.height;
+		const instructions = this.sectorCreationInstructions;
+
+		data.then(data => {
+			const size = data[0].BYTES_PER_ELEMENT;
+			texture.image = instructions.merge(data);
+			texture.width = width;
+			texture.height = height;
+			gl.pixelStorei(gl.UNPACK_ALIGNMENT, size);
+			texture.update();
+			gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+		}).catch(console.error);
+	}
+
 	colors(): Texture {
 		if (this.colorsCached === undefined) {
-			const gl = this.gl;
-			const texture = this.colorsCached = this.newTexture8();
-			const width = this.width;
-			const height = this.height;
-			const instructions = this.sectorCreationInstructions;
-			this.board.colors(instructions.positions)
-				.then(colors => {
-					texture.image = instructions.merge(colors);
-					texture.width = width;
-					texture.height = height;
-					gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-					texture.update();
-					gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-				})
-				.catch(console.error);
+			this.lazyMerge(
+				this.colorsCached = this.newTexture8(),
+				this.board.colors(this.sectorCreationInstructions.positions),
+			);
 		}
 
 		return this.colorsCached;
@@ -68,7 +77,10 @@ class SectorTextures {
 
 	timestamps(): Texture {
 		if (this.timestampsCached === undefined) {
-			this.timestampsCached = this.newTexture32();
+			this.lazyMerge(
+				this.timestampsCached = this.newTexture32(),
+				this.board.timestamps(this.sectorCreationInstructions.positions),
+			);
 		}
 
 		return this.timestampsCached;
@@ -76,15 +88,26 @@ class SectorTextures {
 
 	mask(): Texture {
 		if (this.maskCached === undefined) {
-			this.maskCached = this.newTexture8();
+			this.lazyMerge(
+				this.maskCached = this.newTexture8(),
+				this.board.mask(this.sectorCreationInstructions.positions),
+			);
 		}
 
 		return this.maskCached;
 	}
 
-	initial(): Texture {
+	initial(): Texture | null {
 		if (this.initialCached === undefined) {
-			this.initialCached = this.newTexture8();
+			const initial = this.board.initial(this.sectorCreationInstructions.positions);
+			if (initial === null) {
+				return null;
+			}
+
+			this.lazyMerge(
+				this.initialCached = this.newTexture8(),
+				initial,
+			);
 		}
 
 		return this.initialCached;

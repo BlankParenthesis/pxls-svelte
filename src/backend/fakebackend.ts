@@ -46,7 +46,7 @@ export class FakeBackend implements Backend {
 		await Promise.resolve(1);
 		yield new FakeBoardChoice(
 			"fake_canvas",
-			new Shape([[1, 1], [3, 2], [2, 2], [1, 1]]),
+			new Shape([[1, 1], [3, 2], [2, 2], [4, 4]]),
 			new Map([
 				new Color("White", [255, 255, 255, 255]),
 				new Color("Blue", [30, 120, 255, 255]),
@@ -90,6 +90,7 @@ export class FakeBackend implements Backend {
 
 export class FakeBoard implements Board {
 	private readonly colorsCache = new Map<number, Uint8Array>();
+	private readonly timestampsCache = new Map<number, Uint32Array>();
 
 	constructor(
 		private readonly boardinfo: BoardInfo,
@@ -124,11 +125,26 @@ export class FakeBoard implements Board {
 		return data;
 	}
 
+	private timestampSector(position: number): Uint32Array {
+		let data = this.timestampsCache.get(position);
+		if (data === undefined) {
+			data = new Uint32Array(this.sectorSize).map(() => {
+				if(Math.random() < 0.20) {
+					return Math.floor(Math.random() * 2850);
+				} else {
+					return 0;
+				}
+			});
+			this.timestampsCache.set(position, data);
+		}
+		return data;
+	}
+
 	colors(sectorIndices: number[]): Promise<Uint8Array[]> {
 		return Promise.resolve(sectorIndices.map(i => this.colorSector(i)));
 	}
 	timestamps(sectorIndices: number[]): Promise<Uint32Array[]> {
-		throw new Error("Method not implemented.");
+		return Promise.resolve(sectorIndices.map(i => this.timestampSector(i)));
 	}
 	mask(sectorIndices: number[]): Promise<Uint8Array[]> {
 		throw new Error("Method not implemented.");

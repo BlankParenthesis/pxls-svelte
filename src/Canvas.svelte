@@ -22,7 +22,7 @@
 	let timestampStart = DEFAULT_RENDER_SETTINGS.timestampRange[0];
 	let timestampEnd = DEFAULT_RENDER_SETTINGS.timestampRange[1];
 	$: timestampRange = new Vec2(timestampStart, timestampEnd);
-	let heatmapDim = DEFAULT_RENDER_SETTINGS.heatmapDim
+	let heatmapDim = DEFAULT_RENDER_SETTINGS.heatmapDim;
 
 	$: renderOptions = {
 		autoDetail,

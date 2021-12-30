@@ -11,21 +11,31 @@ export class MergeInstructions {
 		readonly positions: number[],
 	) {}
 
-	// TODO: generalize for any typedarray
-	merge(sectors: Uint8Array[]): Uint8Array {
-		const [width, height] = this.size;
-		const buffer = new Uint8Array(width * height).fill(10);
-		const [sectorWidth, sectorHeight] = this.sectorSize;
+	merge(sectors: Uint8Array[] | Uint32Array[]): Uint8Array {
+		const bytesPer = sectors[0].BYTES_PER_ELEMENT;
+		const is8 = bytesPer === 1;
+
+		const width = bytesPer * this.size[0];
+		const height = this.size[1];
+		const buffer = new Uint8Array(width * height);
+		
+		const sectorWidth = bytesPer * this.sectorSize[0];
+		const sectorHeight = this.sectorSize[1];
 		const sectorSize = sectorWidth * sectorHeight;
 		const sectorsX = width / sectorWidth;
+		
 		const firstSector = this.positions[0];
+		
+		const sectors8 = is8 ?
+			(sectors as Uint8Array[]) :
+			(sectors as Uint32Array[]).map(s => new Uint8Array(s.buffer));
 
 		for (let position = 0; position < sectors.length; position++) {
 			const relativePosition = this.positions[position] - firstSector;
 			const x = relativePosition % sectorsX;
 			const y = Math.floor(relativePosition / sectorsX);
 			const start = x * sectorWidth + y * sectorSize * sectorsX;
-			const sector = sectors[relativePosition];
+			const sector = sectors8[relativePosition];
 			
 			for (let y = 0; y < sectorHeight; y++) {
 				const sliceStart = y * sectorWidth;
