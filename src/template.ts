@@ -52,7 +52,7 @@ export class Template {
 }
 
 export type TemplateProgram = Omit<Program, "uniforms"> & { uniforms: TemplateUniforms };
-export function newTemplateProgram(gl: OGLRenderingContext, palette: Texture): TemplateProgram {
+export function newTemplateProgram(gl: OGLRenderingContext): TemplateProgram {
 	// NOTE: this would be more efficient as a single channel texture,
 	// webgl doesn't support conversion and it's hard to do in js.
 	const templateStyle = new Texture(gl, {
@@ -63,7 +63,7 @@ export function newTemplateProgram(gl: OGLRenderingContext, palette: Texture): T
 	const styleImage = new Image();
 	styleImage.onload = () => {
 		templateStyle.image = styleImage;
-	}
+	};
 	styleImage.src = "./large_template_style.png";
 
 	return new Program(gl, {
@@ -72,8 +72,8 @@ export function newTemplateProgram(gl: OGLRenderingContext, palette: Texture): T
 		uniforms: {
 			uTranslate: { value: new Vec2() },
 			uScale: { value: new Vec2(1, 1) },
-			tPalette: { value: palette },
-			uPaletteSize: { value: palette.width },
+			tPalette: { value: new Texture(gl) },
+			uPaletteSize: { value: 1 },
 			tTemplate: { value: new Texture(gl) },
 			uTemplateSize: { value: new Vec2(1, 1) },
 			tStyle: { value: templateStyle },

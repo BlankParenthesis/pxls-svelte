@@ -1,6 +1,11 @@
 import { Texture, Vec2, Renderer, Program, Mesh, OGLRenderingContext } from "ogl-typescript";
+import type { Board } from "./backend/backend";
 import { QUAD_VERTEX_SHADER, Quad } from "./gl";
+import { toTexture } from "./palette";
+import type { Shape } from "./shape";
 import { newTemplateProgram, Template, TemplateProgram } from "./template";
+import { CanvasTextures } from "./canvastextures";
+import { nextFrame } from "./util";
 
 const CANVAS_FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
@@ -45,7 +50,7 @@ void main() {
 }
 `;
 
-function fromTranslateToTile(coord, scaleModifier) {
+function fromTranslateToTile(coord: number, scaleModifier: number) {
 	const unrounded = coord * scaleModifier + 0.5;
 	const rounded = Math.ceil(unrounded);
 	// Modulo starts working on the integer mark. (1%1 == 0, not 1)
@@ -61,8 +66,6 @@ function fromTranslateToTile(coord, scaleModifier) {
 	}
 }
 
-export type Shape = Array<[number, number]>;
-export const DEFAULT_SHAPE: Shape = [[1, 1],[4, 4], [200, 200]];
 export type RenderSettings = {
 	detailLevel: number,
 	autoDetail: boolean,
@@ -77,13 +80,6 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
 	timestampRange: new Vec2(0, 3000),
 	heatmapDim: 0,
 };
-export type Palette = Array<[number, number, number, number]>
-export const DEFAULT_PALETTE = [
-	[255, 255, 255, 255],
-	[30, 120, 255, 255],
-	[255, 120, 180, 255],
-	[100, 255, 140, 255],
-];
 
 type ChunkMetadata = {
 	gl: OGLRenderingContext;
@@ -92,134 +88,6 @@ type ChunkMetadata = {
 	pixelsWidth: number;
 	pixelsHeight: number;
 };
-
-class Sampler {
-	private canvas?: Texture = null;
-	private heatmap?: Texture = null;
-
-	constructor(
-		// There's going to be quite a few of these Sampler objects.
-		// They could all store copies of all the metadata in a flat structure,
-		// but since they share the same data, it's more memory efficient for them
-		// all to store a reference to a shared object.
-		private readonly chunkMetadata: ChunkMetadata,
-	) {}
-
-	load(x: number, y: number): Texture {
-		if(this.canvas === null) {
-			const gl = this.chunkMetadata.gl;
-			const width = this.chunkMetadata.pixelsWidth;
-			const height = this.chunkMetadata.pixelsHeight;
-			this.canvas = new Texture(gl, {
-				image: new Uint8Array(
-					new Array(width * height)
-						.fill(null)
-						.map((_, i) => (x * width + i % width) % 4),
-				),
-				width,
-				height,
-				minFilter: gl.NEAREST,
-				magFilter: gl.NEAREST,
-				format: gl.LUMINANCE,
-				internalFormat: gl.LUMINANCE,
-			});
-		}
-		return this.canvas;
-	}
-
-	loadHeatmap(x: number, y: number): Texture {
-		if(this.heatmap === null) {
-			const gl = this.chunkMetadata.gl;
-			const width = this.chunkMetadata.pixelsWidth;
-			const height = this.chunkMetadata.pixelsHeight;
-
-			const randomTimestamp = () => {
-				if (Math.random() < 0.05) {
-					const timestamp = Math.floor(Math.random() * 3000);
-					// u32, LE
-					return [
-						timestamp & 255,
-						(timestamp >> 8) & 255,
-						(timestamp >> 16) & 255,
-						(timestamp >> 24) & 255,
-					];
-				} else {
-					return [0, 0, 0, 0];
-				}
-			};
-
-			this.heatmap = new Texture(gl, {
-				image: new Uint8Array(
-					new Array(width * height)
-						.fill(null)
-						.map((_, i) => randomTimestamp())
-						.flat(),
-				),
-				width,
-				height,
-				minFilter: gl.NEAREST,
-				magFilter: gl.NEAREST,
-				format: gl.RGBA,
-				internalFormat: gl.RGBA,
-			});
-		}
-		return this.heatmap;
-	}
-
-	get loaded() {
-		return this.canvas !== null || this.heatmap !== null;
-	}
-
-	unload() {
-		this.canvas = null;
-		this.heatmap = null;
-	}
-}
-
-class LoDSampler {
-	readonly levels: Array<Sampler[][]>;
-	readonly width: number;
-	readonly height: number;
-
-	constructor(gl: OGLRenderingContext, shape: Shape) {
-		this.width = shape.reduce((width, dim) => width * dim[0], 1);
-		this.height = shape.reduce((height, dim) => height * dim[1], 1);
-
-		const configuration: ChunkMetadata[] = new Array(shape.length)
-			.fill(shape)
-			.map((shape: Shape, lod) => {
-				const chunkArragement = shape
-					.slice(0, lod)
-					.reduce((acc, next) => [acc[0] * next[0], acc[1] * next[1]], [1, 1]);
-				const chunkSize = shape
-					.slice(lod, shape.length)
-					.reduce((acc, next) => [acc[0] * next[0], acc[1] * next[1]], [1, 1]);
-
-				return {
-					gl,
-					arrangementWidth: chunkArragement[0],
-					arrangementHeight: chunkArragement[1],
-					pixelsWidth: chunkSize[0],
-					pixelsHeight: chunkSize[1],
-				};
-			});
-
-		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-
-		this.levels = configuration.map(meta => 
-			new Array(meta.arrangementHeight)
-				.fill(null)
-				.map((_, chunkY) => new Array(meta.arrangementWidth)
-					.fill(null)
-					.map((_, chunkX) => {
-						return new Sampler(meta);
-					}),
-				),
-		);
-
-		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-	}
-}
 
 type CanvasUniforms = {
 	uTranslate: { value: Vec2 };
@@ -235,13 +103,23 @@ type CanvasUniforms = {
 };
 type CanvasProgram = Omit<Program, "uniforms"> & { uniforms: CanvasUniforms };
 
+interface RenderInfo {
+	shape: Shape,
+	size: [number, number];
+	scale: Vec2;
+	paletteTexture: Texture;
+	timestamp: DOMHighResTimeStamp;
+	detailLevel: number;
+}
+
 export class Canvas {
+	private palette: Promise<Texture>;
 	private readonly renderer: Renderer;
 	private readonly program: CanvasProgram;
 	private readonly templateProgram: TemplateProgram;
 	private mesh: Mesh;
 	private templateMesh: Mesh;
-	private samplers: LoDSampler;
+	private textures: CanvasTextures;
 
 	zoomScale = new Vec2(1, 1);
 	screenScale = new Vec2(1, 1);
@@ -252,15 +130,15 @@ export class Canvas {
 		return this.renderer.gl;
 	}
 
-	get width() {
-		return this.samplers.width;
+	async size(): Promise<[number, number]> {
+		return (await this.board.info()).shape.size();
 	}
 
-	get height() {
-		return this.samplers.height;
-	}
-
-	constructor(canvas?: HTMLCanvasElement) {
+	constructor(
+		private board: Board,
+		private shape: Shape,
+		canvas?: HTMLCanvasElement,
+	) {
 		this.renderer = new Renderer({
 			canvas,
 			autoClear: false,
@@ -268,25 +146,22 @@ export class Canvas {
 		});
 		const gl = this.gl;
 
+		this.palette = (async () => {
+			const { palette } = await board.info();
+			return toTexture(gl, palette);
+		})();
+
 		gl.clearColor(0, 0, 0, 1);
 
-		const palette = new Texture(gl, {
-			image: new Uint8Array(DEFAULT_PALETTE.flat()),
-			width: DEFAULT_PALETTE.length,
-			height: 1,
-			magFilter: gl.NEAREST,
-			minFilter: gl.NEAREST,
-		});
-
-		this.samplers = new LoDSampler(gl, DEFAULT_SHAPE);
+		this.textures = new CanvasTextures(gl, board, shape);
 
 		const uniforms: CanvasUniforms = {
 			uTranslate: { value: new Vec2(this.translate[0], this.translate[1]) },
 			uScale: { value: new Vec2(this.scale[0], this.scale[1]) },
 			uOutline: { value: 0 },
 			uOutlineStripe: { value: 8 },
-			tPalette: { value: palette },
-			uPaletteSize: { value: palette.width },
+			tPalette: { value: new Texture(gl) },
+			uPaletteSize: { value: 1 },
 			tIndices: { value: new Texture(gl) },
 			tTimestamps: { value: new Texture(gl) },
 			uTimestampRange: { value: DEFAULT_RENDER_SETTINGS.timestampRange },
@@ -299,140 +174,166 @@ export class Canvas {
 			uniforms,
 		}) as CanvasProgram;
 
-		this.templateProgram = newTemplateProgram(gl, palette);
+		this.templateProgram = newTemplateProgram(gl);
 
 		const geometry = new Quad(gl);
 		this.mesh = new Mesh(this.gl, { geometry, program: this.program });
 		this.templateMesh = new Mesh(this.gl, { geometry, program: this.templateProgram });
 	}
 
-	reshape(shape: Shape) {
-		this.samplers = new LoDSampler(this.gl, shape);
-		this.setSize(this.gl.canvas.width, this.gl.canvas.height);
-	}
-
 	get scale() {
 		return new Vec2(
 			this.zoomScale[0] * this.screenScale[0] * this.ratioScale[0],
 			this.zoomScale[1] * this.screenScale[1] * this.ratioScale[1],
-		)
+		);
 	}
 
-	setSize(width: number, height: number) {
-		if (this.gl.canvas.width !== width || this.gl.canvas.height !== height) {
-			this.renderer.setSize(width, height);
+	async setSize(newWidth: number, newHeight: number) {
+		if (this.gl.canvas.width !== newWidth || this.gl.canvas.height !== newHeight) {
+			this.renderer.setSize(newWidth, newHeight);
 			
-			if (width > height) {
+			if (newWidth > newHeight) {
 				this.screenScale[0] = 1;
-				this.screenScale[1] = width / height;
+				this.screenScale[1] = newWidth / newHeight;
 			} else {
-				this.screenScale[0] = height / width;
+				this.screenScale[0] = newHeight / newWidth;
 				this.screenScale[1] = 1;
 			}
 		}
 
-		if(this.width > this.height) {
-			this.ratioScale[0] = this.width / this.height;
+		const [width, height] = await this.size();
+
+		if(width > height) {
+			this.ratioScale[0] = width / height;
 			this.ratioScale[1] = 1;
 		} else {
 			this.ratioScale[0] = 1;
-			this.ratioScale[1] = this.height / this.width;
+			this.ratioScale[1] = height / width;
 		}
 	}
 
-	render(options = DEFAULT_RENDER_SETTINGS) {
-		let detailLevel = options.detailLevel;
-		if (options.autoDetail) {
-			detailLevel = 0;
-			let [x, y] = this.scale;
-			x /= 2;
-			y /= 2;
-			let lod = this.samplers.levels[detailLevel + 1];
-			while (lod && x > lod[0].length && y > lod.length) {
-				detailLevel += 1;
-				lod = this.samplers.levels[detailLevel + 1];
-			}
+	private detailLevel(shape: Shape) {
+		// Length is 1 more than max index and the last index is 1-to-1.
+		// So minus 2.
+		const maxDetailLevel = shape.depth - 2;
+		let detailLevel = 0;
+		let [x, y] = this.scale;
+		x /= 2;
+		y /= 2;
+		let dimensions = shape.slice(0, detailLevel + 2).size();
+		while (detailLevel < maxDetailLevel && x > dimensions[0] && y > dimensions[1]) {
+			detailLevel += 1;
+			dimensions = shape.slice(0, detailLevel + 2).size();
 		}
-		options.detailLevel = detailLevel = Math.max(1, Math.min(detailLevel, this.samplers.levels.length - 1));
-		
-		return requestAnimationFrame((timestamp: DOMHighResTimeStamp) => {
-			this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		return Math.max(0, Math.min(detailLevel, maxDetailLevel));
+	}
+
+	private async prepareToRender(): Promise<RenderInfo> {
+		const { shape } = (await this.board.info());
+		const detailLevel = this.detailLevel(shape);
+		const paletteTexture = await this.palette;
+		const size = shape.size();
+		const scale = this.scale;
+
+		// NOTE: must be last
+		const timestamp = await nextFrame();
+
+		return {
+			shape,
+			size,
+			scale,
+			timestamp,
+			paletteTexture,
+			detailLevel,
+		};
+	}
+
+	private renderCanvas(
+		{ paletteTexture, detailLevel, shape }: RenderInfo,
+	) {
+		this.program.uniforms.tPalette.value = paletteTexture;
+		this.program.uniforms.uPaletteSize.value = paletteTexture.width - 1;
+
+		// NOTE: there is a potential fast-path here when rendering detail level
+		// 0 (the full canvas). In that case, we only need to render one quad
+		// and scale/translate becomes simple, but it adds a condition and
+		// increases the indentation level, so I have elected to not use it for
+		// now.
+
+		const scaleModifier = shape.slice(0, detailLevel + 1).size();
+		const translate = new Vec2(...[this.translate[0], this.translate[1]].map((translate, i) => {
+			const scaledTranslate = translate * scaleModifier[i];
 			
-			this.program.uniforms.uTimestampRange.value = options.timestampRange;
-			this.program.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
-			this.templateProgram.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
+			const offset = scaledTranslate >= -0.5 ? 1.5 : 0.5;
 
-			if (detailLevel > 0) {
-				const lod = this.samplers.levels[detailLevel];
+			return (scaledTranslate + offset) % 1 - offset;
+		}));
+		this.program.uniforms.uScale.value = new Vec2(...[this.scale[0], this.scale[1]].map((scale, i) => {
+			return scale / scaleModifier[i];
+		}));
 
-				const scaleModifier = [lod[0].length, lod.length];
-				const translate = new Vec2(...[this.translate[0], this.translate[1]].map((translate, i) => {
-					const scaledTranslate = translate * scaleModifier[i];
-					
-					const offset = scaledTranslate >= -0.5 ? 1.5 : 0.5;
+		const x = -fromTranslateToTile(this.translate[0], scaleModifier[0]);
+		const y = scaleModifier[1] + fromTranslateToTile(this.translate[1], scaleModifier[1]) - 1;
 
-					return (scaledTranslate + offset) % 1 - offset;
-				}));
-				this.program.uniforms.uScale.value = new Vec2(...[this.scale[0], this.scale[1]].map((scale, i) => {
-					return scale / scaleModifier[i];
-				}));
-
-				const x = -fromTranslateToTile(this.translate[0], scaleModifier[0]);
-				const y = scaleModifier[1] + fromTranslateToTile(this.translate[1], scaleModifier[1]) - 1;
-
-				for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
-					const ox = x + dx;
-					const oy = y - dy;
-					if (lod[oy] && lod[oy][ox]) {
-						this.program.uniforms.uTranslate.value = new Vec2(translate[0] + dx, translate[1] + dy);
-						this.program.uniforms.tIndices.value = lod[oy][ox].load(ox, oy);
-						this.program.uniforms.tTimestamps.value = lod[oy][ox].loadHeatmap(ox, oy);
-						
-						this.renderer.render({
-							scene: this.mesh,
-						});
-					}
-				}
-
-				const radius = 2;
-
-				for (let oy = 0; oy < lod.length; oy++) {
-					for (let ox = 0; ox < lod[oy].length; ox++) {
-						if (lod[oy][ox].loaded && (Math.abs(y - oy) > radius || Math.abs(x - ox) > radius)) {
-							lod[oy][ox].unload();
-						}
-					}
-				}
-			} else {
-				this.program.uniforms.uTranslate.value = new Vec2(this.translate[0], this.translate[1]);
-				this.program.uniforms.uScale.value = this.scale;
-				this.program.uniforms.tIndices.value = this.samplers.levels[0][0][0].load(0, 0);
-				this.program.uniforms.tTimestamps.value = this.samplers.levels[0][0][0].loadHeatmap(0, 0);
+		for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+			const ox = x + dx;
+			const oy = y - dy;
+			const textures = this.textures.get(detailLevel, ox, oy);
+			if (textures !== null) {
+				this.program.uniforms.uTranslate.value = new Vec2(translate[0] + dx, translate[1] + dy);
+				this.program.uniforms.tIndices.value = textures.colors();
+				this.program.uniforms.tTimestamps.value = textures.timestamps();
+				
 				this.renderer.render({
 					scene: this.mesh,
 				});
 			}
+		}
+		
+		this.textures.prune();
+	}
 
-			for (const template of options.templates) {
-				this.templateProgram.uniforms.uScale.value = new Vec2(
-					this.scale[0] * template.image.width / this.width,
-					this.scale[1] * template.image.height / this.height,
-				);
-				this.templateProgram.uniforms.uTranslate.value = new Vec2(
-					(this.translate[0] + Math.round(template.x) / this.width) * this.width / template.image.width,
-					// This will probably get better if canvas begins working in
-					// pixel-space rather than 0.0 – 1.0. Until then: 🤢
-					(this.translate[1] + 1 - (template.image.height + Math.round(template.y)) / this.height) * this.height / template.image.height,
-				);
-				this.templateProgram.uniforms.tTemplate.value = template.image;
-				this.templateProgram.uniforms.uTemplateSize.value = new Vec2(
-					template.image.width,
-					template.image.height,
-				);
-				this.renderer.render({
-					scene: this.templateMesh,
-				});
-			}
-		})
+	private renderTemplates(
+		{ size, paletteTexture }: RenderInfo,
+		templates: Template[],
+	) {
+		const [width, height] = size;
+		this.templateProgram.uniforms.tPalette.value = paletteTexture;
+		this.templateProgram.uniforms.uPaletteSize.value = paletteTexture.width;
+
+		for (const template of templates) {
+			this.templateProgram.uniforms.uScale.value = new Vec2(
+				this.scale[0] * template.image.width / width,
+				this.scale[1] * template.image.height / height,
+			);
+			this.templateProgram.uniforms.uTranslate.value = new Vec2(
+				(this.translate[0] + Math.round(template.x) / width) * width / template.image.width,
+				// This will probably get better if canvas begins working in
+				// pixel-space rather than 0.0 – 1.0. Until then: 🤢
+				(this.translate[1] + 1 - (template.image.height + Math.round(template.y)) / height) * height / template.image.height,
+			);
+			this.templateProgram.uniforms.tTemplate.value = template.image;
+			this.templateProgram.uniforms.uTemplateSize.value = new Vec2(
+				template.image.width,
+				template.image.height,
+			);
+			this.renderer.render({
+				scene: this.templateMesh,
+			});
+		}
+	}
+
+	async render(options = DEFAULT_RENDER_SETTINGS) {
+		const renderInfo = await this.prepareToRender();
+		
+		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		
+		// TODO: move into render functions using settings access.
+		this.program.uniforms.uTimestampRange.value = options.timestampRange;
+		this.program.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
+		this.templateProgram.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
+
+		this.renderCanvas(renderInfo);
+		this.renderTemplates(renderInfo, options.templates);
 	}
 }

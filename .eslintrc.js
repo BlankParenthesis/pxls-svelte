@@ -39,5 +39,6 @@ module.exports = {
 		"@typescript-eslint/indent": ["error", "tab", { "SwitchCase": 1 }],
 		"quotes": ["error", "double"],
 		"comma-dangle": ["error", "always-multiline"],
+		"semi": "error",
 	},
-}
+};

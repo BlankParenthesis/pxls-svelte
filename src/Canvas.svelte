@@ -8,15 +8,10 @@
 <script lang="ts">
 	import { Texture, Vec2 } from "ogl-typescript";
 	import { onMount } from "svelte";
-
-	import {
-		Canvas,
-		DEFAULT_SHAPE,
-		DEFAULT_RENDER_SETTINGS,
-		Shape,
-		RenderSettings,
-	} from "./canvas";
-import { Template } from "./template";
+	import type { Board } from "./backend/backend";
+	import { FakeBackend } from "./backend/fakebackend";
+	import { Canvas, DEFAULT_RENDER_SETTINGS, RenderSettings } from "./canvas";
+	import { Template } from "./template";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
@@ -24,7 +19,6 @@ import { Template } from "./template";
 	let autoDetail = DEFAULT_RENDER_SETTINGS.autoDetail;
 	let detailLevel = DEFAULT_RENDER_SETTINGS.detailLevel;
 	let templates = DEFAULT_RENDER_SETTINGS.templates;
-	let shapeValid = true;
 	let timestampStart = DEFAULT_RENDER_SETTINGS.timestampRange[0];
 	let timestampEnd = DEFAULT_RENDER_SETTINGS.timestampRange[1];
 	$: timestampRange = new Vec2(timestampStart, timestampEnd);
@@ -38,29 +32,9 @@ import { Template } from "./template";
 		heatmapDim,
 	};
 
-	function updateShape(shape: string) {
-		try {
-			const parsed = JSON.parse(shape) as unknown;
-			if (!Array.isArray(parsed)) {
-				throw new Error();
-			}
-			if (!parsed.every(e => Array.isArray(e)
-				&& e.length === 2
-				&& e.every(n => typeof n === "number"))
-			) {
-				throw new Error();
-			}
-			
-			shapeValid = true;
-			canvas.reshape(parsed as Shape);
-			canvas.render(renderOptions as RenderSettings);
-		} catch(e) {
-			shapeValid = false;
-		}
-	}
-
 	$: if (canvas) {
-		canvas.render(renderOptions as RenderSettings);
+		canvas.render(renderOptions as RenderSettings)
+			.catch(console.error);
 		renderOptions = renderOptions;
 	}
 
@@ -108,13 +82,26 @@ import { Template } from "./template";
 		canvas.translate[1] += zoomCenterY / canvas.scale[1];
 	}
 
-	function resize() {
-		canvas.setSize(window.innerWidth, window.innerHeight);
+	async function resize() {
+		await canvas.setSize(window.innerWidth, window.innerHeight);
 		canvas = canvas;
 	}
 
-	onMount(() => {
-		canvas = new Canvas(canvasElement);
+	onMount(async () => {
+		const backend = new FakeBackend();
+
+		let board: Board | null = null;
+		for await (const choice of backend.availableBoards()) {
+			board = await choice.connect();
+			break;
+		}
+		
+		if(board === null) {
+			throw new Error("Fake backend should produce at least one board");
+		}
+
+		const { shape } = await board.info();
+		canvas = new Canvas(board, shape, canvasElement);
 		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 1);
 		const template = new Template(new Texture(canvas.gl, {
 			image: new Uint8Array(new Array(200 * 200).fill(1).map((_, i) => i % 4)),
@@ -129,7 +116,7 @@ import { Template } from "./template";
 		template.y = 100;
 		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 4);
 		templates.push(template);
-		resize();
+		await resize();
 	})
 </script>
 
@@ -137,21 +124,6 @@ import { Template } from "./template";
 
 <canvas on:mousemove="{drag}" on:wheel="{zoom}" bind:this="{canvasElement}" />
 <aside id="buttons">
-	<div>
-		<label>
-			{#if !shapeValid }
-			<span style="font-size: xxx-large; margin-right: 0.15em; margin-top:-.15em; line-height:.5em" title="Invalid shape">⚠</span>
-			{/if}
-			<span style="margin-right: 0.15em;">Shape</span>
-			<input type="text" value="{JSON.stringify(DEFAULT_SHAPE)}" on:change="{e => updateShape(e.target.value)}" />
-		</label>
-	</div>
-	<div>
-		<output><abbr title="Level of Detail">LoD</abbr>: {renderOptions.detailLevel}</output>
-		<label><input bind:checked="{autoDetail}" type="checkbox"/>Auto</label>
-		<button disabled="{autoDetail}" on:click="{() => detailLevel += 1}">+</button>
-		<button disabled="{autoDetail}" on:click="{() => detailLevel -= 1}">-</button>
-	</div>
 	<div class="vertical">
 		<label>Heatmap Start<input type="range" min="0" max="3000" bind:value="{timestampStart}"/></label>
 		<label>Heatmap End<input type="range" min="0" max="3000" bind:value="{timestampEnd}"/></label>
