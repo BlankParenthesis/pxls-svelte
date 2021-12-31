@@ -1,6 +1,7 @@
 import { Color, Palette } from "../palette";
 import { Shape } from "../shape";
 import type { Backend, Board, BoardChoice, BoardInfo, BoardUsersInfo, Permissons, Placement } from "./backend";
+import { CachedBoard } from "./cachedbackend";
 
 interface PxlsInfo {
 	canvasCode: string;
@@ -105,26 +106,17 @@ export class PxlsBackend implements Backend {
 	}
 }
 
-class PxlsBoard implements Board {
-	private infoCache?: Promise<BoardInfo>;
-
+class PxlsBoard extends CachedBoard {
 	constructor(
 		private site: URL,
 	) {
-	}
-
-	info(): Promise<BoardInfo> {
-		if(this.infoCache === undefined) {
-			this.infoCache = PxlsBoardInfo.fetch(this.site);
-		}
-
-		return this.infoCache;
+		super();
 	}
 
 	users(): Promise<BoardUsersInfo> {
 		throw new Error("Method not implemented.");
 	}
-	pixels(): AsyncGenerator<Placement, any, unknown> {
+	pixels(): AsyncGenerator<Placement> {
 		throw new Error("Method not implemented.");
 	}
 	lookup(position: number): Promise<Placement | null> {
@@ -134,46 +126,51 @@ class PxlsBoard implements Board {
 		throw new Error("Method not implemented.");
 	}
 
-	async colors(sectorIndices: number[]): Promise<Uint8Array[]> {
-		if (sectorIndices.every(s => s === 0)) {
-			const location = new URL("boarddata", this.site).toString();
-			const blob = await (await fetch(location)).blob();
-			const buffer = new Uint8Array(await blob.arrayBuffer());
-			// TODO: check size is correct
-			return new Array<Uint8Array>(sectorIndices.length).fill(buffer);
-		} else {
-			throw new Error("Pxls only has one sector");
-		}
+	protected fetchInfo(): Promise<BoardInfo> {
+		return PxlsBoardInfo.fetch(this.site);
 	}
 
-	async timestamps(sectorIndices: number[]): Promise<Uint32Array[]> {
-		if (sectorIndices.every(s => s === 0)) {
-			const location = new URL("heatmap", this.site).toString();
-			const blob = await (await fetch(location)).blob();
-			const raw = Uint32Array.from(new Uint8Array(await blob.arrayBuffer()));
-			const { heatmapCooldown } = await this.info() as PxlsBoardInfo;
-			// TODO: check size is correct
-			const currentTime = Math.floor(Date.now() / 1000);
-
-			const buffer = raw.map(v => {
-				if (v === 0) {
-					// TODO: return 0 or 1 based on virignmap;
-					return 0;
-				} else {
-					return currentTime - ((255 - v) * (heatmapCooldown / 255));
-				}
-			});
-
-			console.debug(buffer);
-			return new Array<Uint32Array>(sectorIndices.length).fill(buffer);
-		} else {
-			throw new Error("Pxls only has one sector");
+	protected async fetchColors(sector: number): Promise<Uint8Array> {
+		if (sector !== 0) {
+			throw new Error("Sector index should be 0");
 		}
+
+		const location = new URL("boarddata", this.site).toString();
+		const blob = await (await fetch(location)).blob();
+		const buffer = new Uint8Array(await blob.arrayBuffer());
+		// TODO: check size is correct
+		return buffer;
 	}
-	mask(sectorIndices: number[]): Promise<Uint8Array[]> {
+
+	protected async fetchTimestamps(sector: number): Promise<Uint32Array> {
+		if (sector !== 0) {
+			throw new Error("Sector index should be 0");
+		}
+
+		const location = new URL("heatmap", this.site).toString();
+		const blob = await (await fetch(location)).blob();
+		const raw = Uint32Array.from(new Uint8Array(await blob.arrayBuffer()));
+		const { heatmapCooldown } = await this.info() as PxlsBoardInfo;
+		// TODO: check size is correct
+		const currentTime = Math.floor(Date.now() / 1000);
+
+		const buffer = raw.map(v => {
+			if (v === 0) {
+				// TODO: return 0 or 1 based on virginmap;
+				return 0;
+			} else {
+				return currentTime - ((255 - v) * (heatmapCooldown / 255));
+			}
+		});
+
+		return buffer;
+	}
+
+	protected async fetchMask(sector: number): Promise<Uint8Array> {
 		throw new Error("Method not implemented.");
 	}
-	initial(sectorIndices: number[]): Promise<Uint8Array[]> | null {
+
+	protected async fetchInitial(sector: number): Promise<Uint8Array> {
 		throw new Error("Method not implemented.");
 	}
 }

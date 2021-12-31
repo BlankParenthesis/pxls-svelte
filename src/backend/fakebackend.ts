@@ -1,13 +1,13 @@
 import { Shape } from "../shape";
 import { Color, Palette } from "../palette";
 import type {
-	Board,
 	Backend,
 	BoardChoice,
 	BoardInfo,
 	BoardUsersInfo,
 	Placement,
 } from "./backend";
+import { CachedBoard } from "./cachedbackend";
 
 class FakeBoardInfo implements BoardInfo {
 	constructor(
@@ -87,15 +87,11 @@ export class FakeBackend implements Backend {
 
 }
 
-export class FakeBoard implements Board {
-	private readonly colorsCache = new Map<number, Uint8Array>();
-	private readonly timestampsCache = new Map<number, Uint32Array>();
-
+export class FakeBoard extends CachedBoard {
 	constructor(
 		private readonly boardinfo: BoardInfo,
-	) {}
-	info(): Promise<BoardInfo> {
-		return Promise.resolve(this.boardinfo);
+	) {
+		super();
 	}
 	users(): Promise<BoardUsersInfo> {
 		throw new Error("Method not implemented.");
@@ -110,45 +106,34 @@ export class FakeBoard implements Board {
 		throw new Error("Method not implemented.");
 	}
 
+	fetchInfo(): Promise<BoardInfo> {
+		return Promise.resolve(this.boardinfo);
+	}
+
 	private get sectorSize() {
 		const [width, height] = this.boardinfo.shape.sectorSize();
 		return width * height;
 	}
 
-	private colorSector(position: number): Uint8Array {
-		let data = this.colorsCache.get(position);
-		if (data === undefined) {
-			data = new Uint8Array(this.sectorSize).fill(position);
-			this.colorsCache.set(position, data);
-		}
-		return data;
+	protected fetchColors(sector: number): Promise<Uint8Array> {
+		return Promise.resolve(new Uint8Array(this.sectorSize).fill(sector));
 	}
 
-	private timestampSector(position: number): Uint32Array {
-		let data = this.timestampsCache.get(position);
-		if (data === undefined) {
-			data = new Uint32Array(this.sectorSize).map(() => {
-				if(Math.random() < 0.20) {
-					return Math.floor(Math.random() * 2850);
-				} else {
-					return 0;
-				}
-			});
-			this.timestampsCache.set(position, data);
-		}
-		return data;
+	protected fetchTimestamps(sector: number): Promise<Uint32Array> {
+		return Promise.resolve(new Uint32Array(this.sectorSize).map(() => {
+			if(Math.random() < 0.20) {
+				return Math.floor(Math.random() * 2850);
+			} else {
+				return 0;
+			}
+		}));
 	}
 
-	colors(sectorIndices: number[]): Promise<Uint8Array[]> {
-		return Promise.resolve(sectorIndices.map(i => this.colorSector(i)));
-	}
-	timestamps(sectorIndices: number[]): Promise<Uint32Array[]> {
-		return Promise.resolve(sectorIndices.map(i => this.timestampSector(i)));
-	}
-	mask(sectorIndices: number[]): Promise<Uint8Array[]> {
+	protected async fetchMask(sector: number): Promise<Uint8Array> {
 		throw new Error("Method not implemented.");
 	}
-	initial(sectorIndices: number[]): Promise<Uint8Array[]> {
+
+	protected async fetchInitial(sector: number): Promise<Uint8Array> {
 		throw new Error("Method not implemented.");
 	}
 }
