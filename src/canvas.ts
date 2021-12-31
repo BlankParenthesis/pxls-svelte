@@ -33,13 +33,13 @@ void main() {
 	// To unpack it, we have to multiply each value by 256 and shift it left
 	// based on that byte's position. WebGL can't do bitshifting but it turns
 	// out that's the same thing as multiplying by 2 to the power of your
-	// bitshift. We can combine our 256 normalization multiplication and our
+	// bitshift. We can combine our 255 normalization multiplication and our
 	// bitshift into a single multiplication for each component.
 	float timestamp =
-		timestampBytes.r * 256.0 + // 256 * 2^0
-		timestampBytes.g * 65536.0 + // 256 * 2^8
-		timestampBytes.b * 16777216.0 + // 256 * 2^16
-		timestampBytes.a * 4294967296.0; // 256 * 2^24
+		timestampBytes.r * 255.0 + // 255 * 2^0
+		timestampBytes.g * 65280.0 + // 255 * 2^8
+		timestampBytes.b * 16711680.0 + // 255 * 2^16
+		timestampBytes.a * 4278190080.0; // 255 * 2^24
 
 	float heatmapIntensity = (timestamp - uTimestampRange.x) / (uTimestampRange.y - uTimestampRange.x);
 	
