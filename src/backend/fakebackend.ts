@@ -43,7 +43,6 @@ class FakeBoardChoice implements BoardChoice {
 
 export class FakeBackend implements Backend {
 	async *availableBoards() {
-		await Promise.resolve(1);
 		yield new FakeBoardChoice(
 			"fake_canvas",
 			new Shape([[1, 1], [3, 2], [2, 2], [4, 4]]),

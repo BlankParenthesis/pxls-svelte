@@ -5,6 +5,35 @@ export class Color {
 		public name: string,
 		public value: [number, number, number, number],
 	) {}
+
+	static fromHex(name: string, hex: string): Color {
+		if (hex.startsWith("#")) {
+			hex = hex.substring(1);
+		}
+
+		let value: number[];
+
+		switch (hex.length) {
+			case 3:
+				hex += "f";
+				// falls through (3 is just a special case of 4)
+			case 4:
+				value = hex.split("").map(c => parseInt(c, 16));
+				break;
+			case 6:
+				hex += "ff";
+				// falls through (6 is just a special case of 8)
+			case 8:
+				value = (hex.match(/.{2}/g) as string[]).map(c => parseInt(c, 16));
+				break;
+			default:
+				throw new Error("Invalid color length");
+		}
+
+		// TODO: validate value
+
+		return new Color(name, value as [number, number, number, number]);
+	}
 }
 
 export type Palette = Map<number, Color>;
