@@ -34,7 +34,7 @@ export interface BoardUsersInfo {
 	/**
 	 * Time since last user activity until that user is considered inactive in seconds.
 	 */
-	idleTimeout: number;
+	idleTimeout: number | null;
 }
 
 export interface BoardChoice {

@@ -15,6 +15,11 @@ interface PxlsInfo {
 	heatmapCooldown: number;
 }
 
+interface PxlsUsers {
+	type: "users";
+	count: number;
+}
+
 class PxlsBoardInfo implements BoardInfo {
 	private constructor(
 		readonly name: string,
@@ -113,9 +118,30 @@ class PxlsBoard extends CachedBoard {
 		super();
 	}
 
-	users(): Promise<BoardUsersInfo> {
-		throw new Error("Method not implemented.");
+	private static isUsersValid(users: unknown): users is PxlsUsers {
+		if (typeof users === "object" && users !== null) {
+			const anyUsers = users as { [prop: string]: unknown };
+
+			return (anyUsers.type === "users")
+				&& (typeof anyUsers.count === "number");
+		} else {
+			return false;
+		}
 	}
+
+	async users(): Promise<BoardUsersInfo> {
+		const location = new URL("users", this.site).toString();
+		const usercount: unknown = await (await fetch(location)).json();
+		if (PxlsBoard.isUsersValid(usercount)) {
+			return {
+				active: usercount.count,
+				idleTimeout: null,
+			};
+		} else {
+			throw new Error("Pxls /users malformed");
+		}
+	}
+
 	pixels(): AsyncGenerator<Placement> {
 		throw new Error("Method not implemented.");
 	}
