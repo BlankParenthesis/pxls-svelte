@@ -147,17 +147,21 @@ class PxlsBoard extends CachedBoard {
 			throw new Error("Sector index should be 0");
 		}
 
-		const location = new URL("heatmap", this.site).toString();
-		const blob = await (await fetch(location)).blob();
-		const raw = Uint32Array.from(new Uint8Array(await blob.arrayBuffer()));
+		const heatmapLocation = new URL("heatmap", this.site).toString();
+		const virginmapLocation = new URL("virginmap", this.site).toString();
+		const heatmapBlob = await (await fetch(heatmapLocation)).blob();
+		const virginmapBlob = await (await fetch(virginmapLocation)).blob();
+		const heatmap = Uint32Array.from(new Uint8Array(await heatmapBlob.arrayBuffer()));
+		const virginmap = Uint32Array.from(new Uint8Array(await virginmapBlob.arrayBuffer()));
 		const { heatmapCooldown } = await this.info() as PxlsBoardInfo;
 		// TODO: check size is correct
 		const currentTime = Math.floor(Date.now() / 1000);
 
-		const buffer = raw.map(v => {
+		const buffer = heatmap.map((v, i) => {
 			if (v === 0) {
-				// TODO: return 0 or 1 based on virginmap;
-				return 0;
+				// 0 is placed, 255 is unplaced
+				const placed = virginmap[i] === 0;
+				return placed ? 1 : 0;
 			} else {
 				return currentTime - ((255 - v) * (heatmapCooldown / 255));
 			}
@@ -167,10 +171,22 @@ class PxlsBoard extends CachedBoard {
 	}
 
 	protected async fetchMask(sector: number): Promise<Uint8Array> {
-		throw new Error("Method not implemented.");
+		if (sector !== 0) {
+			throw new Error("Sector index should be 0");
+		}
+
+		const location = new URL("placemap", this.site).toString();
+		const blob = await (await fetch(location)).blob();
+		const buffer = new Uint8Array(await blob.arrayBuffer());
+		// TODO: check size is correct
+		return buffer;
 	}
 
 	protected async fetchInitial(sector: number): Promise<Uint8Array> {
-		throw new Error("Method not implemented.");
+		throw new Error("Never");
+	}
+
+	initial(sectorIndices: number[]): Promise<Uint8Array[]> | null {
+		return null;
 	}
 }
