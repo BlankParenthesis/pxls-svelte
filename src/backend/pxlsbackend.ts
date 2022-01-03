@@ -1,6 +1,6 @@
 import { Color, Palette } from "../palette";
 import { Shape } from "../shape";
-import type { Backend, Board, BoardChoice, BoardInfo, BoardUsersInfo, Permissons, Placement } from "./backend";
+import type { Backend, Board, BoardChoice, BoardInfo, BoardUpdate, BoardUsersInfo, OnEventArguments, Permissons, PixelsAvailable, Placement } from "./backend";
 import { CachedBoard } from "./cachedbackend";
 
 interface PxlsInfo {
@@ -116,6 +116,10 @@ class PxlsBoard extends CachedBoard {
 		private site: URL,
 	) {
 		super();
+	}
+	
+	on(...args: OnEventArguments) {
+		throw new Error("Method not implemented.");
 	}
 
 	private static isUsersValid(users: unknown): users is PxlsUsers {

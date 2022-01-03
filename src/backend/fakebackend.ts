@@ -5,6 +5,8 @@ import type {
 	BoardChoice,
 	BoardInfo,
 	BoardUsersInfo,
+	OnEventArguments,
+	EmitEventArguments,
 	Placement,
 } from "./backend";
 import { CachedBoard } from "./cachedbackend";
@@ -88,11 +90,81 @@ export class FakeBackend implements Backend {
 }
 
 export class FakeBoard extends CachedBoard {
+	private eventHandlers = new Map<string, Array<(data: any) => void>>([
+		["board_update", []],
+		["pixels_available", []],
+	]);
+
 	constructor(
 		private readonly boardinfo: BoardInfo,
 	) {
 		super();
+		// eslint-disable-next-line @typescript-eslint/no-misused-promises
+		setInterval(async () => {
+			const [width, height] =  boardinfo.shape.size();
+			const position = Math.floor(Math.random() * width * height);
+			const color = Math.floor(Math.random() * 10);
+
+			const [sectorWidth, sectorHeight] = boardinfo.shape.get(boardinfo.shape.depth - 1);
+			const sectorSize = sectorWidth * sectorHeight;
+
+			const bufferIndex = Math.floor(position / sectorSize);
+			const sectorIndex = position % sectorSize;
+			
+			const values = [color];
+
+			const [colors, timestamps] = await Promise.all([
+				this.colorsCache.get(bufferIndex),
+				this.timestampsCache.get(bufferIndex),
+			]);
+
+			if (colors !== undefined) {
+				colors.set(values, sectorIndex);
+			}
+
+			if (timestamps !== undefined) {
+				timestamps.set([2999], sectorIndex);
+			}
+
+			this.emit("board_update", {
+				data: {
+					colors: [{
+						position,
+						values,
+					}],
+					timestamps: [{
+						position,
+						values: [2999],
+					}],
+				},
+			});
+		}, 1000);
 	}
+
+	on(...args: OnEventArguments) {
+		const [event, callback] = args;
+		const handlers = this.eventHandlers.get(event);
+
+		if (handlers === undefined) {
+			throw new Error(`Unknown event ${event}`);
+		} else {
+			handlers.push(callback);
+		}
+	}
+
+	private emit(...args: EmitEventArguments) {
+		const [event, data] = args;
+
+		const handlers = this.eventHandlers.get(event);
+		if (handlers === undefined) {
+			throw new Error(`Emit of unknown event ${event}`);
+		} else {
+			for (const handler of handlers) {
+				handler(data);
+			}
+		}
+	}
+
 	users(): Promise<BoardUsersInfo> {
 		throw new Error("Method not implemented.");
 	}

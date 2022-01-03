@@ -1,11 +1,14 @@
-import type { Board, BoardInfo, BoardUsersInfo, Placement } from "./backend";
+import type { Board, BoardInfo, BoardUpdate, BoardUsersInfo, PixelsAvailable, Placement } from "./backend";
 
 export abstract class CachedBoard implements Board {
 	private infoCache?: Promise<BoardInfo>;
-	private readonly colorsCache = new Map<number, Promise<Uint8Array>>();
-	private readonly timestampsCache = new Map<number, Promise<Uint32Array>>();
-	private readonly maskCache = new Map<number, Promise<Uint8Array>>();
-	private readonly initialCache = new Map<number, Promise<Uint8Array>>();
+	protected readonly colorsCache = new Map<number, Promise<Uint8Array>>();
+	protected readonly timestampsCache = new Map<number, Promise<Uint32Array>>();
+	protected readonly maskCache = new Map<number, Promise<Uint8Array>>();
+	protected readonly initialCache = new Map<number, Promise<Uint8Array>>();
+
+	abstract on(event: "board_update", callback: (data: BoardUpdate) => void): void;
+	abstract on(event: "pixels_available", callback: (data: PixelsAvailable) => void): void;
 
 	abstract users(): Promise<BoardUsersInfo>;
 	abstract pixels(): AsyncGenerator<Placement>;

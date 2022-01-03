@@ -53,7 +53,40 @@ export interface Placement {
 	modified: Date;
 }
 
+export interface Change {
+	position: number;
+	values: number[];
+}
+
+type BoardInfoUpdate = Partial<BoardInfo>;
+interface BoardDataUpdate {
+	colors?: Change[];
+	timestamps?: Change[];
+	initial?: Change[];
+	mask?: Change[];
+}
+
+export interface BoardUpdate {
+	info?: BoardInfoUpdate;
+	data?: BoardDataUpdate;
+}
+
+export interface PixelsAvailable {
+	count: number;
+	/**
+	 * Unix Timestamp of next available.
+	 * `undefined` if `count == maxPixelsAvailable` or not supported by backend.
+	 */
+	next?: number;
+}
+
+export type OnEventArguments = ["board_update", (data: BoardUpdate) => void] | ["pixels_available", (data: PixelsAvailable) => void];
+export type EmitEventArguments = ["board_update", BoardUpdate] | ["pixels_available", PixelsAvailable];
+
 export interface Board {
+	on(event: "board_update", callback: (data: BoardUpdate) => void);
+	on(event: "pixels_available", callback: (data: PixelsAvailable) => void);
+
 	info(): Promise<BoardInfo>;
 	users(): Promise<BoardUsersInfo>;
 	pixels(): AsyncGenerator<Placement>;

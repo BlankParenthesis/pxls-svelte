@@ -153,7 +153,24 @@ export class Canvas {
 
 		gl.clearColor(0, 0, 0, 1);
 
-		this.textures = new CanvasTextures(gl, board, shape);
+		const textures = this.textures = new CanvasTextures(gl, board, shape);
+		this.board.on("board_update", (update) => {
+			if (update.data !== undefined) {
+				if (update.data.colors !== undefined) {
+					update.data.colors.forEach(textures.updateColors.bind(textures));
+				}
+				if (update.data.timestamps !== undefined) {
+					update.data.timestamps.forEach(textures.updateTimestamps.bind(textures));
+				}
+				if (update.data.mask !== undefined) {
+					update.data.mask.forEach(textures.updateMask.bind(textures));
+				}
+				if (update.data.initial !== undefined) {
+					update.data.initial.forEach(textures.updateInitial.bind(textures));
+				}
+				this.render().catch(console.error);
+			}
+		});
 
 		const uniforms: CanvasUniforms = {
 			uTranslate: { value: new Vec2(this.translate[0], this.translate[1]) },
@@ -323,7 +340,14 @@ export class Canvas {
 		}
 	}
 
-	async render(options = DEFAULT_RENDER_SETTINGS) {
+	private lastRenderOptions?: RenderSettings;
+
+	async render(options = this.lastRenderOptions) {
+		if (options === undefined) {
+			options = DEFAULT_RENDER_SETTINGS;
+		}
+		this.lastRenderOptions = options;
+
 		const renderInfo = await this.prepareToRender();
 		
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);

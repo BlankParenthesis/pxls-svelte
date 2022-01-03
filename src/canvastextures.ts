@@ -3,10 +3,15 @@
 // space to clear my thoughts on it, so here it goes for now.
 
 import { OGLRenderingContext, Texture } from "ogl-typescript";
-import type { Board } from "./backend/backend";
+import type { Board, Change } from "./backend/backend";
 import type { MergeInstructions, Shape } from "./shape";
 
 class SectorTextures {
+	private colorsRebuild = false;
+	private timestampsRebuild = false;
+	private maskRebuild = false;
+	private initialRebuild = false;
+
 	private colorsCached: Texture | undefined;
 	private timestampsCached: Texture | undefined;
 	private maskCached: Texture | undefined;
@@ -64,50 +69,90 @@ class SectorTextures {
 		}).catch(console.error);
 	}
 
+	invalidateColors() {
+		this.colorsRebuild = true;
+	}
+
 	colors(): Texture {
-		if (this.colorsCached === undefined) {
+		if(this.colorsRebuild || this.colorsCached === undefined) {
+			if (this.colorsCached === undefined) {
+				this.colorsCached = this.newTexture8();
+			}
+
 			this.lazyMerge(
-				this.colorsCached = this.newTexture8(),
+				this.colorsCached,
 				this.board.colors(this.sectorCreationInstructions.positions),
 			);
+
+			this.colorsRebuild = false;
 		}
 
 		return this.colorsCached;
 	}
 
+	invalidateTimestamps() {
+		this.timestampsRebuild = true;
+	}
+
 	timestamps(): Texture {
-		if (this.timestampsCached === undefined) {
+		if(this.timestampsRebuild || this.timestampsCached === undefined) {
+			if (this.timestampsCached === undefined) {
+				this.timestampsCached = this.newTexture32();
+			}
+
 			this.lazyMerge(
-				this.timestampsCached = this.newTexture32(),
+				this.timestampsCached,
 				this.board.timestamps(this.sectorCreationInstructions.positions),
 			);
+
+			this.timestampsRebuild = false;
 		}
 
 		return this.timestampsCached;
 	}
 
+	invalidateMask() {
+		this.maskRebuild = true;
+	}
+
 	mask(): Texture {
-		if (this.maskCached === undefined) {
+		if(this.maskRebuild || this.maskCached === undefined) {
+			if (this.maskCached === undefined) {
+				this.maskCached = this.newTexture8();
+			}
+
 			this.lazyMerge(
-				this.maskCached = this.newTexture8(),
+				this.maskCached,
 				this.board.mask(this.sectorCreationInstructions.positions),
 			);
+
+			this.maskRebuild = false;
 		}
 
 		return this.maskCached;
 	}
 
+	invalidateInitial() {
+		this.initialRebuild = true;
+	}
+
 	initial(): Texture | null {
-		if (this.initialCached === undefined) {
+		if(this.initialRebuild || this.initialCached === undefined) {
 			const initial = this.board.initial(this.sectorCreationInstructions.positions);
 			if (initial === null) {
 				return null;
 			}
 
+			if (this.initialCached === undefined) {
+				this.initialCached = this.newTexture8();
+			}
+
 			this.lazyMerge(
-				this.initialCached = this.newTexture8(),
+				this.initialCached,
 				initial,
 			);
+
+			this.initialRebuild = false;
 		}
 
 		return this.initialCached;
@@ -155,6 +200,41 @@ export class CanvasTextures {
 			return sector;
 		} else {
 			return null;
+		}
+	}
+
+	private *invalidatedTextures(change: Change) {
+		for (const [detailLevel, cached] of this.cache.entries()) {
+			const [width, height] = this.shape.slice(detailLevel).size();
+			const index = Math.floor(change.position / (width * height)); 
+			const textures = cached.get(index);
+			if (textures !== undefined) {
+				yield textures;
+			}
+		}
+	}
+
+	updateColors(change: Change) {
+		for (const textures of this.invalidatedTextures(change)) {
+			textures.invalidateColors();
+		}
+	}
+
+	updateTimestamps(change: Change) {
+		for (const textures of this.invalidatedTextures(change)) {
+			textures.invalidateTimestamps();
+		}
+	}
+
+	updateMask(change: Change) {
+		for (const textures of this.invalidatedTextures(change)) {
+			textures.invalidateMask();
+		}
+	}
+
+	updateInitial(change: Change) {
+		for (const textures of this.invalidatedTextures(change)) {
+			textures.invalidateInitial();
 		}
 	}
 
