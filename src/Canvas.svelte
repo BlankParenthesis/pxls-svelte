@@ -38,11 +38,14 @@
 		renderOptions = renderOptions;
 	}
 
-	function drag(event: MouseEvent) {
+	async function drag(event: MouseEvent) {
 		if (event.buttons & MOUSE_BUTTON_PRIMARY) {
 			if (event.altKey || event.ctrlKey) {
-				templates[0].x += canvas.width * 2 * event.movementX / canvasElement.width / canvas.scale[0];
-				templates[0].y += canvas.height * 2 * event.movementY / canvasElement.height / canvas.scale[1];
+				// FIXME: multiple events could play out of order here since there's no sync.
+				// Also, no feedback on movement could be bad for UX.
+				const [width, height] = await canvas.size();
+				templates[0].x += width * 2 * event.movementX / canvasElement.width / canvas.scale[0];
+				templates[0].y += height * 2 * event.movementY / canvasElement.height / canvas.scale[1];
 			} else {
 				canvas.translate[0] += 2 * event.movementX / canvasElement.width / canvas.scale[0];
 				canvas.translate[1] += -2 * event.movementY / canvasElement.height / canvas.scale[1];
