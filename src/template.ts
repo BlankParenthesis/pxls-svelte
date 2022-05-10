@@ -23,7 +23,7 @@ void main() {
 		// flip y position but not inter-pixel
 		floor(index / PALETTE_STYLE_WIDTH - 1.0) + PALETTE_STYLE_WIDTH
 	) / PALETTE_STYLE_WIDTH;
-	gl_FragColor = texture2D(tPalette, vec2(index / uPaletteSize, 0.0));
+	gl_FragColor = texture2D(tPalette, vec2((index + 0.5) / uPaletteSize, 0.5));
 	gl_FragColor.rgb *= uHeatmapDim;
 	vec2 normalizedUv = mod(vUv * uTemplateSize, 1.0) / PALETTE_STYLE_WIDTH;
 	vec2 styleUv = normalizedUv + indexTranslate;

@@ -105,15 +105,15 @@
 		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 1);
 		const template = new Template(new Texture(canvas.gl, {
 			image: new Uint8Array(new Array(200 * 200).fill(1).map((_, i) => i % 4)),
-			width: 200,
-			height: 200,
+			width: 20,
+			height: 20,
 			format: canvas.gl.LUMINANCE,
 			internalFormat: canvas.gl.LUMINANCE,
 			minFilter: canvas.gl.NEAREST,
 			magFilter: canvas.gl.NEAREST,
 		}));
-		template.x = 10;
-		template.y = 100;
+		template.x = 5;
+		template.y = 2;
 		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 4);
 		templates.push(template);
 		await resize();
