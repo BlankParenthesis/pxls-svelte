@@ -1,5 +1,5 @@
 import { Shape } from "../shape";
-import { Color, Palette } from "../palette";
+import { Color, type Palette } from "../palette";
 import type {
 	Backend,
 	BoardChoice,

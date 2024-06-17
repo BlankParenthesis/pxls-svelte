@@ -1,4 +1,4 @@
-import { Geometry, OGLRenderingContext } from "ogl-typescript";
+import { Geometry, type OGLRenderingContext } from "ogl-typescript";
 
 export const QUAD_VERTEX_SHADER = /* glsl */ `
 attribute vec2 position;

@@ -1,4 +1,4 @@
-import { OGLRenderingContext, Texture } from "ogl-typescript";
+import { type OGLRenderingContext, Texture } from "ogl-typescript";
 
 export class Color {
 	constructor(

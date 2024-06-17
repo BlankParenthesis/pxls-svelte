@@ -6,36 +6,22 @@
 	const MOUSE_BUTTON_FIVE = 16;
 </script>
 <script lang="ts">
-	import { Texture, Vec2 } from "ogl-typescript";
+	import { Texture } from "ogl-typescript";
 	import { onMount } from "svelte";
-	import type { Board } from "./backend/backend";
-	import { FakeBackend } from "./backend/fakebackend";
-	import { Canvas, DEFAULT_RENDER_SETTINGS, RenderSettings } from "./canvas";
-	import { Template } from "./template";
+	import type { Board } from "../lib/canvas/backend/backend";
+	import { FakeBackend } from "../lib/canvas/backend/fakebackend";
+	import { Canvas } from "../lib/canvas/canvas";
+	import { Template } from "../lib/canvas/template";
+    import { type RenderSettings } from "../lib/settings";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
 
-	let autoDetail = DEFAULT_RENDER_SETTINGS.autoDetail;
-	let detailLevel = DEFAULT_RENDER_SETTINGS.detailLevel;
-	let templates = DEFAULT_RENDER_SETTINGS.templates;
-	let timestampStart = DEFAULT_RENDER_SETTINGS.timestampRange[0];
-	let timestampEnd = DEFAULT_RENDER_SETTINGS.timestampRange[1];
-	$: timestampRange = new Vec2(timestampStart, timestampEnd);
-	let heatmapDim = DEFAULT_RENDER_SETTINGS.heatmapDim;
-
-	$: renderOptions = {
-		autoDetail,
-		detailLevel,
-		templates,
-		timestampRange,
-		heatmapDim,
-	};
+	export let renderOptions: RenderSettings;
 
 	$: if (canvas) {
-		canvas.render(renderOptions as RenderSettings)
+		canvas.render(renderOptions)
 			.catch(console.error);
-		renderOptions = renderOptions;
 	}
 
 	async function drag(event: MouseEvent) {
@@ -44,8 +30,8 @@
 				// FIXME: multiple events could play out of order here since there's no sync.
 				// Also, no feedback on movement could be bad for UX.
 				const [width, height] = await canvas.size();
-				templates[0].x += width * 2 * event.movementX / canvasElement.width / canvas.scale[0];
-				templates[0].y += height * 2 * event.movementY / canvasElement.height / canvas.scale[1];
+				renderOptions.templates[0].x += width * 2 * event.movementX / canvasElement.width / canvas.scale[0];
+				renderOptions.templates[0].y += height * 2 * event.movementY / canvasElement.height / canvas.scale[1];
 			} else {
 				canvas.translate[0] += 2 * event.movementX / canvasElement.width / canvas.scale[0];
 				canvas.translate[1] += -2 * event.movementY / canvasElement.height / canvas.scale[1];
@@ -118,7 +104,7 @@
 		template.x = 5;
 		template.y = 2;
 		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 4);
-		templates.push(template);
+		renderOptions.templates.push(template);
 		await resize();
 	})
 </script>
@@ -126,60 +112,3 @@
 <svelte:window on:resize="{resize}" />
 
 <canvas on:mousemove="{drag}" on:wheel="{zoom}" bind:this="{canvasElement}" />
-<aside id="buttons">
-	<div class="vertical">
-		<label>Heatmap Start<input type="range" min="0" max="3000" bind:value="{timestampStart}"/></label>
-		<label>Heatmap End<input type="range" min="0" max="3000" bind:value="{timestampEnd}"/></label>
-		<label>Heatmap Dimming<input type="range" min="0" max="1" step="0.01" bind:value="{heatmapDim}"/></label>
-	</div>
-</aside>
-
-<style>
-	aside {
-		display: flex;
-		flex-direction: column;
-		position: absolute;
-		top: .5em;
-		right: .5em;
-		gap: .5em;
-	}
-
-	aside > div {
-		display: flex;
-		align-items: center;
-		justify-content: right;
-		gap: .5em;
-	}
-
-	button, output, label {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		font-size: x-large;
-		font-weight: bold;
-		font-family: monospace;
-		padding:  .25em .5em;
-	}
-
-	output, label {
-		background-color: aliceblue;
-		border-style: outset;
-		border-width: 1px;
-		border-color: #77b;
-		border-radius: .25em;
-	}
-
-	input[type="checkbox"] {
-		margin-left: 0;
-	}
-
-	input[type="number"] {
-		width: 3em;
-	}
-
-	.vertical {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-	}
-</style>

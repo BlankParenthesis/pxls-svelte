@@ -1,4 +1,4 @@
-import { Color, Palette } from "../palette";
+import { Color, type Palette } from "../palette";
 import { Shape } from "../shape";
 import type { Backend, Board, BoardChoice, BoardInfo, BoardUpdate, BoardUsersInfo, OnEventArguments, Permissons, PixelsAvailable, Placement } from "./backend";
 import { CachedBoard } from "./cachedbackend";

@@ -1,11 +1,12 @@
-import { Texture, Vec2, Renderer, Program, Mesh, OGLRenderingContext } from "ogl-typescript";
+import { Texture, Vec2, Renderer, Program, Mesh, type OGLRenderingContext } from "ogl-typescript";
 import type { Board } from "./backend/backend";
 import { QUAD_VERTEX_SHADER, Quad } from "./gl";
 import { toTexture } from "./palette";
 import type { Shape } from "./shape";
-import { newTemplateProgram, Template, TemplateProgram } from "./template";
+import { newTemplateProgram, Template, type TemplateProgram } from "./template";
 import { CanvasTextures } from "./canvastextures";
 import { nextFrame } from "./util";
+import { type RenderSettings } from "../settings";
 
 const CANVAS_FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
@@ -66,18 +67,12 @@ function fromTranslateToTile(coord: number, scaleModifier: number) {
 	}
 }
 
-export type RenderSettings = {
-	detailLevel: number,
-	autoDetail: boolean,
-	templates: Template[],
-	timestampRange: Vec2,
-	heatmapDim: number,
-};
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
 	detailLevel: 1,
 	autoDetail: true,
 	templates: [],
-	timestampRange: new Vec2(0, 3000),
+	timestampStart: 0,
+	timestampEnd: 3000,
 	heatmapDim: 0,
 };
 
@@ -181,7 +176,7 @@ export class Canvas {
 			uPaletteSize: { value: 1 },
 			tIndices: { value: new Texture(gl) },
 			tTimestamps: { value: new Texture(gl) },
-			uTimestampRange: { value: DEFAULT_RENDER_SETTINGS.timestampRange },
+			uTimestampRange: { value: new Vec2(DEFAULT_RENDER_SETTINGS.timestampStart, DEFAULT_RENDER_SETTINGS.timestampEnd) },
 			uHeatmapDim: { value: 1 - DEFAULT_RENDER_SETTINGS.heatmapDim },
 		};
 
@@ -353,7 +348,7 @@ export class Canvas {
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 		
 		// TODO: move into render functions using settings access.
-		this.program.uniforms.uTimestampRange.value = options.timestampRange;
+		this.program.uniforms.uTimestampRange.value = new Vec2(options.timestampStart, options.timestampEnd);
 		this.program.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
 		this.templateProgram.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
 

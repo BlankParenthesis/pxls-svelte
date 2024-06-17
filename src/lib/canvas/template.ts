@@ -1,5 +1,6 @@
-import { OGLRenderingContext, Program, Texture, Vec2 } from "ogl-typescript";
+import { type OGLRenderingContext, Program, Texture, Vec2 } from "ogl-typescript";
 import { QUAD_VERTEX_SHADER } from "./gl";
+import templateStyleImage from "/src/assets/large_template_style.png";
 
 const TEMPLATE_FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
@@ -64,7 +65,7 @@ export function newTemplateProgram(gl: OGLRenderingContext): TemplateProgram {
 	styleImage.onload = () => {
 		templateStyle.image = styleImage;
 	};
-	styleImage.src = "./large_template_style.png";
+	styleImage.src = templateStyleImage;
 
 	return new Program(gl, {
 		vertex: QUAD_VERTEX_SHADER,
