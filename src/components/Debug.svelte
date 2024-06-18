@@ -38,7 +38,7 @@
 	}
 </style>
 <div class="vertical">
-	<label>Heatmap Start<input type="range" min="0" max="355411" bind:value="{settings.render.timestampStart}"/></label>
-	<label>Heatmap End<input type="range" min="0" max="355411" bind:value="{settings.render.timestampEnd}"/></label>
+	<label>Heatmap Start<input type="range" min="618000" max="620000" bind:value="{settings.render.timestampStart}"/></label>
+	<label>Heatmap End<input type="range" min="618000" max="620000" bind:value="{settings.render.timestampEnd}"/></label>
 	<label>Heatmap Dimming<input type="range" min="0" max="1" step="0.01" bind:value="{settings.render.heatmapDim}"/></label>
 </div>

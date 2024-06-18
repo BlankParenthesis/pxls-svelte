@@ -81,6 +81,18 @@ export class Shape {
 	}
 
 	/**
+	 * @param position absolute pixel position 
+	 * @returns [sector index, sector offset]
+	 */
+	positionToSector(position: number): [number, number] {
+		const [width, height] = this.sectorSize();
+		const sectorLength = width * height;
+		const sectorIndex = Math.floor(position / sectorLength);
+		const sectorOffset = position % sectorLength;
+		return [sectorIndex, sectorOffset];
+	}
+
+	/**
 	 * @returns The array addressing the sector at the given euclidean coordinates.
 	 * Here are examples for a shape of `[[2, 2], [2, 2], [_, _]]`.
 	 * This Shape produces a board like this:

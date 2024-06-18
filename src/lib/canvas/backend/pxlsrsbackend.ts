@@ -45,7 +45,7 @@ class PxlsRsBoardChoice implements BoardChoice {
 	) {}
 	
 	async connect(): Promise<Board> {
-		return new PxlsRsBoard(this.location);
+		return await PxlsRsBoard.connect(this.location);
 	}
 	
 	async info(): Promise<BoardInfo> {
@@ -176,17 +176,59 @@ class PxlsRsBoardInfo implements BoardInfo {
 }
 
 class PxlsRsBoard extends CachedBoard {
-	public constructor(
-		readonly location: URL,
-	) {
-		super();
+	private listeners = {
+		"board_update": [] as Array<(data: BoardUpdate) => void>,
+		"pixels_available": [] as Array<(data: PixelsAvailable) => void>,
+	};
+
+	public static async connect(location: URL): Promise<PxlsRsBoard> {
+		const events = [
+			"data.colors",
+			"data.timestamps",
+		];
+		const query = events
+			.map(e => "subscribe[]=" + encodeURIComponent(e))
+			.join("&");
+		const socketUrl = new URL("events?" + query, location.href + "/");
+		const socket = new WebSocket(socketUrl);
+		await new Promise((resolve, reject) => {
+			socket.onopen = resolve;
+			socket.onerror = reject;
+		});
+		return new PxlsRsBoard(location, socket);
 	}
 
-	on(event: "board_update", callback: (data: BoardUpdate) => void): void;
-	on(event: "pixels_available", callback: (data: PixelsAvailable) => void): void;
-	on(event: unknown, callback: unknown): void {
-		//throw new Error("Method not implemented.");
+	private constructor(
+		readonly location: URL,
+		private readonly socket: WebSocket,
+	) {
+		super();
+		this.on("board_update", (u: BoardUpdate) => this.update(u));
+		socket.addEventListener("message", e => {
+			const packet = JSON.parse(e.data);
+			switch (packet.type) {
+				case "board-update": 
+					this.listeners.board_update.forEach(l => l(packet));
+					break;
+				case "pixels-available": 
+					this.listeners.pixels_available.forEach(l => l(packet));
+					break;
+			}
+		});
 	}
+
+	on(...args: OnEventArguments) {
+		const [event, callback] = args;
+		switch (event) {
+			case "pixels_available":
+				this.listeners.pixels_available.push(callback);
+				break;
+			case "board_update":
+				this.listeners.board_update.push(callback);
+				break;
+		}
+	}
+
 	users(): Promise<BoardUsersInfo> {
 		throw new Error("Method not implemented.");
 	}

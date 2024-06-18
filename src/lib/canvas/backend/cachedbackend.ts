@@ -21,6 +21,46 @@ export abstract class CachedBoard implements Board {
 	protected abstract fetchMask(sector: number): Promise<Uint8Array>;
 	protected abstract fetchInitial(sector: number): Promise<Uint8Array>;
 	
+	protected async update(update: BoardUpdate) {
+		const colorUpdates = update.data?.colors || [];
+		const timestampUpdates = update.data?.timestamps || [];
+		const maskUpdates = update.data?.mask || [];
+		const initialUpdates = update.data?.initial || [];
+		const info = await this.info();
+
+		for (const change of colorUpdates) {
+			const [index, offset] = info.shape.positionToSector(change.position);
+			const sector = this.colorsCache.get(index);
+			if (sector) {
+				(await sector).set(change.values, offset);
+			}
+		}
+
+		for (const change of timestampUpdates) {
+			const [index, offset] = info.shape.positionToSector(change.position);
+			const sector = this.timestampsCache.get(index);
+			if (sector) {
+				(await sector).set(change.values, offset);
+			}
+		}
+
+		for (const change of maskUpdates) {
+			const [index, offset] = info.shape.positionToSector(change.position);
+			const sector = this.maskCache.get(index);
+			if (sector) {
+				(await sector).set(change.values, offset);
+			}
+		}
+
+		for (const change of initialUpdates) {
+			const [index, offset] = info.shape.positionToSector(change.position);
+			const sector = this.initialCache.get(index);
+			if (sector) {
+				(await sector).set(change.values, offset);
+			}
+		}
+	}
+	
 	private static getOrGenerate<K, V>(
 		map: Map<K ,V>,
 		generate: (key: K) => V,
