@@ -4,11 +4,10 @@
     import { type Settings } from "../lib/settings";
 
 	export let settings: Settings;
-	$: debugSettings = settings.debug;
 </script>
 
 <Grid>
 	<aside class="top-right">
-		<Debug bind:settings={debugSettings} />
+		<Debug bind:settings={settings.debug} />
 	</aside>
 </Grid>	

@@ -9,7 +9,8 @@
 	import { Texture } from "ogl-typescript";
 	import { onMount } from "svelte";
 	import type { Board } from "../lib/canvas/backend/backend";
-	import { FakeBackend } from "../lib/canvas/backend/fakebackend";
+	//import { FakeBackend } from "../lib/canvas/backend/fakebackend";
+	import { PxlsRsBackend } from "../lib/canvas/backend/pxlsrsbackend";
 	import { Canvas } from "../lib/canvas/canvas";
 	import { Template } from "../lib/canvas/template";
     import { type RenderSettings } from "../lib/settings";
@@ -77,7 +78,8 @@
 	}
 
 	onMount(async () => {
-		const backend = new FakeBackend();
+		//const backend = new FakeBackend();
+		const backend = new PxlsRsBackend(new URL("http://localhost:45632/"));
 
 		let board: Board | null = null;
 		for await (const choice of backend.availableBoards()) {

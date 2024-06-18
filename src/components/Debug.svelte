@@ -11,7 +11,7 @@
 		font-size: x-large;
 		font-weight: bold;
 		font-family: monospace;
-		padding:  .25em .5em;
+		padding: .25em .5em;
 	}
 
 	output, label {
@@ -34,14 +34,11 @@
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
-	}
-
-	.pad {
-		padding: 1em;
+		gap: 0.5em;
 	}
 </style>
-<div class="vertical pad">
-	<label>Heatmap Start<input type="range" min="0" max="3000" bind:value="{settings.render.timestampStart}"/></label>
-	<label>Heatmap End<input type="range" min="0" max="3000" bind:value="{settings.render.timestampEnd}"/></label>
+<div class="vertical">
+	<label>Heatmap Start<input type="range" min="0" max="355411" bind:value="{settings.render.timestampStart}"/></label>
+	<label>Heatmap End<input type="range" min="0" max="355411" bind:value="{settings.render.timestampEnd}"/></label>
 	<label>Heatmap Dimming<input type="range" min="0" max="1" step="0.01" bind:value="{settings.render.heatmapDim}"/></label>
 </div>

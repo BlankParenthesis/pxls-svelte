@@ -1,6 +1,6 @@
 import { Color, type Palette } from "../palette";
 import { Shape } from "../shape";
-import type { Backend, Board, BoardChoice, BoardInfo, BoardUpdate, BoardUsersInfo, OnEventArguments, Permissons, PixelsAvailable, Placement } from "./backend";
+import type { Backend, Board, BoardChoice, BoardInfo, BoardUpdate, BoardUsersInfo, OnEventArguments, Permissions, PixelsAvailable, Placement } from "./backend";
 import { CachedBoard } from "./cachedbackend";
 
 interface PxlsInfo {
@@ -106,7 +106,7 @@ export class PxlsBackend implements Backend {
 		yield new PxlsBoardChoice(this.site);
 	}
 
-	permissions(): Promise<Permissons> {
+	permissions(): Promise<Permissions> {
 		throw new Error("Method not implemented.");
 	}
 }

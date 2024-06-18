@@ -1,7 +1,7 @@
 import type { Palette } from "../palette";
 import type { Shape } from "../shape";
 
-export interface Permissons {
+export interface Permissions {
 	"info": boolean;
 	"boards.list": boolean;
 	"boards.post": boolean;
@@ -44,7 +44,7 @@ export interface BoardChoice {
 
 export interface Backend {
 	availableBoards(): AsyncGenerator<BoardChoice>;
-	permissions(): Promise<Permissons>;
+	permissions(): Promise<Permissions>;
 }
 
 export interface Placement {

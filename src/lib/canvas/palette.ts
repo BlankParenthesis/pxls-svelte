@@ -18,7 +18,7 @@ export class Color {
 				hex += "f";
 				// falls through (3 is just a special case of 4)
 			case 4:
-				value = hex.split("").map(c => parseInt(c, 16));
+				value = hex.split("").map(c => 0x11 * parseInt(c, 16));
 				break;
 			case 6:
 				hex += "ff";
@@ -33,6 +33,14 @@ export class Color {
 		// TODO: validate value
 
 		return new Color(name, value as [number, number, number, number]);
+	}
+
+	static fromNumber(name: string, value: number): Color {
+		const r = (value >> 24) & 0xFF;
+		const g = (value >> 16) & 0xFF;
+		const b = (value >> 8) & 0xFF;
+		const a = value & 0xFF;
+		return new Color(name, [r, g, b, a]);
 	}
 }
 
