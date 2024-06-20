@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { type OGLRenderingContext, Texture } from "ogl-typescript";
+
+/* eslint camelcase: off */
+export const color = z.object({
+	name: z.string(),
+	value: z.number(),
+	system_only: z.boolean().optional(),
+}).transform(c => Color.fromNumber(c.name, c.value));
 
 export class Color {
 	constructor(

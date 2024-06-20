@@ -8,11 +8,9 @@
 <script lang="ts">
 	import { Texture } from "ogl-typescript";
 	import { onMount } from "svelte";
-	import type { Board } from "../lib/canvas/backend/backend";
-	//import { FakeBackend } from "../lib/canvas/backend/fakebackend";
-	import { PxlsRsBackend } from "../lib/canvas/backend/pxlsrsbackend";
-	import { Canvas } from "../lib/canvas/canvas";
-	import { Template } from "../lib/canvas/template";
+	import type { Board } from "../lib/board/board";
+	import { Canvas } from "../lib/render/canvas";
+	import { Template } from "../lib/render/template";
     import { type RenderSettings } from "../lib/settings";
 
 	let canvasElement: HTMLCanvasElement;
@@ -76,21 +74,10 @@
 		await canvas.setSize(window.innerWidth, window.innerHeight);
 		canvas = canvas;
 	}
+	
+	export let board: Board;
 
 	onMount(async () => {
-		//const backend = new FakeBackend();
-		const backend = new PxlsRsBackend(new URL("http://localhost:45632/"));
-
-		let board: Board | null = null;
-		for await (const choice of backend.availableBoards()) {
-			board = await choice.connect();
-			break;
-		}
-		
-		if(board === null) {
-			throw new Error("Fake backend should produce at least one board");
-		}
-
 		const { shape } = await board.info();
 		canvas = new Canvas(board, shape, canvasElement);
 		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 1);

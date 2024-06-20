@@ -175,7 +175,6 @@ export class Shape {
 	mergeSectors(location: number[]): MergeInstructions {
 		const subsection = this.slice(location.length);
 		const size = subsection.size();
-		const [sectorWidth, sectorHeight] = this.sectorSize();
 		const [sectorsX, sectorsY] = subsection.slice(0, -1).size();
 		const sectorsCount = sectorsX * sectorsY;
 
@@ -189,10 +188,6 @@ export class Shape {
 			}
 		}
 
-		return new MergeInstructions(
-			size,
-			this.sectorSize(),
-			sectors,
-		);
+		return new MergeInstructions(size, this.sectorSize(), sectors);
 	}
 }

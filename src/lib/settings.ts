@@ -1,4 +1,4 @@
-import type { Template } from "./canvas/template";
+import type { Template } from "./render/template";
 
 export type RenderSettings = {
 	detailLevel: number;

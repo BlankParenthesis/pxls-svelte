@@ -1,12 +1,13 @@
 import { Texture, Vec2, Renderer, Program, Mesh, type OGLRenderingContext } from "ogl-typescript";
-import type { Board } from "./backend/backend";
+import type { Board } from "../board/board";
 import { QUAD_VERTEX_SHADER, Quad } from "./gl";
-import { toTexture } from "./palette";
+import { toTexture } from "../board/palette";
 import type { Shape } from "./shape";
 import { newTemplateProgram, Template, type TemplateProgram } from "./template";
 import { CanvasTextures } from "./canvastextures";
-import { nextFrame } from "./util";
+import { nextFrame } from "../util";
 import { type RenderSettings } from "../settings";
+import type { BoardUpdate } from "../board/canvas";
 
 const CANVAS_FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
@@ -149,7 +150,7 @@ export class Canvas {
 		gl.clearColor(0, 0, 0, 1);
 
 		const textures = this.textures = new CanvasTextures(gl, board, shape);
-		this.board.on("board_update", (update) => {
+		this.board.on("board_update", (update: BoardUpdate) => {
 			if (update.data !== undefined) {
 				if (update.data.colors !== undefined) {
 					update.data.colors.forEach(textures.updateColors.bind(textures));

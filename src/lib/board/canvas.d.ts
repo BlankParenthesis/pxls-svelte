@@ -1,5 +1,5 @@
-import type { Palette } from "../palette";
-import type { Shape } from "../shape";
+import type { Palette } from "./palette";
+import type { Shape } from "./shape";
 
 export interface Permissions {
 	"info": boolean;

@@ -2,15 +2,12 @@ import globals from "globals";
 import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
 
-/**
- * @type @typescript-eslint/utils/dist/ts-eslint/Config.d.ts/SharedConfig/RuleEntry
- */
 let rules = {
 	"brace-style": "error",
 	"camelcase": "error",
 	"curly": "error",
 	"eqeqeq": "error",
-	"@typescript-eslint/indent": ["error", "tab", { "SwitchCase": 1 }],
+	"indent": ["error", "tab", { "SwitchCase": 1 }],
 	"quotes": ["error", "double"],
 	"comma-dangle": ["error", "always-multiline"],
 	"semi": "error",

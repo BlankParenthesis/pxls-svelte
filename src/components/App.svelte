@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { DEFAULT_RENDER_SETTINGS } from "../lib/canvas/canvas";
+    import { DEFAULT_RENDER_SETTINGS } from "../lib/render/canvas";
     import { type Settings } from "../lib/settings";
 	import Canvas from "./Canvas.svelte";
 	import Ui from "./Ui.svelte";
 	import Stack from "./layout/Stack.svelte";
+	import { Site } from "../lib/site";
 
 	let autoDetail = DEFAULT_RENDER_SETTINGS.autoDetail;
 	let detailLevel = DEFAULT_RENDER_SETTINGS.detailLevel;
@@ -24,9 +25,14 @@
 			},
 		},
 	};
+
+	const siteUrl = new URL("http://localhost:45632");
+	const site = new Site(siteUrl);
 </script>
 
 <Stack>
-	<Canvas renderOptions={settings.debug.render}/>
+	{#await site.defaultBoard().then(b => b.connect()) then board}
+		<Canvas {board} renderOptions={settings.debug.render}/>
+	{/await}
 	<Ui bind:settings/>
 </Stack>

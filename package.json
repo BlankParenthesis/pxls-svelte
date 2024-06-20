@@ -20,10 +20,12 @@
 		"svelte-check": "^3.6.7",
 		"tslib": "^2.6.2",
 		"typescript": "^5.2.2",
-		"typescript-eslint": "^7.13.0",
+		"typescript-eslint": "8.0.0-alpha.30",
 		"vite": "^5.2.0"
 	},
 	"dependencies": {
-		"ogl-typescript": "^0.1.40"
+		"js-sha256": "^0.11.0",
+		"ogl-typescript": "^0.1.40",
+		"zod": "^3.23.8"
 	}
 }

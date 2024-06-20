@@ -1,10 +1,19 @@
 <script lang="ts">
     import { type DebugSettings } from "../lib/settings";
+    import { persistentWritable } from "../lib/storage/persistent";
+	import { urlWritable } from "../lib/storage/url";
 
 	export let settings: DebugSettings;
+
+	const state = urlWritable("state", null, true);
+	const sessionState = urlWritable("session_state", null, true);
+	const iss = urlWritable("iss", null, true);
+	const code = urlWritable("code", null, true);
+
+	const persistence = persistentWritable("debugText", "default text");
 </script>
 <style>
-	button, output, label {
+	button, output, label, input[type=text] {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -20,6 +29,7 @@
 		border-width: 1px;
 		border-color: #77b;
 		border-radius: .25em;
+		gap: 0.5em;
 	}
 
 	input[type="checkbox"] {
@@ -41,4 +51,9 @@
 	<label>Heatmap Start<input type="range" min="618000" max="620000" bind:value="{settings.render.timestampStart}"/></label>
 	<label>Heatmap End<input type="range" min="618000" max="620000" bind:value="{settings.render.timestampEnd}"/></label>
 	<label>Heatmap Dimming<input type="range" min="0" max="1" step="0.01" bind:value="{settings.render.heatmapDim}"/></label>
+	<label>Persistence Test<input type="text" bind:value="{$persistence}"/><button on:click={() => persistence.set(null)}>Delete</button></label>
+	<label>Login state: <output>{$state}</output></label>
+	<label>Login sessionState: <output>{$sessionState}</output></label>
+	<label>Login iss: <output>{$iss}</output></label>
+	<label>Login code: <output>{$code}</output></label>
 </div>
