@@ -4,7 +4,8 @@ import { Extension } from "./extensions";
 import { Permission } from "./permissions";
 import { Cache } from "./cache";
 import { BoardStub } from "./board/board";
-import { BoardReference, resolveURL } from "./util";
+import { resolveURL } from "./util";
+import { BoardReference } from "./reference";
 
 
 const SiteInfo = z.object({

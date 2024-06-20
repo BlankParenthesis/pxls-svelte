@@ -1,22 +1,12 @@
 import type { Writable, Subscriber, Unsubscriber } from "svelte/store";
+import { getFragment, setFragment } from "../util";
 
 const usedKeys = new Set();
 
 type URLValue = string | null;
 
-function readFragment(): { [k: string]: string } {
-	const entries = document.location.hash.replace(/^#/, "")
-		.split("&")
-		.map(p => p.split("="))
-		.filter(e => e.length === 2)
-		.map(([k, v]) => [k, decodeURIComponent(v)]);
-
-	return Object.fromEntries(entries);
-}
-
-
-function setFragment(key: string, value: URLValue) {
-	const values = readFragment();
+function setFragmentValue(key: string, value: URLValue) {
+	const values = getFragment();
 	
 	if (value === null) {
 		delete values[key];
@@ -24,12 +14,7 @@ function setFragment(key: string, value: URLValue) {
 		values[key] = value;
 	}
 
-	const fragment = Object.entries(values)
-		.map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-		.join("&");
-	
-	const currentPath = document.location.origin + document.location.pathname;
-	history.replaceState(null, "", new URL("#" + fragment, currentPath));
+	setFragment(values);
 }
 
 /**
@@ -49,15 +34,15 @@ export function urlWritable(
 	}
 	usedKeys.add(key);
 
-	let value = readFragment()[key] || defaultValue;
+	let value = getFragment()[key] || defaultValue;
 
 	const subscriptions: Set<Subscriber<URLValue>> = new Set();
 
 	const set = (v: URLValue) => {
 		if (hidden) {
-			setFragment(key, null);
+			setFragmentValue(key, null);
 		} else {
-			setFragment(key, v);
+			setFragmentValue(key, v);
 		}
 		value = v;
 		subscriptions.forEach(s => s(value));
@@ -72,7 +57,7 @@ export function urlWritable(
 	};
 
 	window.addEventListener("hashchange", () => {
-		const value = readFragment()[key];
+		const value = getFragment()[key];
 		if (value !== undefined || !hidden) {
 			set(value);
 		}

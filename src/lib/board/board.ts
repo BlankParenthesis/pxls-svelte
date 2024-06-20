@@ -1,31 +1,7 @@
-import { z } from "zod";
-
-import type { BoardUpdate, OnEventArguments, PixelsAvailable } from "./canvas";
-import { color } from "./palette";
 import { resolveURL } from "../util";
-import { Shape } from "../render/shape";
-
-/* eslint camelcase: off */
-export const BoardInfo = z.object({
-	name: z.string(),
-	created_at: z.number(),
-	shape: z.array(z.array(z.number()).length(2)).min(1)
-		.transform(s => {
-			if (s.length === 0) {
-				throw new Error("Degenerate board shape");
-			} else if (s.length === 1) {
-				return new Shape([[1,1], s[0] as [number, number]]);
-			} else {
-				return new Shape(s as Array<[number, number]>);
-			}
-		}),
-	max_pixels_available: z.number(),
-	palette: z.record(
-		z.string().transform(i => parseInt(i)).pipe(z.number()),
-		color,
-	).transform(o => new Map(Object.entries(o).map(([k, v]) => [parseInt(k), v]))),
-});
-export type BoardInfo = z.infer<typeof BoardInfo>;
+import { BoardInfo } from "./info";
+import { DataCache, DataCache32 } from "./sector";
+import { BoardUpdate, PixelsAvailable } from "./events";
 
 export class BoardStub {
 	constructor(
@@ -37,59 +13,6 @@ export class BoardStub {
 		return Board.connect(this.location);
 	}
 }
-
-function sectorRange(info: BoardInfo, sector: number, multiplier = 1): string {
-	const [width, height] = info.shape.sectorSize();
-	const sectorSize = width * height * multiplier;
-	const sectorStart = sectorSize * sector;
-	const sectorEnd = sectorStart + sectorSize;
-	return "bytes=" + sectorStart + "-" + sectorEnd;
-}
-
-class DataCache {
-	private data = new Map<number, Promise<Uint8Array>>();
-
-	constructor(
-		private readonly location: URL,
-	) {}
-
-	get(info: BoardInfo, sector: number): Promise<Uint8Array> {
-		if (!this.data.has(sector)) {
-			const range = sectorRange(info, sector);
-			const headers = { "Range":  range };
-			const promise = fetch(this.location, { headers })
-				.then(response => response.arrayBuffer())
-				.then(bytes => new Uint8Array(bytes));
-
-			this.data.set(sector, promise);
-		}
-
-		return this.data.get(sector) as unknown as Promise<Uint8Array>;
-	}
-}
-
-class DataCache32 {
-	private data = new Map<number, Promise<Uint32Array>>();
-
-	constructor(
-		private readonly location: URL,
-	) {}
-
-	get(info: BoardInfo, sector: number): Promise<Uint32Array> {
-		if (!this.data.has(sector)) {
-			const range = sectorRange(info, sector, 4);
-			const headers = { "Range":  range };
-			const promise = fetch(this.location, { headers })
-				.then(response => response.arrayBuffer())
-				.then(bytes => new Uint32Array(bytes));
-
-			this.data.set(sector, promise);
-		}
-
-		return this.data.get(sector) as unknown as Promise<Uint32Array>;
-	}
-}
-
 export class Board {
 	private listeners = {
 		"board_update": [] as Array<(data: BoardUpdate) => void>,
@@ -122,7 +45,7 @@ export class Board {
 		readonly location: URL,
 		private readonly socket: WebSocket,
 	) {
-		this.on("board_update", (u: BoardUpdate) => this.update(u));
+		this.onUpdate((u: BoardUpdate) => this.update(u));
 		socket.addEventListener("message", e => {
 			const packet = JSON.parse(e.data);
 			switch (packet.type) {
@@ -141,16 +64,8 @@ export class Board {
 		this.initialCache = new DataCache(resolveURL(location, "data/initial"));
 	}
 
-	on(...args: OnEventArguments) {
-		const [event, callback] = args;
-		switch (event) {
-			case "pixels_available":
-				this.listeners.pixels_available.push(callback);
-				break;
-			case "board_update":
-				this.listeners.board_update.push(callback);
-				break;
-		}
+	onUpdate(callback: (packet: BoardUpdate) => void) {
+		this.listeners.board_update.push(callback);
 	}
 
 	private infoCache?: Promise<BoardInfo>;
@@ -190,33 +105,49 @@ export class Board {
 
 		for (const change of colorUpdates) {
 			const [index, offset] = info.shape.positionToSector(change.position);
-			const sector = this.colorsCache.get(info, index);
-			if (sector) {
-				(await sector).set(change.values, offset);
+			if ("values" in change) {
+				const sector = this.colorsCache.get(info, index);
+				if (sector) {
+					(await sector).set(change.values, offset);
+				}
+			} else {
+				this.colorsCache.invalidate(index);
 			}
 		}
 
 		for (const change of timestampUpdates) {
 			const [index, offset] = info.shape.positionToSector(change.position);
-			const sector = this.timestampsCache.get(info, index);
-			if (sector) {
-				(await sector).set(change.values, offset);
+			if ("values" in change) {
+				const sector = this.timestampsCache.get(info, index);
+				if (sector) {
+					(await sector).set(change.values, offset);
+				}
+			} else {
+				this.colorsCache.invalidate(index);
 			}
 		}
 
 		for (const change of maskUpdates) {
 			const [index, offset] = info.shape.positionToSector(change.position);
-			const sector = this.maskCache.get(info, index);
-			if (sector) {
-				(await sector).set(change.values, offset);
+			if ("values" in change) {
+				const sector = this.maskCache.get(info, index);
+				if (sector) {
+					(await sector).set(change.values, offset);
+				}
+			} else {
+				this.colorsCache.invalidate(index);
 			}
 		}
 
 		for (const change of initialUpdates) {
 			const [index, offset] = info.shape.positionToSector(change.position);
-			const sector = this.initialCache.get(info, index);
-			if (sector) {
-				(await sector).set(change.values, offset);
+			if ("values" in change) {
+				const sector = this.initialCache.get(info, index);
+				if (sector) {
+					(await sector).set(change.values, offset);
+				}
+			} else {
+				this.colorsCache.invalidate(index);
 			}
 		}
 	}

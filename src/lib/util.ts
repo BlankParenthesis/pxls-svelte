@@ -1,6 +1,3 @@
-import { z, type ZodTypeAny } from "zod";
-import { BoardInfo } from "./board/board";
-
 /**
  * Wait until the page is about to render.
  * NOTE: Awaiting after this point will likely miss the frame.
@@ -31,16 +28,31 @@ export function resolveURL(base: URL, path: string): URL {
 	}
 }
 
+type FragmentMap = { [k: string]: string };
 /**
- * creates a parser for a reference of an object
- * @param view the parser for the object
- * @returns the parser for a reference of the view
+ * @returns an object containing th key value pairs from the current url fragment
  */
-function reference<T extends ZodTypeAny>(view: T) {
-	return z.object({
-		uri: z.string(),
-		view: view.optional(),
-	});
-}
+export function getFragment(): FragmentMap {
+	const entries = document.location.hash.replace(/^#/, "")
+		.split("&")
+		.map(p => p.split("="))
+		.filter(e => e.length === 2)
+		.map(([k, v]) => [k, decodeURIComponent(v)]);
 
-export const BoardReference = reference(BoardInfo);
+	return Object.fromEntries(entries);
+}
+/**
+ * @param values an object containing the key value pairs to set in the current url fragment
+ */
+export function setFragment(values: FragmentMap) {
+	const fragment = Object.entries(values)
+		.map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+		.join("&");
+	
+	const currentPath = document.location.origin + document.location.pathname;
+	if (fragment.length === 0) {
+		history.replaceState(null, "", new URL(currentPath));
+	} else {
+		history.replaceState(null, "", new URL("#" + fragment, currentPath));
+	}
+}

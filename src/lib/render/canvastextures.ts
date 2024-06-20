@@ -5,7 +5,7 @@
 import { type OGLRenderingContext, Texture } from "ogl-typescript";
 import type { Board } from "../board/board";
 import type { MergeInstructions, Shape } from "./shape";
-import type { Change } from "../board/canvas";
+import type { Change } from "../board/events";
 
 class SectorTextures {
 	private colorsRebuild = false;

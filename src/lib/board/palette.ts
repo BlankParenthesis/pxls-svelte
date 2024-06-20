@@ -52,7 +52,12 @@ export class Color {
 	}
 }
 
-export type Palette = Map<number, Color>;
+export const Palette = z.record(
+	z.string().transform(i => parseInt(i)).pipe(z.number()),
+	color,
+).transform(o => new Map(Object.entries(o).map(([k, v]) => [parseInt(k), v])));
+
+export type Palette = z.infer<typeof Palette>;
 
 function toArray(palette: Palette): Array<[number, number, number, number]> {
 	const maxEntry = [...palette.keys()]
