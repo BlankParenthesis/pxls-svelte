@@ -22,7 +22,7 @@ export class Board {
 	static async connect(location: URL) {
 		const events = [
 			"data.colors",
-			"data.timestamps",
+			"data.timestamps", // TODO: this is an extension, test if it's available
 		];
 		const query = events
 			.map(e => "subscribe[]=" + encodeURIComponent(e))

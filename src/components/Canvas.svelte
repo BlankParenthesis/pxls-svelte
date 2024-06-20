@@ -6,7 +6,7 @@
 	const MOUSE_BUTTON_FIVE = 16;
 </script>
 <script lang="ts">
-	import { Texture } from "ogl-typescript";
+	import { Texture } from "ogl";
 	import { onMount } from "svelte";
 	import type { Board } from "../lib/board/board";
 	import { Canvas } from "../lib/render/canvas";

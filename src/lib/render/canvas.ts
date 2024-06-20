@@ -1,4 +1,4 @@
-import { Texture, Vec2, Renderer, Program, Mesh } from "ogl-typescript";
+import { Texture, Vec2, Renderer, Program, Mesh } from "ogl";
 import type { Board } from "../board/board";
 import { CANVAS_FRAGMENT_SHADER, QUAD_VERTEX_SHADER, Quad } from "./gl";
 import { toTexture } from "../board/palette";

@@ -1,4 +1,4 @@
-import { type OGLRenderingContext, Program, Texture, Vec2 } from "ogl-typescript";
+import { type OGLRenderingContext, Program, Texture, Vec2 } from "ogl";
 import { QUAD_VERTEX_SHADER } from "./gl";
 import templateStyleImage from "/src/assets/large_template_style.png";
 

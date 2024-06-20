@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type OGLRenderingContext, Texture } from "ogl-typescript";
+import { type OGLRenderingContext, Texture } from "ogl";
 
 /* eslint camelcase: off */
 export const Color = z.object({

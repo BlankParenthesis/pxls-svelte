@@ -2,7 +2,7 @@
 // It would probably be more relevant in the canvas.ts module but I wanted some
 // space to clear my thoughts on it, so here it goes for now.
 
-import { type OGLRenderingContext, Texture } from "ogl-typescript";
+import { type OGLRenderingContext, Texture } from "ogl";
 import type { Board } from "../board/board";
 import type { MergeInstructions, Shape } from "./shape";
 import type { Change } from "../board/events";
