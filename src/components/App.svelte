@@ -33,6 +33,6 @@
 <Stack>
 	{#await site.defaultBoard().then(b => b.connect()) then board}
 		<Canvas {board} renderOptions={settings.debug.render}/>
+		<Ui {board} bind:settings />
 	{/await}
-	<Ui bind:settings/>
 </Stack>
