@@ -18,7 +18,7 @@ void main() {
 export const CANVAS_FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
 
-#define HEATMAP_COLOR vec3(0.8, 0.2, 0.3)
+#define HEATMAP_COLOR vec4(0.8, 0.2, 0.3, 1.0)
 
 varying vec2 vUv;
 
@@ -54,7 +54,9 @@ void main() {
 	if (heatmapIntensity > 1.0 || heatmapIntensity < 0.0) {
 		heatmapIntensity = 0.0;
 	}
-	gl_FragColor = vec4(mix(color.rgb * uHeatmapDim, HEATMAP_COLOR, heatmapIntensity), color.a);
+
+	vec4 dimmedColor = vec4(color.rgb * uHeatmapDim, color.a); 
+	gl_FragColor = mix(dimmedColor, HEATMAP_COLOR, heatmapIntensity);
 }
 `;
 
