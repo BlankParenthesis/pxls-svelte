@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { type OGLRenderingContext, Texture } from "ogl";
 
-/* eslint camelcase: off */
+/* eslint-disable camelcase */
 export const Color = z.object({
 	name: z.string(),
 	value: z.number(),
@@ -46,3 +46,4 @@ export function toTexture(
 		minFilter: gl.NEAREST,
 	});
 }
+/* eslint-enable camelcase */

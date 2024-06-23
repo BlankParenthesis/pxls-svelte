@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 import { Extension } from "./extensions";
-import { Permission } from "./permissions";
-import { Cache } from "./cache";
+import { Permissions } from "./permissions";
 import { BoardStub } from "./board/board";
 import { resolveURL } from "./util";
 import { BoardReference } from "./reference";
-
+import { SiteAuthUnverified, Authentication } from "./authentication";
+import { Requester } from "./requester";
 
 const SiteInfo = z.object({
 	name: z.string().nullable().optional(),
@@ -16,33 +16,41 @@ const SiteInfo = z.object({
 });
 export type SiteInfo = z.infer<typeof SiteInfo>;
 
-const Permissions = z.set(Permission);
-type Permissions = z.infer<typeof Permissions>;
-
 export class Site {
-	private readonly cache: Cache;
+	static async connect(location: URL): Promise<Site> {
+		const info: SiteInfo = await fetch(resolveURL(location, "info"))
+			.then(r => r.json())
+			.then(j => SiteInfo.parse(j));
 
-	constructor(
-		private readonly location: URL,
-	) {
-		this.cache = new Cache(location);
-	}
-
-	async access(): Promise<Permissions> {
-		return await this.cache.get("access", Permissions.parse);
-	}
-
-	async info(): Promise<SiteInfo> {
-		const permissions = await this.access();
-		if (permissions.has("info")) {
-			return await this.cache.get("info", SiteInfo.parse);
-		} else {
-			throw new Error("Missing permissions");
+		if (!info.extensions.includes("authentication")) {
+			throw new Error("TODO: anonymous canvas");
 		}
+
+		const auth = await fetch(resolveURL(location, "auth"))
+			.then(r => r.json())
+			.then(j => SiteAuthUnverified.parse(j))
+			.then(a => Authentication.login(a));
+
+		return new Site(location, info, auth);
 	}
 
-	async authentication(): Promise<string | null> {
-		throw new Error("TODO");
+	private readonly http: Requester;
+	private constructor(
+		location: URL,
+		private readonly info: SiteInfo,
+		readonly auth: Authentication,
+	) {
+		this.http = new Requester(location, auth.token);
+	}
+
+	private accessCache?: Promise<Permissions>;
+	access(): Promise<Permissions> {
+		if (typeof this.accessCache === "undefined") {
+			this.accessCache = this.http.get("access")
+				.then(j => Permissions.parse(j));
+		}
+
+		return this.accessCache;
 	}
 
 	async *boards() {
@@ -51,12 +59,9 @@ export class Site {
 	}
 	
 	async defaultBoard(): Promise<BoardStub> {
-		const url = resolveURL(this.location, "boards/default");
-
-		const board = await fetch(url)
-			.then(r => r.json())
+		const board = await this.http.get("boards/default")
 			.then(BoardReference.parse);
 
-		return new BoardStub(resolveURL(this.location, board.uri));
+		return new BoardStub(this.http.subpath(board.uri), board.view);
 	}
 }

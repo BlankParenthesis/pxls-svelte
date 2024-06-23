@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Palette } from "./palette";
 import { Shape } from "../render/shape";
 
-/* eslint camelcase: off */
+/* eslint-disable camelcase */
 export const BoardInfo = z.object({
 	name: z.string(),
 	created_at: z.number().int().min(0),
@@ -21,3 +21,4 @@ export const BoardInfo = z.object({
 	palette: Palette,
 });
 export type BoardInfo = z.infer<typeof BoardInfo>;
+/* eslint-enable camelcase */

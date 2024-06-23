@@ -1,4 +1,4 @@
 import { z } from "zod";
 
-export const Extension = z.literal("authentication");
+export const Extension = z.string();
 export type Extension = z.infer<typeof Extension>;

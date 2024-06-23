@@ -2,6 +2,7 @@
     import { type DebugSettings } from "../lib/settings";
     import { persistentWritable } from "../lib/storage/persistent";
 	import { urlWritable } from "../lib/storage/url";
+	import { z } from "zod";
 
 	export let settings: DebugSettings;
 
@@ -10,7 +11,11 @@
 	const iss = urlWritable("iss", null, true);
 	const code = urlWritable("code", null, true);
 
-	const persistence = persistentWritable("debugText", "default text");
+	const persistence = persistentWritable(
+		"debugText",
+		z.string().parse,
+		"default text",
+	);
 </script>
 <style>
 	button, output, label, input[type=text] {
@@ -51,9 +56,5 @@
 	<label>Heatmap Start<input type="range" min="618000" max="620000" bind:value="{settings.render.timestampStart}"/></label>
 	<label>Heatmap End<input type="range" min="618000" max="620000" bind:value="{settings.render.timestampEnd}"/></label>
 	<label>Heatmap Dimming<input type="range" min="0" max="1" step="0.01" bind:value="{settings.render.heatmapDim}"/></label>
-	<label>Persistence Test<input type="text" bind:value="{$persistence}"/><button on:click={() => persistence.set(null)}>Delete</button></label>
-	<label>Login state: <output>{$state}</output></label>
-	<label>Login sessionState: <output>{$sessionState}</output></label>
-	<label>Login iss: <output>{$iss}</output></label>
-	<label>Login code: <output>{$code}</output></label>
+	<label>Persistence Test<input type="text" bind:value="{$persistence}"/><button on:click={() => persistence.reset()}>Delete</button></label>
 </div>

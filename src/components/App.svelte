@@ -26,13 +26,20 @@
 		},
 	};
 
-	const siteUrl = new URL("http://localhost:45632");
-	const site = new Site(siteUrl);
+	const connecting = Site.connect(new URL(import.meta.env.VITE_TARGET_SITE));
 </script>
 
 <Stack>
-	{#await site.defaultBoard().then(b => b.connect()) then board}
-		<Canvas {board} renderOptions={settings.debug.render}/>
-		<Ui {board} bind:settings />
+	{#await connecting}
+		Connecting
+	{:then site}
+		{#await site.defaultBoard().then(b => b.connect()) then board}
+			<Canvas {board} renderOptions={settings.debug.render}/>
+			<Ui {site} {board} bind:settings />
+		{:catch e}
+			Board {e}
+		{/await}
+	{:catch e}
+		Site {e}
 	{/await}
 </Stack>

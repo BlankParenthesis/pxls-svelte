@@ -2,15 +2,16 @@ import { resolveURL } from "../util";
 import { BoardInfo } from "./info";
 import { DataCache, DataCache32 } from "./sector";
 import { BoardUpdate, PixelsAvailable } from "./events";
+import type { Requester } from "../requester";
 
 export class BoardStub {
 	constructor(
-		private readonly location: URL,
+		private readonly http: Requester,
 		private readonly info?: BoardInfo,
 	) {}
 
 	async connect(): Promise<Board> {
-		return Board.connect(this.location);
+		return Board.connect(this.http);
 	}
 }
 export class Board {
@@ -19,7 +20,7 @@ export class Board {
 		"pixels_available": [] as Array<(data: PixelsAvailable) => void>,
 	};
 
-	static async connect(location: URL) {
+	static async connect(http: Requester) {
 		const events = [
 			"data.colors",
 			"data.timestamps", // TODO: this is an extension, test if it's available
@@ -27,13 +28,13 @@ export class Board {
 		const query = events
 			.map(e => "subscribe[]=" + encodeURIComponent(e))
 			.join("&");
-		const socketUrl = new URL("events?" + query, location.href + "/");
+		const socketUrl = resolveURL(http.baseURL, "events?" + query);
 		const socket = new WebSocket(socketUrl);
 		await new Promise((resolve, reject) => {
 			socket.onopen = resolve;
 			socket.onerror = reject;
 		});
-		return new Board(location, socket);
+		return new Board(http, socket);
 	}
 	
 	protected readonly colorsCache: DataCache;
@@ -42,7 +43,7 @@ export class Board {
 	protected readonly initialCache: DataCache;
 
 	private constructor(
-		readonly location: URL,
+		private readonly http: Requester,
 		private readonly socket: WebSocket,
 	) {
 		this.onUpdate((u: BoardUpdate) => this.update(u));
@@ -58,10 +59,10 @@ export class Board {
 			}
 		});
 		
-		this.colorsCache = new DataCache(resolveURL(location, "data/colors"));
-		this.timestampsCache = new DataCache32(resolveURL(location, "data/timestamps"));
-		this.maskCache = new DataCache(resolveURL(location, "data/mask"));
-		this.initialCache = new DataCache(resolveURL(location, "data/initial"));
+		this.colorsCache = new DataCache(this.http.subpath("data/colors"));
+		this.timestampsCache = new DataCache32(this.http.subpath("data/timestamps"));
+		this.maskCache = new DataCache(this.http.subpath("data/mask"));
+		this.initialCache = new DataCache(this.http.subpath("data/initial"));
 	}
 
 	onUpdate(callback: (packet: BoardUpdate) => void) {
@@ -72,9 +73,7 @@ export class Board {
 	
 	info(): Promise<BoardInfo> {
 		if (this.infoCache === undefined) {
-			this.infoCache = fetch(this.location)
-				.then(d => d.json())
-				.then(BoardInfo.parse);
+			this.infoCache = this.http.get().then(BoardInfo.parse);
 		}
 
 		return this.infoCache;

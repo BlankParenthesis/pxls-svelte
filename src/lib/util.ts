@@ -6,6 +6,21 @@ export function nextFrame(): Promise<DOMHighResTimeStamp> {
 	return new Promise(resolve => requestAnimationFrame(resolve));
 }
 
+export function randomBytes(length: number): Uint8Array {
+	return crypto.getRandomValues(new Uint8Array(length));
+}
+
+export function base64encode(bytes: Uint8Array): string {
+	return btoa(String.fromCharCode(...bytes));
+}
+
+export function base64urlsafe(bytes: Uint8Array): string {
+	return base64encode(bytes)
+		.replaceAll("+", "-")
+		.replaceAll("/", "_")
+		.replaceAll("=", "");
+}
+
 export function randomString(length: number = 20): string {
 	const choices = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");
 	return Array(length).fill(null).map(() => {
@@ -55,4 +70,23 @@ export function setFragment(values: FragmentMap) {
 	} else {
 		history.replaceState(null, "", new URL("#" + fragment, currentPath));
 	}
+}
+
+/**
+ * creates a function that adds the key and value to an object passed into it
+ * @param key the key to insert when the function is called
+ * @param value the value of the key
+ * @returns the function which adds the key-value pair to the passed argument
+ */
+export function tag<K extends string, V,>(key: K, value: V) {
+	function record<K extends string, V>(key: K, value: V): { [prop in K]: V };
+	function record<K extends string, V>(key: K, value: V) {
+		return { [key]: value };
+	}
+
+	const obj2 = record(key, value);
+
+	return function<T extends { [P in keyof T]: unknown }>(obj: T) { 
+		return {...obj, ...obj2 };
+	};
 }
