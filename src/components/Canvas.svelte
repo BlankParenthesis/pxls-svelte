@@ -8,6 +8,7 @@
 <script lang="ts">
 	import { Texture } from "ogl";
 	import { onMount } from "svelte";
+	import { get } from "svelte/store";
 	import type { Board } from "../lib/board/board";
 	import { Canvas } from "../lib/render/canvas";
 	import { Template } from "../lib/render/template";
@@ -78,8 +79,9 @@
 	export let board: Board;
 
 	onMount(async () => {
-		const { shape } = await board.info();
-		canvas = new Canvas(board, shape, canvasElement);
+		// TODO: use stores in Canvas
+		const info = get(board.info);
+		canvas = new Canvas(board, info.shape, info.palette, canvasElement);
 		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 1);
 		const template = new Template(new Texture(canvas.gl, {
 			image: new Uint8Array(new Array(200 * 200).fill(1).map((_, i) => i % 4)),

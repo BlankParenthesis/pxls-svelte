@@ -1,9 +1,24 @@
-import { resolveURL } from "../util";
+import { z } from "zod";
 import { BoardInfo } from "./info";
 import { DataCache, DataCache32 } from "./sector";
-import { BoardUpdate, PixelsAvailable } from "./events";
+import { Event, BoardUpdate, PixelsAvailable } from "./events";
 import type { Requester } from "../requester";
+import { get, writable, type Readable, type Writable } from "svelte/store";
 
+const HeaderNumber = z.number().int().min(0);
+
+const Cooldown = z.object({
+	"pxls-pixels-available": z.string()
+		.transform(s => HeaderNumber.parse(parseInt(s)))
+		.optional(),
+	"pxls-next-available": z.string()
+		.transform(s => HeaderNumber.parse(parseInt(s)))
+		.optional(),
+}).transform(h => ({
+	pixelsAvailable: h["pxls-pixels-available"],
+	nextTimestamp: h["pxls-next-available"],
+}));
+export type Cooldown = z.infer<typeof Cooldown>;
 export class BoardStub {
 	constructor(
 		private readonly http: Requester,
@@ -16,46 +31,59 @@ export class BoardStub {
 }
 export class Board {
 	private listeners = {
-		"board_update": [] as Array<(data: BoardUpdate) => void>,
-		"pixels_available": [] as Array<(data: PixelsAvailable) => void>,
+		boardUpdate: [] as Array<(data: BoardUpdate) => void>,
+		pixelsAvailable: [] as Array<(data: PixelsAvailable) => void>,
 	};
 
 	static async connect(http: Requester) {
 		const events = [
+			"cooldown",
 			"data.colors",
 			"data.timestamps", // TODO: this is an extension, test if it's available
+			"info", // TODO: this is also an extension
 		];
-		const query = events
-			.map(e => "subscribe[]=" + encodeURIComponent(e))
-			.join("&");
-		const socketUrl = resolveURL(http.baseURL, "events?" + query);
-		const socket = new WebSocket(socketUrl);
-		await new Promise((resolve, reject) => {
-			socket.onopen = resolve;
-			socket.onerror = reject;
-		});
-		return new Board(http, socket);
+		const socket = await http.socket("events", events);
+		// TODO: catch events in socket and replay them after this is fetched
+		const { cooldown, info } = await http.getRaw().then(async r => ({
+			cooldown: writable(Cooldown.parse(Object.fromEntries(r.headers.entries()))),
+			info: writable(BoardInfo.parse(await r.json())),
+		}));
+		return new Board(http, socket, info, cooldown);
 	}
 	
 	protected readonly colorsCache: DataCache;
 	protected readonly timestampsCache: DataCache32;
 	protected readonly maskCache: DataCache;
 	protected readonly initialCache: DataCache;
+	public readonly info: Readable<BoardInfo>;
+	public readonly cooldown: Readable<Cooldown>;
 
 	private constructor(
 		private readonly http: Requester,
 		private readonly socket: WebSocket,
+		private readonly infoStore: Writable<BoardInfo>,
+		private readonly cooldownStore: Writable<Cooldown>,
 	) {
-		this.onUpdate((u: BoardUpdate) => this.update(u));
+		this.info = { subscribe: infoStore.subscribe };
+		this.cooldown = { subscribe: cooldownStore.subscribe };
+		this.onUpdate(u => this.update(u));
+		this.onPixelsAvailable(p => this.cooldownStore.set({
+			pixelsAvailable: p.count,
+			nextTimestamp: p.next,
+		}));
 		socket.addEventListener("message", e => {
-			const packet = JSON.parse(e.data);
-			switch (packet.type) {
-				case "board-update": 
-					this.listeners.board_update.forEach(l => l(packet));
-					break;
-				case "pixels-available": 
-					this.listeners.pixels_available.forEach(l => l(packet));
-					break;
+			try {
+				const packet = Event.parse(JSON.parse(e.data) as unknown);
+				switch (packet.type) {
+					case "board-update": 
+						this.listeners.boardUpdate.forEach(l => l(packet));
+						break;
+					case "pixels-available": 
+						this.listeners.pixelsAvailable.forEach(l => l(packet));
+						break;
+				}
+			} catch(e) {
+				console.error("Failed to parse packet", e);
 			}
 		});
 		
@@ -66,41 +94,46 @@ export class Board {
 	}
 
 	onUpdate(callback: (packet: BoardUpdate) => void) {
-		this.listeners.board_update.push(callback);
+		this.listeners.boardUpdate.push(callback);
 	}
 
-	private infoCache?: Promise<BoardInfo>;
+	onPixelsAvailable(callback: (packet: PixelsAvailable) => void) {
+		this.listeners.pixelsAvailable.push(callback);
+	}
 	
-	info(): Promise<BoardInfo> {
-		if (this.infoCache === undefined) {
-			this.infoCache = this.http.get().then(BoardInfo.parse);
-		}
-
-		return this.infoCache;
-	}
-
 	async colors(sector: number): Promise<Uint8Array> {
-		return await this.colorsCache.get(await this.info(), sector);
+		return await this.colorsCache.get(get(this.info), sector);
 	}
 
 	async timestamps(sector: number): Promise<Uint32Array> {
-		return await this.timestampsCache.get(await this.info(), sector);
+		return await this.timestampsCache.get(get(this.info), sector);
 	}
 
 	async mask(sector: number): Promise<Uint8Array> {
-		return await this.maskCache.get(await this.info(), sector);
+		return await this.maskCache.get(get(this.info), sector);
 	}
 
 	async initial(sector: number): Promise<Uint8Array> {
-		return await this.initialCache.get(await this.info(), sector);
+		return await this.initialCache.get(get(this.info), sector);
 	}
 
 	protected async update(update: BoardUpdate) {
+		// NOTE: the "!" here tells typescript to assume this is defined as it
+		// cannot deduce that the next call will set it.
+		let info!: BoardInfo;
+		this.infoStore.update(oldInfo => {
+			if (typeof update.info?.shape !== "undefined") {
+				throw new Error("TODO: shape change handling");
+			}
+
+			info = { ...oldInfo, ...update.info };
+			return info;
+		});
+
 		const colorUpdates = update.data?.colors || [];
 		const timestampUpdates = update.data?.timestamps || [];
 		const maskUpdates = update.data?.mask || [];
 		const initialUpdates = update.data?.initial || [];
-		const info = await this.info();
 
 		for (const change of colorUpdates) {
 			const [index, offset] = info.shape.positionToSector(change.position);

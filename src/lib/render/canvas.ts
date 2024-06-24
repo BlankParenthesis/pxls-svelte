@@ -1,7 +1,7 @@
 import { Texture, Vec2, Renderer, Program, Mesh } from "ogl";
 import type { Board } from "../board/board";
 import { CANVAS_FRAGMENT_SHADER, QUAD_VERTEX_SHADER, Quad } from "./gl";
-import { toTexture } from "../board/palette";
+import { Palette, toTexture } from "../board/palette";
 import type { Shape } from "./shape";
 import { newTemplateProgram, Template, type TemplateProgram } from "./template";
 import { CanvasTextures } from "./canvastextures";
@@ -74,13 +74,14 @@ export class Canvas {
 		return this.renderer.gl;
 	}
 
-	async size(): Promise<[number, number]> {
-		return (await this.board.info()).shape.size();
+	size(): [number, number] {
+		return this.shape.size();
 	}
 
 	constructor(
 		private board: Board,
 		private shape: Shape,
+		palette: Palette,
 		canvas?: HTMLCanvasElement,
 	) {
 		this.renderer = new Renderer({
@@ -91,7 +92,6 @@ export class Canvas {
 		const gl = this.gl;
 
 		this.palette = (async () => {
-			const { palette } = await board.info();
 			return toTexture(gl, palette);
 		})();
 
@@ -190,12 +190,11 @@ export class Canvas {
 	}
 
 	private async prepareToRender(): Promise<RenderInfo> {
-		const { shape } = (await this.board.info());
-		const detailLevel = this.detailLevel(shape);
-		const paletteTexture = await this.palette;
-		const size = shape.size();
+		const shape = this.shape;
+		const size = await this.size();
 		const scale = this.scale;
-
+		const paletteTexture = await this.palette;
+		const detailLevel = this.detailLevel(this.shape);
 		// NOTE: must be last
 		const timestamp = await nextFrame();
 

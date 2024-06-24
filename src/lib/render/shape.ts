@@ -1,3 +1,16 @@
+import { z } from "zod";
+
+export const ShapeParser = z.array(z.array(z.number()).length(2)).min(1)
+	.transform(s => {
+		if (s.length === 0) {
+			throw new Error("Degenerate board shape");
+		} else if (s.length === 1) {
+			return new Shape([[1,1], s[0] as [number, number]]);
+		} else {
+			return new Shape(s as Array<[number, number]>);
+		}
+	});
+
 export class MergeInstructions {
 	constructor(
 		/**

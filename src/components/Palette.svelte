@@ -2,6 +2,7 @@
 	import { Board } from "../lib/board/board";
 
 	export let board: Board;
+	const info = board.info; // TODO: listen to the palette directly
 </script>
 <style>
 	ul {
@@ -18,11 +19,9 @@
 	}
 </style>
 <ul>
-	{#await board.info() then info}
-		{#each info.palette as [index, color]}
-			{#if !color.system_only }
-				<li><button>{color.name}</button></li>
-			{/if}
-		{/each}
-	{/await}
+	{#each $info.palette as [index, color]}
+		{#if !color.system_only }
+			<li><button>{color.name}</button></li>
+		{/if}
+	{/each}
 </ul>

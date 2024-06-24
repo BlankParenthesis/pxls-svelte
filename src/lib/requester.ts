@@ -11,13 +11,13 @@ export class Requester {
 	private headers(): HeadersInit {
 		const token = get(this.token);
 		if (typeof token !== "undefined") {
-			return { authentication: `Bearer ${token}` };
+			return { authorization: `Bearer ${token}` };
 		} else {
 			return {};
 		}
 	}
 
-	public get(location?: string): Promise<unknown> {
+	public getRaw(location?: string): Promise<Response> {
 		const headers = this.headers();
 		let url: URL;
 		if (typeof location === "undefined") {
@@ -25,13 +25,62 @@ export class Requester {
 		} else {
 			url = resolveURL(this.baseURL, location);
 		}
-		return fetch(url, { headers }).then(r => r.json());
+		return fetch(url, { headers });
+	}
+
+	public get(location?: string): Promise<unknown> {
+		return this.getRaw(location).then(r => r.json());
 	}
 
 	public data(start: number, end: number): Promise<ArrayBuffer> {
 		const range = "bytes=" + start + "-" + end;
 		const headers = { "Range":  range, ...this.headers() };
 		return fetch(this.baseURL, { headers }).then(r => r.arrayBuffer());
+	}
+
+	public async socket(location: string, events: Array<string>): Promise<WebSocket> {
+		const token = get(this.token);
+		const query = events
+			.map(e => "subscribe[]=" + encodeURIComponent(e));
+
+		if (typeof token !== "undefined") {
+			query.push("authenticate=true");
+		}
+
+		const url = resolveURL(this.baseURL, location + "?" + query.join("&"));
+		const socket = new WebSocket(url);
+		await new Promise((resolve, reject) => {
+			let unsubscribe = () => {};
+			socket.onclose = () => {
+				unsubscribe();
+				reject(new Error("Socket closed"));
+			};
+			socket.onerror = () => reject(new Error("Socket error"));
+			
+			if (typeof token !== "undefined") {
+				socket.onopen = () => {
+					unsubscribe = this.token.subscribe(token => {
+						socket.send(JSON.stringify({
+							"type": "authenticate",
+							"token": token,
+						}));
+					});
+				};
+			}
+			socket.onmessage = m => {
+				try {
+					const packet = JSON.parse(m.data);
+					if (packet.type === "ready") {
+						resolve(null);
+					} else {
+						throw new Error("Unexpected packet");
+					}
+				} catch (e) {
+					reject(e);
+				}
+			};
+		});
+		return socket;
 	}
 
 	public subpath(location: string): Requester {

@@ -6,11 +6,14 @@
     import { type Settings } from "../lib/settings";
     import { type Board } from "../lib/board/board";
     import { type Site } from "../lib/site";
+    import Cooldown from "./Cooldown.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
 	const auth = site.auth;
 	export let board: Board;
+	const cooldown = board.cooldown;
+	const info = board.info;
 </script>
 <style>
 	.card {
@@ -26,6 +29,7 @@
 	</aside>
 	<aside class="bottom card">
 		<Login {auth} />
+		<Cooldown info={$info} cooldown={$cooldown} />
 		<Palette {board} />
 	</aside>
 </Grid>

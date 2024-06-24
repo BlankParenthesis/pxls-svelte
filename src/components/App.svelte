@@ -31,9 +31,11 @@
 
 <Stack>
 	{#await connecting}
-		Connecting
+		Connecting…
 	{:then site}
-		{#await site.defaultBoard().then(b => b.connect()) then board}
+		{#await site.defaultBoard().then(b => b.connect())}
+			Loading board…
+		{:then board}
 			<Canvas {board} renderOptions={settings.debug.render}/>
 			<Ui {site} {board} bind:settings />
 		{:catch e}

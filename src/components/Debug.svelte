@@ -1,15 +1,9 @@
 <script lang="ts">
     import { type DebugSettings } from "../lib/settings";
     import { persistentWritable } from "../lib/storage/persistent";
-	import { urlWritable } from "../lib/storage/url";
 	import { z } from "zod";
 
 	export let settings: DebugSettings;
-
-	const state = urlWritable("state", null, true);
-	const sessionState = urlWritable("session_state", null, true);
-	const iss = urlWritable("iss", null, true);
-	const code = urlWritable("code", null, true);
 
 	const persistence = persistentWritable(
 		"debugText",
