@@ -5,6 +5,7 @@ export const ShapeParser = z.array(z.array(z.number()).length(2)).min(1)
 		if (s.length === 0) {
 			throw new Error("Degenerate board shape");
 		} else if (s.length === 1) {
+			console.warn("Server gave an invalid shape");
 			return new Shape([[1,1], s[0] as [number, number]]);
 		} else {
 			return new Shape(s as Array<[number, number]>);
@@ -74,8 +75,20 @@ export class Shape {
 		this.depth = raw.length;
 	}
 
+	toString(): string {
+		const items = this.raw.map(i => `[${i.join(", ")}]`);
+		return `[${items.join(", ")}]`;
+	}
+
 	slice(start?: number, end?: number): Shape {
 		return new Shape(this.raw.slice(start, end));
+	}
+
+	/**
+	 * A special case of slice which removes the last element
+	 */
+	sectors(): Shape {
+		return this.slice(0, -1);
 	}
 
 	size(): [number, number] {
@@ -89,7 +102,10 @@ export class Shape {
 		return this.get(this.depth - 1);
 	}
 
-	get(level: number) {
+	get(level: number): [number, number] {
+		if (!(level in this.raw)) {
+			throw new Error("shape is not deep enough");
+		}
 		return this.raw[level];
 	}
 
@@ -106,8 +122,10 @@ export class Shape {
 	}
 
 	/**
+	 * @param x the x coordinate of the position in the shape.
+	 * @param y the y coordinate of the position in the shape.
 	 * @returns The array addressing the sector at the given euclidean coordinates.
-	 * Here are examples for a shape of `[[2, 2], [2, 2], [_, _]]`.
+	 * Here are examples for a shape of `[[2, 2], [2, 2]]`.
 	 * This Shape produces a board like this:
 	 * ```
 	 *    □□□□
@@ -115,7 +133,9 @@ export class Shape {
 	 *    □□□□
 	 *    □□□□
 	 * ```
-	 * where `□` represents a sector of size `[_, _]`
+	 * where `□` represents a unit which may be:
+	 * - a pixel if the shape is unsliced
+	 * - a sector if the last component is removed (for example with `sectors()`)
 	 * Sectors are logically ordered like this:
 	 * ```
 	 *    0  1  4  5
@@ -153,34 +173,34 @@ export class Shape {
 	 *    □□■□
 	 * ```
 	 * The addressing array for position (2, 3) is [3, 2] (fourth quadrant, third sector).
-	 * So, when provided input of `[2, 3]` for a shape of `[[2, 2], [2, 2], [_, _]]`,
+	 * So, when provided input of `[2, 3]` for a shape of `[[2, 2], [2, 2]]`,
 	 * this function outputs `[3, 2]`
 	 */
 	coordinatesToIndexArray(x: number, y: number): number[] {
-		const [sectorsX, sectorsY] = this.slice(0, -1).size();
-		const [sectionsX, sectionsY] = this.get(0);
-
-		const rangedX = x % sectorsX;
-		const rangedY = y % sectorsY;
-		
-		const subX = Math.floor(sectionsX * rangedX / sectorsX);
-		const subY = Math.floor(sectionsY * rangedY / sectorsY);
-		const subPosition = subX + (subY * sectionsX);
-
-		if (this.depth > 2) {
-			const rest = this.slice(1).coordinatesToIndexArray(x, y);
-			return [subPosition].concat(rest);
+		if (this.depth === 0) {
+			return [];
 		} else {
-			return [subPosition];
+			const subsection = this.slice(1);
+			const [subsectionWidth, subsectionHeight] = subsection.size();
+			const [sectionWidth, _] = this.slice(0, 1).size();
+			const subsectionX = Math.floor(x / subsectionWidth);
+			const subsectionY = Math.floor(y / subsectionHeight);
+			const subPosition = subsectionX + (subsectionY * sectionWidth);
+			const rest = subsection.coordinatesToIndexArray(
+				x % subsectionWidth,
+				y  % subsectionHeight,
+			);
+						
+			return [subPosition].concat(rest);
 		}
 	}
 
 	/**
 	 * @returns The real index of a sector based on the addressing array.
 	 */
-	indexArrayToSector(indexArray: number[]): number {
+	indexArrayToPosition(indexArray: number[]): number {
 		return indexArray.reduce((position, index, depth) => {
-			const [width, height] = this.slice(depth + 1, -1).size();
+			const [width, height] = this.slice(depth + 1).size();
 			return position + index * width * height;
 		}, 0);
 	}
@@ -188,16 +208,18 @@ export class Shape {
 	mergeSectors(location: number[]): MergeInstructions {
 		const subsection = this.slice(location.length);
 		const size = subsection.size();
-		const [sectorsX, sectorsY] = subsection.slice(0, -1).size();
+		const subsectionSectors = subsection.sectors();
+		const [sectorsX, sectorsY] = subsectionSectors.size();
 		const sectorsCount = sectorsX * sectorsY;
 
 		const sectors = new Array(sectorsCount) as number[];
 
 		for (let x = 0; x < sectorsX; x++) {
 			for (let y = 0; y < sectorsY; y++) {
-				sectors[x + y * sectorsX] = this.indexArrayToSector(
-					location.concat(subsection.coordinatesToIndexArray(x, y)),
-				);
+				const subIndexArray = subsectionSectors.coordinatesToIndexArray(x, y);
+				const indexArray = location.concat(subIndexArray);
+				const sector = this.sectors().indexArrayToPosition(indexArray);
+				sectors[x + y * sectorsX] = sector;
 			}
 		}
 

@@ -1,3 +1,5 @@
+import { Vec2, type Attribute } from "ogl";
+
 /**
  * Wait until the page is about to render.
  * NOTE: Awaiting after this point will likely miss the frame.
@@ -89,4 +91,49 @@ export function tag<K extends string, V,>(key: K, value: V) {
 	return function<T extends { [P in keyof T]: unknown }>(obj: T) { 
 		return {...obj, ...obj2 };
 	};
+}
+
+/**
+ * resolves an async generator of items to a single promise resolving to an 
+ * array of all generated items.
+ * @param gen the async generator to collect
+ * @returns a promise to an array of all yielded items
+ */
+export async function collect<T>(gen: AsyncGenerator<T>): Promise<Array<T>> {
+	const collection = [];
+	for await(const i of gen) {
+		collection.push(i);
+	}
+	return collection;
+}
+
+export interface Instanceable {
+	maxParallelism: number;
+}
+
+
+/** 
+ * @returns a vector which normalizes the larger of @width and @height to the other
+ */
+export function ratio(width: number, height: number): Vec2 {
+	if (width > height) {
+		return new Vec2(1, width / height);
+	} else {
+		return new Vec2(height / width, 1);
+	}
+}
+
+/**
+ * updates the contents of and ogl attribute.
+ * @param attribute the ogl instance attribute to update.
+ * @param data the data to set the attribute to.
+ */
+export function updateAttribute(attribute: Attribute, data: Array<Vec2 | number>) {
+	attribute.data = Float32Array.from(data.flat());
+	attribute.count = data.length;
+	attribute.needsUpdate = true;
+}
+
+export interface GameState {
+	selectedColor?: number;
 }

@@ -1,16 +1,13 @@
-import type { Template } from "./render/template";
-
-export type RenderSettings = {
-	detailLevel: number;
-	autoDetail: boolean;
-	templates: Template[];
-	timestampStart: number;
-	timestampEnd: number;
-	heatmapDim: number;
+export type RendererOverrides = {
+	detailLevel?: number;
+	debug: boolean;
+	debugOutline: number;
+	debugOutlineStripe: number;
+	zoom: boolean,
 };
 
 export type DebugSettings = {
-	render: RenderSettings;
+	render: RendererOverrides;
 }
 
 export type Settings = {

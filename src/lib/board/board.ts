@@ -5,6 +5,8 @@ import { Event, BoardUpdate, PixelsAvailable } from "./events";
 import type { Requester } from "../requester";
 import { get, writable, type Readable, type Writable } from "svelte/store";
 
+type PlaceResult = boolean; // TODO: a bit more detail would be nice
+
 const HeaderNumber = z.number().int().min(0);
 
 const Cooldown = z.object({
@@ -22,11 +24,15 @@ export type Cooldown = z.infer<typeof Cooldown>;
 export class BoardStub {
 	constructor(
 		private readonly http: Requester,
-		private readonly info?: BoardInfo,
+		readonly info?: BoardInfo,
 	) {}
 
 	async connect(): Promise<Board> {
 		return Board.connect(this.http);
+	}
+
+	get uri(): URL {
+		return this.http.baseURL;
 	}
 }
 export class Board {
@@ -184,4 +190,16 @@ export class Board {
 		}
 	}
 	
+	async place(x: number, y: number, color: number): Promise<PlaceResult> {
+		const shape = get(this.info).shape;
+		const indexArray = shape.coordinatesToIndexArray(x, y);
+		const position = shape.indexArrayToPosition(indexArray);
+		
+		try {
+			await this.http.post({ color }, `pixels/${position}`);
+			return true;
+		} catch(_) {
+			return false;
+		}
+	}
 }

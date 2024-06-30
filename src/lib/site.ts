@@ -5,6 +5,7 @@ import { Permissions } from "./permissions";
 import { BoardStub } from "./board/board";
 import { resolveURL } from "./util";
 import { BoardReference } from "./reference";
+import { BoardsPage } from "./page";
 import { SiteAuthUnverified, Authentication } from "./authentication";
 import { Requester } from "./requester";
 
@@ -54,8 +55,19 @@ export class Site {
 	}
 
 	async *boards() {
-		throw new Error("TODO");
-		yield await this.defaultBoard();
+		let boards = await this.http.get("boards")
+			.then(j => BoardsPage.parse(j));
+		while(true) {
+			for (const board of boards.items) {
+				yield new BoardStub(this.http.subpath(board.uri), board.view);
+			}
+			if (boards.next) {
+				boards = await this.http.get(boards.next)
+					.then(j => BoardsPage.parse(j));
+			} else {
+				break;
+			}
+		}
 	}
 	
 	async defaultBoard(): Promise<BoardStub> {

@@ -10,6 +10,14 @@
 		z.string().parse,
 		"default text",
 	);
+
+	function checkAutoDetail(event: Event) {
+		if (settings.render.detailLevel == -1) {
+			settings.render.detailLevel = undefined;
+		}
+	}
+
+	let shape = "";
 </script>
 <style>
 	button, output, label, input[type=text] {
@@ -47,8 +55,26 @@
 	}
 </style>
 <div class="vertical">
-	<label>Heatmap Start<input type="range" min="618000" max="620000" bind:value="{settings.render.timestampStart}"/></label>
-	<label>Heatmap End<input type="range" min="618000" max="620000" bind:value="{settings.render.timestampEnd}"/></label>
-	<label>Heatmap Dimming<input type="range" min="0" max="1" step="0.01" bind:value="{settings.render.heatmapDim}"/></label>
-	<label>Persistence Test<input type="text" bind:value="{$persistence}"/><button on:click={() => persistence.reset()}>Delete</button></label>
+	<label>
+		Detail Level
+		<input type="number" min="-1" step="1" bind:value="{settings.render.detailLevel}" on:change="{checkAutoDetail}"/>
+	</label>
+	<label>
+		Zoom minimum override
+		<input type="checkbox" bind:checked="{settings.render.zoom}"/>
+	</label>
+	<label>
+		Debug Render
+		<input type="checkbox" bind:checked="{settings.render.debug}"/>
+	</label>
+	{#if settings.render.debug}
+		<label>
+			Debug Outline
+			<input type="range" min="0" max="1" step="0.01" bind:value="{settings.render.debugOutline}"/>
+		</label>
+		<label>
+			Debug Outline Stripe
+			<input type="range" min="0" max="1" step="0.01" bind:value="{settings.render.debugOutlineStripe}"/>
+		</label>
+	{/if}
 </div>

@@ -171,8 +171,8 @@ export class Authentication {
 				const wait = token.expiry - Date.now() - 30000;
 	
 				if (wait < 0) {
-					// this shouldn't happen
-					throw new Error("token already expired");
+					// this shouldn't happen, but it does
+					console.warn("token already expired");
 				}
 
 				clearTimeout(tokenRefresh);

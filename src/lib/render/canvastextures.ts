@@ -163,40 +163,51 @@ export class CanvasTextures {
 		private board: Board,
 		private shape: Shape,
 	) {
-		this.cache = new Array(shape.depth)
+		this.cache = new Array(shape.depth).fill(null).map(() => new Map());
+		// make each [1, 1] shape level map to the level above
+		Array(shape.depth - 1)
 			.fill(null)
-			.map(() => new Map<number, SectorTextures>());
+			.map((_, i) => i + 1)
+			.filter(i => shape.get(i).every(v => v === 1))
+			.forEach(i => this.cache[i] = this.cache[i -1]);
+
+		board.onUpdate(update => {
+			update.data?.colors?.forEach(c => this.updateColors(c));
+			update.data?.timestamps?.forEach(c => this.updateTimestamps(c));
+			update.data?.mask?.forEach(c => this.updateMask(c));
+			update.data?.initial?.forEach(c => this.updateInitial(c));
+		});
 	}
 
 	get(
 		detailLevel: number,
 		x: number,
 		y: number,
-	): SectorTextures | null {
-		const [maxX, maxY] = this.shape.slice(0, detailLevel + 1).size();
-		if ((0 <= x && x < maxX) && (0 <= y && y < maxY)) {
-			const sectorPosition = x * maxX + y;
-			
-			let sector = this.cache[detailLevel].get(sectorPosition);
-			if (sector === undefined) {
-				const [width, height] = this.shape.slice(detailLevel + 1).size();
-				const slicedShape = this.shape.slice(0, detailLevel + 2);
-				const arrayIndex = slicedShape.coordinatesToIndexArray(x, y);
-
-				sector = new SectorTextures(
-					this.gl,
-					this.board,
-					this.shape.mergeSectors(arrayIndex),
-					width,
-					height,
-				);
-
-				this.cache[detailLevel].set(sectorPosition, sector);
-			}
-			return sector;
-		} else {
-			return null;
+	): SectorTextures {
+		const [maxX, maxY] = this.shape.slice(0, detailLevel).size();
+		if (x < 0 || x >= maxX || y < 0 || y >= maxY) {
+			throw new Error(`No data at ${x}, ${y} for detail level ${detailLevel}`);
 		}
+		
+		const sectorPosition = y * maxX + x;
+
+		let sector = this.cache[detailLevel].get(sectorPosition);
+		if (sector === undefined) {
+			const [width, height] = this.shape.slice(detailLevel).size();
+			const subsectorShape = this.shape.slice(0, detailLevel + 1);
+			const arrayIndex = subsectorShape.sectors().coordinatesToIndexArray(x, y);
+
+			sector = new SectorTextures(
+				this.gl,
+				this.board,
+				this.shape.mergeSectors(arrayIndex),
+				width,
+				height,
+			);
+
+			this.cache[detailLevel].set(sectorPosition, sector);
+		}
+		return sector;
 	}
 
 	private *invalidatedTextures(change: Change) {

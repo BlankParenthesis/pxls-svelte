@@ -1,8 +1,22 @@
 <script lang="ts">
+	import { z } from "zod";
 	import { Board } from "../lib/board/board";
+    import type { GameState } from "../lib/util";
 
 	export let board: Board;
+	export let gamestate: GameState;
 	const info = board.info; // TODO: listen to the palette directly
+
+	const Index = z.number().int().min(0);
+
+	function selectColor(this: HTMLButtonElement) {
+		const index = Index.parse(parseInt(this.dataset["index"] as string));
+		gamestate.selectedColor = index;
+	}
+
+	function deselectColor() {
+		gamestate.selectedColor = undefined;
+	}
 </script>
 <style>
 	ul {
@@ -18,10 +32,20 @@
 		list-style-type: none;
 	}
 </style>
+	
 <ul>
 	{#each $info.palette as [index, color]}
 		{#if !color.system_only }
-			<li><button>{color.name}</button></li>
+			<li>
+				<button data-index={index} on:click={selectColor} disabled={gamestate.selectedColor === index}>
+					{color.name}
+				</button>
+			</li>
 		{/if}
 	{/each}
 </ul>
+<button
+	type="button"
+	on:click={deselectColor}
+	disabled={typeof gamestate.selectedColor === "undefined"}
+>Delselect</button>

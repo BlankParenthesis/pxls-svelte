@@ -1,47 +1,110 @@
-<script context="module" lang="ts">
-	const MOUSE_BUTTON_PRIMARY = 1;
-	const MOUSE_BUTTON_SECONDARY = 2;
-	const MOUSE_BUTTON_AUXILIARY = 4;
-	const MOUSE_BUTTON_FOUR = 8;
-	const MOUSE_BUTTON_FIVE = 16;
-</script>
 <script lang="ts">
-	import { Texture } from "ogl";
-	import { onMount } from "svelte";
-	import { get } from "svelte/store";
+    import { Vec2 } from "ogl";
+	import type { GameState } from "../lib/util";
 	import type { Board } from "../lib/board/board";
-	import { Canvas } from "../lib/render/canvas";
-	import { Template } from "../lib/render/template";
-    import { type RenderSettings } from "../lib/settings";
+	import type { RenderParameters } from "../lib/render/canvas";
+    import type { RendererOverrides } from "../lib/settings";
+	import Render from "./Render.svelte";
+    import Reticule from "./Reticule.svelte";
+    import { tick } from "svelte";
 
-	let canvasElement: HTMLCanvasElement;
-	let canvas: Canvas;
+	let canvas: Render;
 
-	export let renderOptions: RenderSettings;
+	export let board: Board;
+	export let overrides: RendererOverrides;
+	export let parameters: RenderParameters;
+	export let gamestate: GameState;
 
-	$: if (canvas) {
-		canvas.render(renderOptions)
-			.catch(console.error);
+	let innerWidth: number;
+	let innerHeight: number;
+	$: width = innerWidth;
+	$: height = innerHeight;
+	
+	const info = board.info;
+	$: reticuleSize = Math.min(parameters.transform[0], parameters.transform[4])
+		* Math.max(window.innerWidth, window.innerHeight)
+		/ Math.max(...$info.shape.size())
+		/ 2;
+
+
+	let [boardWidth, boardHeight] = $info.shape.size();
+	let reticulePosition = new Vec2(0, 0);
+
+	function positionReticule(mouseX: number, mouseY: number) {
+		const x = mouseX / width;
+		const y = mouseY / height;
+		const viewbox = canvas.viewbox();
+		const [boardX, boardY] = viewbox.into(x, y);
+		const pixelsX = Math.floor(boardX * boardWidth);
+		const pixelsY = Math.floor(boardY * boardHeight);
+		const [x2, y2] = viewbox.outof(pixelsX / boardWidth, pixelsY / boardHeight);
+
+		reticulePosition = new Vec2(x2 * width, y2 * height);
 	}
 
-	async function drag(event: MouseEvent) {
-		if (event.buttons & MOUSE_BUTTON_PRIMARY) {
-			if (event.altKey || event.ctrlKey) {
-				// FIXME: multiple events could play out of order here since there's no sync.
-				// Also, no feedback on movement could be bad for UX.
-				const [width, height] = await canvas.size();
-				renderOptions.templates[0].x += width * 2 * event.movementX / canvasElement.width / canvas.scale[0];
-				renderOptions.templates[0].y += height * 2 * event.movementY / canvasElement.height / canvas.scale[1];
-			} else {
-				canvas.translate[0] += 2 * event.movementX / canvasElement.width / canvas.scale[0];
-				canvas.translate[1] += -2 * event.movementY / canvasElement.height / canvas.scale[1];
-			}
+	async function place(x: number, y: number) {
+		if (typeof gamestate.selectedColor !== "undefined") {
+			await board.place(x, y, gamestate.selectedColor);
+		} else {
+			throw new Error("Placed with no color selected");
 		}
 	}
 
-	function zoom(event: WheelEvent) {
-		const oldScaleX = canvas.scale[0];
-		const oldScaleY = canvas.scale[1];
+	let dragAnchor: Vec2 | undefined;
+	let clicking = false;
+
+	function drag(event: MouseEvent) {
+		positionReticule(event.clientX, event.clientY);
+		
+		// TODO: a bunch of stuff, but mainly we can do nasty things like place through the ui
+		
+		if (event.buttons === 1) {
+			const dx = 2 * event.movementX / width;
+			const dy = 2 * event.movementY / height;
+			const scale = new Vec2(parameters.transform[0], parameters.transform[4]);
+			parameters.transform = parameters.transform
+				.translate(new Vec2(dx, dy)
+				.divide(scale));
+		}
+
+		// TODO: use this for dragging
+		//const viewbox = canvas.viewbox();
+		//const [boardX, boardY] = viewbox.into(event.clientX, event.clientY);
+		//if (event.buttons === 0) {
+		//	dragAnchor = undefined;
+		//} else if (typeof dragAnchor === "undefined") {
+		//	dragAnchor = new Vec2(boardX, boardY);
+		//} else {
+		//	const dragDelta = new Vec2(boardX, boardY).sub(dragAnchor);
+		//}
+
+		if (typeof gamestate.selectedColor !== "undefined") {
+			const position = new Vec2(event.clientX, event.clientY);
+			if (event.buttons === 0) {
+				if (clicking && event.target) {
+					clicking = false;
+					const x = event.clientX / width;
+					const y = event.clientY / height;
+					const viewbox = canvas.viewbox();
+					const [boardX, boardY] = viewbox.into(x, y);
+					const pixelsX = Math.floor(boardX * boardWidth);
+					const pixelsY = Math.floor(boardY * boardHeight);
+					place(pixelsX, pixelsY);
+				}
+				dragAnchor = undefined;
+			} else if (typeof dragAnchor === "undefined") {
+				dragAnchor = position;
+				clicking = true;
+			} else {
+				if (position.distance(dragAnchor) > 5) {
+					clicking = false;
+				}
+			}
+		}
+
+	}
+
+	async function zoom(event: WheelEvent) {
 
 		let delta = -event.deltaY;
 
@@ -59,47 +122,15 @@
 				break;
 		}
 
-		canvas.zoomScale[0] *= 1.15 ** delta;
-		canvas.zoomScale[1] *= 1.15 ** delta;
-
-		const zoomCenterX = 2 * (event.clientX / canvasElement.width) - 1;
-		const zoomCenterY = -2 * (event.clientY / canvasElement.height) + 1;
+		// TODO: this scales from the top left rather than anything nice, fix that
+		const zoom = 1.15 ** delta;
+		parameters.transform = parameters.transform.scale(new Vec2(zoom, zoom));
 		
-		canvas.translate[0] -= zoomCenterX / oldScaleX;
-		canvas.translate[0] += zoomCenterX / canvas.scale[0];
-		canvas.translate[1] -= zoomCenterY / oldScaleY;
-		canvas.translate[1] += zoomCenterY / canvas.scale[1];
+		// TODO: this is out of date so displays wrong
+		positionReticule(event.clientX, event.clientY);
 	}
-
-	async function resize() {
-		await canvas.setSize(window.innerWidth, window.innerHeight);
-		canvas = canvas;
-	}
-	
-	export let board: Board;
-
-	onMount(async () => {
-		// TODO: use stores in Canvas
-		const info = get(board.info);
-		canvas = new Canvas(board, info.shape, info.palette, canvasElement);
-		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 1);
-		const template = new Template(new Texture(canvas.gl, {
-			image: new Uint8Array(new Array(200 * 200).fill(1).map((_, i) => i % 4)),
-			width: 20,
-			height: 20,
-			format: canvas.gl.LUMINANCE,
-			internalFormat: canvas.gl.LUMINANCE,
-			minFilter: canvas.gl.NEAREST,
-			magFilter: canvas.gl.NEAREST,
-		}));
-		template.x = 5;
-		template.y = 2;
-		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 4);
-		renderOptions.templates.push(template);
-		await resize();
-	})
 </script>
-
-<svelte:window on:resize="{resize}" />
-
-<canvas on:mousemove="{drag}" on:wheel="{zoom}" bind:this="{canvasElement}" />
+<!--TODO: perhaps use actions to make some nice controls module -->
+<svelte:window bind:innerWidth bind:innerHeight on:mousemove={drag} on:wheel={zoom} on:mousedown={drag} on:mouseup={drag}/>
+<Render bind:this={canvas} {board} {parameters} {overrides} {width} {height} />
+<Reticule {gamestate} position={reticulePosition} size={reticuleSize} />

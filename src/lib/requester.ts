@@ -32,6 +32,18 @@ export class Requester {
 		return this.getRaw(location).then(r => r.json());
 	}
 
+	public post(data: Record<string, unknown>, location?: string): Promise<unknown> {
+		const headers = this.headers() as Record<string, string>;
+		headers["content-type"] = "application/json";
+		let url: URL;
+		if (typeof location === "undefined") {
+			url = this.baseURL;
+		} else {
+			url = resolveURL(this.baseURL, location);
+		}
+		return fetch(url, { method: "post", headers, body: JSON.stringify(data) });
+	}
+
 	public data(start: number, end: number): Promise<ArrayBuffer> {
 		const range = "bytes=" + start + "-" + end;
 		const headers = { "Range":  range, ...this.headers() };

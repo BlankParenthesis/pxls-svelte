@@ -6,14 +6,18 @@
     import { type Settings } from "../lib/settings";
     import { type Board } from "../lib/board/board";
     import { type Site } from "../lib/site";
+    import { type GameState } from "../lib/util";
     import Cooldown from "./Cooldown.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
+	export let gamestate: GameState;
 	const auth = site.auth;
 	export let board: Board;
 	const cooldown = board.cooldown;
 	const info = board.info;
+	const token = auth.token;
+	$: loggedIn = typeof $token === "string";
 </script>
 <style>
 	.card {
@@ -24,12 +28,14 @@
 	}
 </style>
 <Grid>
-	<aside class="top-right">
+	<aside class="bottom-right">
 		<Debug bind:settings={settings.debug} />
 	</aside>
 	<aside class="bottom card">
 		<Login {auth} />
-		<Cooldown info={$info} cooldown={$cooldown} />
-		<Palette {board} />
+		{#if loggedIn}
+			<Cooldown info={$info} cooldown={$cooldown} />
+			<Palette bind:gamestate {board} />
+		{/if}
 	</aside>
 </Grid>

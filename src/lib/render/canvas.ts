@@ -1,88 +1,86 @@
-import { Texture, Vec2, Renderer, Program, Mesh } from "ogl";
+import { Texture, Vec2, Renderer, Mesh, Mat3, Program } from "ogl";
 import type { Board } from "../board/board";
-import { CANVAS_FRAGMENT_SHADER, QUAD_VERTEX_SHADER, Quad } from "./gl";
+import { QuadQuad } from "./gl";
 import { Palette, toTexture } from "../board/palette";
-import type { Shape } from "./shape";
-import { newTemplateProgram, Template, type TemplateProgram } from "./template";
+import { Shape } from "./shape";
+import { Template } from "./template";
 import { CanvasTextures } from "./canvastextures";
-import { nextFrame } from "../util";
-import { type RenderSettings } from "../settings";
+import { nextFrame, ratio, updateAttribute, type Instanceable } from "../util";
+import { type RendererOverrides } from "../settings";
+import { TemplateProgram } from "./program/template";
+import { CanvasProgram } from "./program/canvas";
+import { DebugProgram } from "./program/debug";
 
-function fromTranslateToTile(coord: number, scaleModifier: number) {
-	const unrounded = coord * scaleModifier + 0.5;
-	const rounded = Math.ceil(unrounded);
-	// Modulo starts working on the integer mark. (1%1 == 0, not 1)
-	// Ceil (and floor) stop working on the integer mark. (ceil(1) == 1, not 2)
-	// The below corrects for this difference.
-	// NOTE: This is basically a hack regardless and I've still seen issues
-	// related to this happen. Perhaps a better solution would be to use the 
-	// same rounding for both the display position and the tile coordinates.
-	if (unrounded === rounded) {
-		return rounded + 1;
-	} else {
-		return rounded;
+export class ViewBox {
+	readonly bottom: number;
+	readonly left: number;
+	readonly top: number;
+	readonly right: number;
+	constructor(view: {
+		bottom: number,
+		left: number,
+		top: number,
+		right: number,
+	}) {
+		this.bottom = view.bottom;
+		this.left = view.left;
+		this.top = view.top;
+		this.right = view.right;
 	}
-}
 
-export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
-	detailLevel: 1,
-	autoDetail: true,
-	templates: [],
-	timestampStart: 0,
-	timestampEnd: 3000,
-	heatmapDim: 0,
+	/**
+	 * @param x x position in screen space from 0 to 1
+	 * @param y y position in screen space from 0 to 1
+	 * @returns the position on the board where [0, 0] is the top left and [1, 1] is the bottom right
+	 */
+	into(x: number, y: number): [number, number] {
+		return [
+			this.left + x * (this.right - this.left),
+			this.top + y * (this.bottom - this.top),
+		];
+	}
+
+	/**
+	 * @param x x position in board space
+	 * @param y y position in board space
+	 * @returns the position in screen space where [0, 0] is the top left and [1, 1] is the bottom right
+	 */
+	outof(x: number, y: number): [number, number] {
+		return [
+			(x - this.left) / (this.right - this.left),
+			(y - this.top) / (this.bottom - this.top),
+		];
+	}
 };
 
-type CanvasUniforms = {
-	uTranslate: { value: Vec2 };
-	uScale: { value: Vec2 };
-	uOutline: { value: number };
-	uOutlineStripe: { value: number };
-	tPalette: { value: Texture };
-	uPaletteSize: { value: number };
-	tIndices: { value: Texture };
-	tTimestamps: { value: Texture };
-	uTimestampRange: { value: Vec2 };
-	uHeatmapDim: { value: number };
-};
-type CanvasProgram = Omit<Program, "uniforms"> & { uniforms: CanvasUniforms };
-
-interface RenderInfo {
-	shape: Shape,
-	size: [number, number];
-	scale: Vec2;
-	paletteTexture: Texture;
-	timestamp: DOMHighResTimeStamp;
-	detailLevel: number;
+export type RenderParameters = {
+	transform: Mat3;
+	templates: Template[];
+	timestampStart: number;
+	timestampEnd: number;
+	heatmapDim: number;
 }
 
 export class Canvas {
-	private palette: Promise<Texture>;
+	private palette: Texture;
 	private readonly renderer: Renderer;
 	private readonly program: CanvasProgram;
+	private readonly debugProgram: DebugProgram;
 	private readonly templateProgram: TemplateProgram;
-	private mesh: Mesh;
-	private templateMesh: Mesh;
+	private mesh: Mesh<QuadQuad, CanvasProgram>;
+	private debugMesh: Mesh<QuadQuad, DebugProgram>;
+	private templateMesh: Mesh<QuadQuad, TemplateProgram>;
 	private textures: CanvasTextures;
-
-	zoomScale = new Vec2(1, 1);
-	screenScale = new Vec2(1, 1);
-	ratioScale = new Vec2(1, 1);
-	translate = new Vec2(-0.5, -0.5);
 
 	get gl() {
 		return this.renderer.gl;
 	}
 
-	size(): [number, number] {
-		return this.shape.size();
-	}
-
 	constructor(
-		private board: Board,
+		board: Board,
 		private shape: Shape,
 		palette: Palette,
-		canvas?: HTMLCanvasElement,
+		canvas: HTMLCanvasElement,
 	) {
 		this.renderer = new Renderer({
 			canvas,
@@ -91,216 +89,204 @@ export class Canvas {
 		});
 		const gl = this.gl;
 
-		this.palette = (async () => {
-			return toTexture(gl, palette);
-		})();
+		this.palette = toTexture(gl, palette);
 
 		gl.clearColor(0, 0, 0, 1);
 
-		const textures = this.textures = new CanvasTextures(gl, board, shape);
-		this.board.onUpdate(update => {
-			if (update.data !== undefined) {
-				if (update.data.colors !== undefined) {
-					update.data.colors.forEach(textures.updateColors.bind(textures));
-				}
-				if (update.data.timestamps !== undefined) {
-					update.data.timestamps.forEach(textures.updateTimestamps.bind(textures));
-				}
-				if (update.data.mask !== undefined) {
-					update.data.mask.forEach(textures.updateMask.bind(textures));
-				}
-				if (update.data.initial !== undefined) {
-					update.data.initial.forEach(textures.updateInitial.bind(textures));
-				}
-				this.render().catch(console.error);
-			}
-		});
+		this.textures = new CanvasTextures(gl, board, shape);
+		this.program = new CanvasProgram(gl);
+		this.debugProgram = new DebugProgram(gl);
+		this.templateProgram = new TemplateProgram(gl);
 
-		const uniforms: CanvasUniforms = {
-			uTranslate: { value: new Vec2(this.translate[0], this.translate[1]) },
-			uScale: { value: new Vec2(this.scale[0], this.scale[1]) },
-			uOutline: { value: 0 },
-			uOutlineStripe: { value: 8 },
-			tPalette: { value: new Texture(gl) },
-			uPaletteSize: { value: 1 },
-			tIndices: { value: new Texture(gl) },
-			tTimestamps: { value: new Texture(gl) },
-			uTimestampRange: { value: new Vec2(DEFAULT_RENDER_SETTINGS.timestampStart, DEFAULT_RENDER_SETTINGS.timestampEnd) },
-			uHeatmapDim: { value: 1 - DEFAULT_RENDER_SETTINGS.heatmapDim },
-		};
-
-		this.program = new Program(gl, {
-			vertex: QUAD_VERTEX_SHADER,
-			fragment: CANVAS_FRAGMENT_SHADER,
-			uniforms,
-		}) as CanvasProgram;
-
-		this.templateProgram = newTemplateProgram(gl);
-
-		const geometry = new Quad(gl);
+		const geometry = new QuadQuad(gl);
 		this.mesh = new Mesh(this.gl, { geometry, program: this.program });
+		this.debugMesh = new Mesh(this.gl, { geometry, program: this.debugProgram });
 		this.templateMesh = new Mesh(this.gl, { geometry, program: this.templateProgram });
 	}
 
-	get scale() {
-		return new Vec2(
-			this.zoomScale[0] * this.screenScale[0] * this.ratioScale[0],
-			this.zoomScale[1] * this.screenScale[1] * this.ratioScale[1],
-		);
-	}
-
-	async setSize(newWidth: number, newHeight: number) {
+	setSize(newWidth: number, newHeight: number) {
 		if (this.gl.canvas.width !== newWidth || this.gl.canvas.height !== newHeight) {
+			// FIXME: this causes flicker? probably has to recreate view
 			this.renderer.setSize(newWidth, newHeight);
-			
-			if (newWidth > newHeight) {
-				this.screenScale[0] = 1;
-				this.screenScale[1] = newWidth / newHeight;
-			} else {
-				this.screenScale[0] = newHeight / newWidth;
-				this.screenScale[1] = 1;
-			}
-		}
-
-		const [width, height] = await this.size();
-
-		if(width > height) {
-			this.ratioScale[0] = width / height;
-			this.ratioScale[1] = 1;
-		} else {
-			this.ratioScale[0] = 1;
-			this.ratioScale[1] = height / width;
+			const screenScale = ratio(newWidth, newHeight);
+			const boardScale = ratio(...this.shape.size());
+			const scale = screenScale.multiply(boardScale);
+			this.program.uniforms.uAspect.value = scale;
+			this.debugProgram.uniforms.uAspect.value = scale;
+			this.templateProgram.uniforms.uAspect.value = scale;
 		}
 	}
 
-	private detailLevel(shape: Shape) {
-		// Length is 1 more than max index and the last index is 1-to-1.
-		// So minus 2.
-		const maxDetailLevel = shape.depth - 2;
-		let detailLevel = 0;
-		let [x, y] = this.scale;
-		x /= 2;
-		y /= 2;
-		let dimensions = shape.slice(0, detailLevel + 2).size();
-		while (detailLevel < maxDetailLevel && x > dimensions[0] && y > dimensions[1]) {
-			detailLevel += 1;
-			dimensions = shape.slice(0, detailLevel + 2).size();
-		}
-		return Math.max(0, Math.min(detailLevel, maxDetailLevel));
-	}
-
-	private async prepareToRender(): Promise<RenderInfo> {
-		const shape = this.shape;
-		const size = await this.size();
-		const scale = this.scale;
-		const paletteTexture = await this.palette;
-		const detailLevel = this.detailLevel(this.shape);
-		// NOTE: must be last
-		const timestamp = await nextFrame();
-
-		return {
-			shape,
-			size,
-			scale,
-			timestamp,
-			paletteTexture,
-			detailLevel,
-		};
-	}
-
-	private renderCanvas(
-		{ paletteTexture, detailLevel, shape }: RenderInfo,
-	) {
-		this.program.uniforms.tPalette.value = paletteTexture;
-		this.program.uniforms.uPaletteSize.value = paletteTexture.width - 1;
-
-		// NOTE: there is a potential fast-path here when rendering detail level
-		// 0 (the full canvas). In that case, we only need to render one quad
-		// and scale/translate becomes simple, but it adds a condition and
-		// increases the indentation level, so I have elected to not use it for
-		// now.
-
-		const scaleModifier = shape.slice(0, detailLevel + 1).size();
-		const translate = new Vec2(...[this.translate[0], this.translate[1]].map((translate, i) => {
-			const scaledTranslate = translate * scaleModifier[i];
-			
-			const offset = scaledTranslate >= -0.5 ? 1.5 : 0.5;
-
-			return (scaledTranslate + offset) % 1 - offset;
-		}));
-		this.program.uniforms.uScale.value = new Vec2(...[this.scale[0], this.scale[1]].map((scale, i) => {
-			return scale / scaleModifier[i];
-		}));
-
-		const x = -fromTranslateToTile(this.translate[0], scaleModifier[0]);
-		const y = scaleModifier[1] + fromTranslateToTile(this.translate[1], scaleModifier[1]) - 1;
-
-		for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
-			const ox = x + dx;
-			const oy = y - dy;
-			const textures = this.textures.get(detailLevel, ox, oy);
-			if (textures !== null) {
-				this.program.uniforms.uTranslate.value = new Vec2(translate[0] + dx, translate[1] + dy);
-				this.program.uniforms.tIndices.value = textures.colors();
-				this.program.uniforms.tTimestamps.value = textures.timestamps();
-				
-				this.renderer.render({
-					scene: this.mesh,
-				});
-			}
-		}
+	/** 
+	 * @returns The viewbox relative to the top left of the unit board.
+	 */
+	visibleArea(): ViewBox {
+		const inverse = new Mat3(...this.program.uniforms.uView.value)
+			.multiply(new Mat3().identity().scale(this.program.uniforms.uAspect.value))
+			.inverse();
 		
+		// gl goes from bottom to top, but we want from top to bottom, so flip the y
+		const bottomLeft = new Vec2(-1, 1).applyMatrix3(inverse);
+		const topRight = new Vec2(1, -1).applyMatrix3(inverse);
+
+		return new ViewBox({
+			bottom: bottomLeft.y,
+			left: bottomLeft.x,
+			top: topRight.y,
+			right: topRight.x,
+		});
+	}
+
+	private detailLevel(visible: ViewBox): number {
+		// NOTE: this is just 2 / scale for now, but in case the logic changes
+		// in future, rely on `visible`.
+		const width = visible.right - visible.left;
+		const height = visible.bottom - visible.top;
+
+		const maxDetail = this.shape.depth - 1;
+		// NOTE: 1 by 1 is the size  of the board, and the widths here get
+		// smaller as more sectors are added at higher detail levels.
+		let [sectorWidth, sectorHeight] = [1, 1];
+		for (let detail = 0; detail < maxDetail; detail++) {
+			sectorWidth /= this.shape.get(detail)[0];
+			sectorHeight /= this.shape.get(detail)[1];
+			if (width > sectorWidth || height > sectorHeight) {
+				return detail;
+			}
+		}
+
+		return maxDetail;
+	}
+
+	private visibleSectors(visible: ViewBox, detail: number): Array<Vec2> {
+		const [sectorWidth, sectorHeight] = this.shape.slice(0, detail).size();
+		const clamped = (v: number, max: number) => Math.max(0, Math.min(v, max));
+		const left = clamped(Math.floor(visible.left * sectorWidth), sectorWidth);
+		const right = clamped(Math.ceil(visible.right * sectorWidth), sectorWidth);
+		const top = clamped(Math.floor(visible.top * sectorHeight), sectorHeight);
+		const bottom = clamped(Math.ceil(visible.bottom * sectorHeight), sectorHeight);
+
+		const sectors = [];
+		for (let y = top; y < bottom; y++) {
+			for (let x = left; x < right; x++) {
+				sectors.push(new Vec2(x, y));
+			}
+		}
+
+		return sectors;
+	}
+
+	private updateUniforms(
+		palette: Texture,
+		parameters: RenderParameters,
+		overrides: RendererOverrides,
+	) {
+		this.program.uniforms.uTimestampRange.value = new Vec2(parameters.timestampStart, parameters.timestampEnd);
+		this.program.uniforms.uHeatmapDim.value = 1 - parameters.heatmapDim;
+		this.program.uniforms.tPalette.value = palette;
+		this.program.uniforms.uPaletteSize.value = palette.width;
+		this.templateProgram.uniforms.uHeatmapDim.value = 1 - parameters.heatmapDim;
+
+		this.debugProgram.uniforms.uOutline.value = overrides.debugOutline;
+		this.debugProgram.uniforms.uOutlineStripe.value = overrides.debugOutlineStripe;
+
+		const view = new Mat3(...parameters.transform);
+		this.program.uniforms.uView.value = view;
+		this.debugProgram.uniforms.uView.value = view;
+		this.templateProgram.uniforms.uView.value = view;
+
+		const [width, height] = this.shape.size();
+		this.templateProgram.uniforms.uBoardSize.value = new Vec2(width, height);
+	}
+
+	async render(parameters: RenderParameters, overrides: RendererOverrides) {
+		const palette = await this.palette;
+
+		if (!overrides.zoom) {
+			const scale = new Vec2(parameters.transform[0], parameters.transform[4]);
+			const [minZoomX, minZoomY] = this.shape.slice(0, -1).slice(0, 1).size().map(v => v * 2);
+			const correctionX = minZoomX / scale.x;
+			const correctionY = minZoomY / scale.y;
+			const correction = Math.max(correctionX, correctionY);
+			if (correction > 1) {
+				parameters.transform.scale(new Vec2(correction, correction));
+			}
+		}
+
+		this.updateUniforms(palette, parameters, overrides);
+
+		type Scene = Mesh<QuadQuad, Program & Instanceable>;
+		const scene = (overrides.debug ? this.debugMesh : this.mesh);
+		const visible = this.visibleArea();
+
+		let detail: number;
+		if (typeof overrides.detailLevel === "undefined") {
+			detail = this.detailLevel(visible);
+		} else {
+			detail = overrides.detailLevel;
+		}
+		detail = Math.max(1, Math.min(detail, this.shape.depth - 1));
+
+		const [width, height] = this.shape.slice(0, detail).size();
+		updateAttribute(
+			scene.geometry.attributes.size,
+			Array(scene.program.maxParallelism).fill(new Vec2(width, height)),
+		);
+		
+		const sectors = this.visibleSectors(visible, detail);
+		if (typeof overrides.detailLevel === "undefined") {
+			console.assert(sectors.length <= 4, "More than 4 sectors were visible");
+		} else if (!overrides.debug) {
+			sectors.splice(4);
+		}
+		await this.renderSectors(scene as Scene, sectors, detail);
+		this.renderTemplates(palette, [...parameters.templates]);
 		this.textures.prune();
 	}
 
-	private renderTemplates(
-		{ size, paletteTexture }: RenderInfo,
-		templates: Template[],
+	private async renderSectors<P extends Program & Instanceable>(
+		scene: Mesh<QuadQuad, P>,
+		sectors: Array<Vec2>,
+		detail: number,
 	) {
-		const [width, height] = size;
-		this.templateProgram.uniforms.tPalette.value = paletteTexture;
-		this.templateProgram.uniforms.uPaletteSize.value = paletteTexture.width;
-
-		for (const template of templates) {
-			this.templateProgram.uniforms.uScale.value = new Vec2(
-				this.scale[0] * template.image.width / width,
-				this.scale[1] * template.image.height / height,
-			);
-			this.templateProgram.uniforms.uTranslate.value = new Vec2(
-				(this.translate[0] + Math.round(template.x) / width) * width / template.image.width,
-				// This will probably get better if canvas begins working in
-				// pixel-space rather than 0.0 – 1.0. Until then: 🤢
-				(this.translate[1] + 1 - (template.image.height + Math.round(template.y)) / height) * height / template.image.height,
-			);
-			this.templateProgram.uniforms.tTemplate.value = template.image;
-			this.templateProgram.uniforms.uTemplateSize.value = new Vec2(
-				template.image.width,
-				template.image.height,
-			);
-			this.renderer.render({
-				scene: this.templateMesh,
+		// TODO: this was a bad idea, sort rendering flow out once and for all.
+		// (probably by removing the frame await in the render call, but there's more to it than that)
+		const frame = new Promise(resolve => nextFrame().then(resolve))
+			.then(() => this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT));
+		
+		const parallelism = scene.program.maxParallelism;
+		const attributes = scene.geometry.attributes;
+		while (sectors.length > 0) {
+			const nextSet = sectors.splice(0, parallelism);
+			updateAttribute(attributes.offset, nextSet.flat());
+			updateAttribute(attributes.texture, nextSet.map((_, i) => i));
+			scene.geometry.setInstancedCount(nextSet.length);
+			nextSet.forEach((sector, i) => {
+				const texture = this.textures.get(detail, sector.x, sector.y);
+				this.program.uniforms.tIndices.value[i] = texture.colors();
+				this.program.uniforms.tTimestamps.value[i] = texture.timestamps();
 			});
+			await frame; // this only waits once
+			this.renderer.render({ scene });
 		}
 	}
 
-	private lastRenderOptions?: RenderSettings;
+	private renderTemplates(palette: Texture, templates: Template[]) {
+		const [width, height] = this.shape.size();
+		this.templateProgram.uniforms.tPalette.value = palette;
+		this.templateProgram.uniforms.uPaletteSize.value = palette.width;
 
-	async render(options = this.lastRenderOptions) {
-		if (options === undefined) {
-			options = DEFAULT_RENDER_SETTINGS;
+		const attributes = this.templateMesh.geometry.attributes;
+
+		const parallelism = this.templateProgram.maxParallelism;
+		while (templates.length > 0) {
+			const nextSet = templates.splice(0, parallelism);
+			updateAttribute(attributes.offset, nextSet.map(t => new Vec2(t.x / t.image.width, t.y / t.image.height)));
+			updateAttribute(attributes.size, nextSet.map(t => new Vec2(width / t.image.width, height / t.image.height)));
+			updateAttribute(attributes.texture, nextSet.map((_, i) => i));
+			this.templateMesh.geometry.setInstancedCount(nextSet.length);
+			this.templateProgram.uniforms.tTemplate.value = nextSet.map(t => t.image);
+			this.renderer.render({ scene: this.templateMesh });
 		}
-		this.lastRenderOptions = options;
-
-		const renderInfo = await this.prepareToRender();
-		
-		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-		
-		// TODO: move into render functions using settings access.
-		this.program.uniforms.uTimestampRange.value = new Vec2(options.timestampStart, options.timestampEnd);
-		this.program.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
-		this.templateProgram.uniforms.uHeatmapDim.value = 1 - options.heatmapDim;
-
-		this.renderCanvas(renderInfo);
-		this.renderTemplates(renderInfo, options.templates);
 	}
 }
