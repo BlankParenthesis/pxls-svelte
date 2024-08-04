@@ -5,7 +5,7 @@ import { Palette, toTexture } from "../board/palette";
 import { Shape } from "./shape";
 import { Template } from "./template";
 import { CanvasTextures } from "./canvastextures";
-import { nextFrame, ratio, updateAttribute, type Instanceable } from "../util";
+import { ratio, updateAttribute, type Instanceable } from "../util";
 import { type RendererOverrides } from "../settings";
 import { TemplateProgram } from "./program/template";
 import { CanvasProgram } from "./program/canvas";
@@ -239,20 +239,17 @@ export class Canvas {
 		} else if (!overrides.debug) {
 			sectors.splice(4);
 		}
-		await this.renderSectors(scene as Scene, sectors, detail);
+		this.renderSectors(scene as Scene, sectors, detail);
 		this.renderTemplates(palette, [...parameters.templates]);
 		this.textures.prune();
 	}
 
-	private async renderSectors<P extends Program & Instanceable>(
+	private renderSectors<P extends Program & Instanceable>(
 		scene: Mesh<QuadQuad, P>,
 		sectors: Array<Vec2>,
 		detail: number,
 	) {
-		// TODO: this was a bad idea, sort rendering flow out once and for all.
-		// (probably by removing the frame await in the render call, but there's more to it than that)
-		const frame = new Promise(resolve => nextFrame().then(resolve))
-			.then(() => this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT));
+		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 		
 		const parallelism = scene.program.maxParallelism;
 		const attributes = scene.geometry.attributes;
@@ -266,7 +263,6 @@ export class Canvas {
 				this.program.uniforms.tIndices.value[i] = texture.colors();
 				this.program.uniforms.tTimestamps.value[i] = texture.timestamps();
 			});
-			await frame; // this only waits once
 			this.renderer.render({ scene });
 		}
 	}

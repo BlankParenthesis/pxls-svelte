@@ -1,13 +1,5 @@
 import { Vec2, type Attribute } from "ogl";
 
-/**
- * Wait until the page is about to render.
- * NOTE: Awaiting after this point will likely miss the frame.
- */
-export function nextFrame(): Promise<DOMHighResTimeStamp> {
-	return new Promise(resolve => requestAnimationFrame(resolve));
-}
-
 export function randomBytes(length: number): Uint8Array {
 	return crypto.getRandomValues(new Uint8Array(length));
 }

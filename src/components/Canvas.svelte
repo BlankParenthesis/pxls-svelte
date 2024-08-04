@@ -6,7 +6,6 @@
     import type { RendererOverrides } from "../lib/settings";
 	import Render from "./Render.svelte";
     import Reticule from "./Reticule.svelte";
-    import { tick } from "svelte";
 
 	let canvas: Render;
 

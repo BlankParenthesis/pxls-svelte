@@ -26,25 +26,26 @@
 	}
 
 	let renderQueued = false;
-	function render() {
-		if(renderQueued) {
-			return;
-		}
-		renderQueued = true;
-		setTimeout(async () => {
-			await canvas.render(parameters, overrides).catch(console.error);
-			renderQueued = false;
-		}, 0);
-	}
 
 	$: if (canvas) {
 		canvas.setSize(width, height);
-		render();
+		renderQueued = true;
 	}
 
 	$: if (canvas && parameters && overrides) {
-		render();
+		renderQueued = true;
 	}
+
+	async function render(timestamp?: number) {
+		console.debug(timestamp);
+		if (canvas && renderQueued) {
+			await canvas.render(parameters, overrides).catch(console.error);
+			renderQueued = false;
+		}
+		requestAnimationFrame(render);
+	}
+
+	render();
 	
 	const info = board.info;
 
