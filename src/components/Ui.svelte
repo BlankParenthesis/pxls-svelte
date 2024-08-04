@@ -8,6 +8,7 @@
     import { type Site } from "../lib/site";
     import { type GameState } from "../lib/util";
     import Cooldown from "./Cooldown.svelte";
+    import Toggle from "./Toggle.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
@@ -18,24 +19,37 @@
 	const info = board.info;
 	const token = auth.token;
 	$: loggedIn = typeof $token === "string";
+
+	let showSettings = false;
 </script>
 <style>
 	.card {
 		background-color: white;
-		padding: 1em;
-		border-top-left-radius: 0.5em;
-		border-top-right-radius: 0.5em;
+		display: inline-block;
+		min-width: 40em;
 	}
+
+	.left { text-align: left; }
+	.right { text-align: right; }
 </style>
 <Grid>
-	<aside class="bottom-right">
-		<Debug bind:settings={settings.debug} />
-	</aside>
-	<aside class="bottom card">
-		<Login {auth} />
-		{#if loggedIn}
-			<Cooldown info={$info} cooldown={$cooldown} />
+	<div class="bottom-center card">
+		<Grid>
+			<div class="left"><Login {auth} /></div>
+			<div class="center"><Cooldown info={$info} cooldown={$cooldown} /></div>
+			<div class="right"><Toggle bind:state={showSettings}>Settings</Toggle></div>
+		</Grid>
+
+		
+		{#if loggedIn && !showSettings}
 			<Palette bind:gamestate {board} />
 		{/if}
-	</aside>
+	</div>
+	{#if showSettings}
+		<div class="center-center card">
+			<h2>Settings Menu</h2>
+			<p>There would be some settings here</p>
+			<Debug bind:settings={settings.debug} />
+		</div>
+	{/if}
 </Grid>

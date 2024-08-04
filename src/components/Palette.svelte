@@ -17,6 +17,10 @@
 	function deselectColor() {
 		gamestate.selectedColor = undefined;
 	}
+
+	function colorToHex(color: number) {
+		return color.toString(16).padStart(8, "0");
+	}
 </script>
 <style>
 	ul {
@@ -31,15 +35,25 @@
 	li {
 		list-style-type: none;
 	}
+
+	.color {
+		width: 3em;
+		height: 3em;
+		box-sizing: border-box;
+	}
 </style>
 	
 <ul>
 	{#each $info.palette as [index, color]}
 		{#if !color.system_only }
 			<li>
-				<button data-index={index} on:click={selectColor} disabled={gamestate.selectedColor === index}>
-					{color.name}
-				</button>
+				<button
+					data-index={index}
+					on:click={selectColor}
+					disabled={gamestate.selectedColor === index}
+					style:background-color="#{colorToHex(color.value)}"
+					class="color"
+				/>
 			</li>
 		{/if}
 	{/each}

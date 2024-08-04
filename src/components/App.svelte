@@ -37,43 +37,42 @@
 	let select: (board: BoardStub) => void;
 	const boardSelect = new Promise<BoardStub>(resolve => select = resolve);
 </script>
-
-<Stack>
-	{#await connecting}
-		Connecting…
-	{:then site}
-		{#await collect(site.boards())}
-			Loading boards…
-		{:then boards}
-			{#await boardSelect}
-				<ul>
-					{#each boards as board}
-						<li>
-							{#if board.info}
-								<h4>{board.info.name}</h4>
-								<p>Shape: {board.info.shape}<p/>
-								<button on:click="{() => select(board)}">Connect</button>
-							{:else}
-								<h4>Info unknown</h4>
-								<p>Location: {board.uri.href}</p>
-							{/if}
-						</li>
-					{/each}
-				</ul>
+{#await connecting}
+	Connecting…
+{:then site}
+	{#await collect(site.boards())}
+		Loading boards…
+	{:then boards}
+		{#await boardSelect}
+			<ul>
+				{#each boards as board}
+					<li>
+						{#if board.info}
+							<h4>{board.info.name}</h4>
+							<p>Shape: {board.info.shape}<p/>
+							<button on:click="{() => select(board)}">Connect</button>
+						{:else}
+							<h4>Info unknown</h4>
+							<p>Location: {board.uri.href}</p>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		{:then board}
+			{#await board.connect()}
+				Loading board…
 			{:then board}
-				{#await board.connect()}
-					Loading board…
-				{:then board}
+				<Stack>
 					<Canvas {gamestate} {board} parameters={render} overrides={settings.debug.render}/>
 					<Ui bind:gamestate {site} {board} bind:settings />
-				{:catch e}
-					Board {e}
-				{/await}
+				</Stack>
+			{:catch e}
+				Board {e}
 			{/await}
-		{:catch e}
-			Board {e}
 		{/await}
 	{:catch e}
-		Site {e}
+		Board {e}
 	{/await}
-</Stack>
+{:catch e}
+	Site {e}
+{/await}

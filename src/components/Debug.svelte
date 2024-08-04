@@ -1,23 +1,13 @@
 <script lang="ts">
     import { type DebugSettings } from "../lib/settings";
-    import { persistentWritable } from "../lib/storage/persistent";
-	import { z } from "zod";
 
 	export let settings: DebugSettings;
-
-	const persistence = persistentWritable(
-		"debugText",
-		z.string().parse,
-		"default text",
-	);
 
 	function checkAutoDetail(event: Event) {
 		if (settings.render.detailLevel == -1) {
 			settings.render.detailLevel = undefined;
 		}
 	}
-
-	let shape = "";
 </script>
 <style>
 	button, output, label, input[type=text] {
@@ -50,7 +40,6 @@
 	.vertical {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-end;
 		gap: 0.5em;
 	}
 </style>
