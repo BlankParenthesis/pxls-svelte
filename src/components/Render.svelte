@@ -36,16 +36,17 @@
 		renderQueued = true;
 	}
 
-	async function render(timestamp?: number) {
-		console.debug(timestamp);
-		if (canvas && renderQueued) {
-			await canvas.render(parameters, overrides).catch(console.error);
-			renderQueued = false;
+	{
+		async function render(timestamp?: number) {
+			if (canvas && renderQueued) {
+				await canvas.render(parameters, overrides).catch(console.error);
+				renderQueued = false;
+			}
+			requestAnimationFrame(render);
 		}
-		requestAnimationFrame(render);
-	}
 
-	render();
+		render();
+	}
 	
 	const info = board.info;
 
@@ -74,7 +75,7 @@
 		
 		parameters.templates.push(createTemplate());
 		
-		board.onUpdate(_ => render());
+		board.onUpdate(_ => renderQueued = true);
 	})
 </script>
 <style>
