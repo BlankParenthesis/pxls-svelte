@@ -36,7 +36,13 @@
 	<div class="bottom-center card">
 		<Grid>
 			<div class="left"><Login {auth} /></div>
-			<div class="center"><Cooldown info={$info} cooldown={$cooldown} /></div>
+			<div class="center">
+				{#if loggedIn}
+					<Cooldown info={$info} cooldown={$cooldown} />
+				{:else}
+					Login to place pixels
+				{/if}
+			</div>
 			<div class="right"><Toggle bind:state={showSettings}>Settings</Toggle></div>
 		</Grid>
 
