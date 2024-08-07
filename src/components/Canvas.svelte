@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Vec2 } from "ogl";
+    import { Mat3, Vec2 } from "ogl";
 	import type { GameState } from "../lib/util";
 	import type { Board } from "../lib/board/board";
 	import type { RenderParameters } from "../lib/render/canvas";
@@ -100,11 +100,9 @@
 				}
 			}
 		}
-
 	}
 
 	async function zoom(event: WheelEvent) {
-
 		let delta = -event.deltaY;
 
 		switch (event.deltaMode) {
@@ -121,10 +119,21 @@
 				break;
 		}
 
-		// TODO: this scales from the top left rather than anything nice, fix that
 		const zoom = 1.15 ** delta;
-		parameters.transform = parameters.transform.scale(new Vec2(zoom, zoom));
+
+		// the cursor position in gl space
+		const position = new Vec2(event.clientX / width, event.clientY / height)
+			.scale(2)
+			.sub(new Vec2(1, 1))
+			.applyMatrix3(new Mat3(...parameters.transform).inverse());
 		
+		// move the origin to the cursor, scale, then move back
+		// this scales around the cursor
+		parameters.transform = parameters.transform
+			.translate(position)
+			.scale(new Vec2(zoom, zoom))
+			.translate(position.scale(-1));
+
 		// TODO: this is out of date so displays wrong
 		positionReticule(event.clientX, event.clientY);
 	}
