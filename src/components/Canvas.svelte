@@ -34,9 +34,13 @@
 		const y = mouseY / height;
 		const viewbox = canvas.viewbox();
 		const [boardX, boardY] = viewbox.into(x, y);
+		
 		const pixelsX = Math.floor(boardX * boardWidth);
 		const pixelsY = Math.floor(boardY * boardHeight);
-		const [x2, y2] = viewbox.outof(pixelsX / boardWidth, pixelsY / boardHeight);
+		const clippedX = Math.max(0, Math.min(pixelsX, boardWidth));
+		const clippedY = Math.max(0, Math.min(pixelsY, boardHeight));
+		
+		const [x2, y2] = viewbox.outof(clippedX / boardWidth, clippedY / boardHeight);
 
 		reticulePosition = new Vec2(x2 * width, y2 * height);
 	}
@@ -86,7 +90,14 @@
 					const [boardX, boardY] = viewbox.into(x, y);
 					const pixelsX = Math.floor(boardX * boardWidth);
 					const pixelsY = Math.floor(boardY * boardHeight);
-					place(pixelsX, pixelsY);
+
+					const xInBounds = 0 <= pixelsX && pixelsX < boardWidth;
+					const yInBounds = 0 <= pixelsY && pixelsY < boardHeight;
+					if (xInBounds && yInBounds) {
+						place(pixelsX, pixelsY);
+					} else {
+						// TODO: indicate that placement is outside of canvas.
+					}
 				}
 				dragAnchor = undefined;
 			} else if (typeof dragAnchor === "undefined") {
