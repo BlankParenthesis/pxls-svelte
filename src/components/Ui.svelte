@@ -26,13 +26,12 @@
 	.card {
 		background-color: white;
 		display: inline-block;
-		min-width: 40em;
 	}
 
 	.left { text-align: left; }
 	.right { text-align: right; }
 </style>
-<Grid>
+<Grid maxwidth="40em" maxheight="100%">
 	<div class="bottom-center card">
 		<Grid>
 			<div class="left"><Login {auth} /></div>

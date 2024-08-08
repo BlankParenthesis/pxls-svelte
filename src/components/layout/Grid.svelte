@@ -1,3 +1,7 @@
+<script lang="ts">
+	export let maxwidth = "auto";
+	export let maxheight = "auto";
+</script>
 <style>
 	.grid {
 		display: grid;
@@ -6,8 +10,8 @@
 			"left         center  right"
 			"bottom-left  bottom  bottom-right";
 		pointer-events: none;
-		grid-template-columns: 1fr auto 1fr;
-		grid-template-rows: 1fr minmax(0, 100%) 1fr;
+		grid-template-columns: 1fr minmax(0, var(--maxwidth)) 1fr;
+		grid-template-rows: 1fr minmax(0, var(--maxheight)) 1fr;
 	}
 
 	.grid > :global(*) {
@@ -32,6 +36,6 @@
 	.grid > :global(.center) { grid-area: top / top / bottom / auto; }
 	.grid > :global(.right) { grid-area: top-right / top-right / bottom-right / auto; }
 </style>
-<div class="grid">
+<div class="grid" style="--maxwidth: {maxwidth}; --maxheight: {maxheight}">
 	<slot></slot>
 </div>
