@@ -55,8 +55,6 @@
 	function drag(event: MouseEvent) {
 		positionReticule(event.clientX, event.clientY);
 		
-		// TODO: a bunch of stuff, but mainly we can do nasty things like place through the ui
-		
 		if (event.buttons === 1) {
 			const dx = 2 * event.movementX / width;
 			const dy = 2 * event.movementY / height;
@@ -80,7 +78,7 @@
 		if (typeof gamestate.selectedColor !== "undefined") {
 			const position = new Vec2(event.clientX, event.clientY);
 			if (event.buttons === 0) {
-				if (clicking && event.target) {
+				if (clicking && event.target === canvas.getElement()) {
 					clicking = false;
 					const x = event.clientX / width;
 					const y = event.clientY / height;

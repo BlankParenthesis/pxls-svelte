@@ -25,6 +25,10 @@
 		};
 	}
 
+	export function getElement() {
+		return canvasElement;
+	}
+
 	let renderQueued = false;
 
 	$: if (canvas) {
