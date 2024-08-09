@@ -202,9 +202,11 @@ export class Canvas {
 	async render(parameters: RenderParameters, overrides: RendererOverrides) {
 		const palette = await this.palette;
 
+		// this is redudant with the zooming code now handling this, but I'm
+		// leaving it here for now
 		if (!overrides.zoom) {
 			const scale = new Vec2(parameters.transform[0], parameters.transform[4]);
-			const [minZoomX, minZoomY] = this.shape.slice(0, -1).slice(0, 1).size().map(v => v * 2);
+			const [minZoomX, minZoomY] = this.shape.sectors().slice(0, 1).size().map(v => v * 2);
 			const correctionX = minZoomX / scale.x;
 			const correctionY = minZoomY / scale.y;
 			const correction = Math.max(correctionX, correctionY);

@@ -111,6 +111,8 @@
 		}
 	}
 
+	let maxZoom = $info.shape.sectors().slice(0, 1).size().map(v => v * 2);
+
 	async function zoom(event: WheelEvent) {
 		let delta = -event.deltaY;
 
@@ -140,7 +142,20 @@
 		// this scales around the cursor
 		parameters.transform = parameters.transform
 			.translate(position)
-			.scale(new Vec2(zoom, zoom))
+			.scale(new Vec2(zoom, zoom));
+
+		if (!overrides.zoom) {
+			const scale = new Vec2(parameters.transform[0], parameters.transform[4]);
+			const [minZoomX, minZoomY] = maxZoom;
+			const correctionX = minZoomX / scale.x;
+			const correctionY = minZoomY / scale.y;
+			const correction = Math.max(correctionX, correctionY);
+			if (correction > 1) {
+				parameters.transform.scale(new Vec2(correction, correction));
+			}
+		}
+		
+		parameters.transform = parameters.transform
 			.translate(position.scale(-1));
 
 		// TODO: this is out of date so displays wrong
