@@ -55,58 +55,54 @@
 
 	let dragAnchor: Vec2 | undefined;
 	let clicking = false;
+	let placeValid = false;
+
+	function dragState(event: MouseEvent) {
+		const position = new Vec2(event.clientX, event.clientY);
+		if (!clicking && event.buttons & 1 && event.target === canvas.getElement()) {
+			// start clicking
+			dragAnchor = position;
+			clicking = true;
+			placeValid = true;
+		} else if (clicking) {
+			// stop clicking
+			clicking = false;
+
+			const isPlacing = typeof gamestate.selectedColor !== "undefined";
+
+			if (placeValid && isPlacing) {
+				const x = event.clientX / width;
+				const y = event.clientY / height;
+				const viewbox = canvas.viewbox();
+				const [boardX, boardY] = viewbox.into(x, y);
+				const pixelsX = Math.floor(boardX * boardWidth);
+				const pixelsY = Math.floor(boardY * boardHeight);
+
+				const xInBounds = 0 <= pixelsX && pixelsX < boardWidth;
+				const yInBounds = 0 <= pixelsY && pixelsY < boardHeight;
+				if (xInBounds && yInBounds) {
+					place(pixelsX, pixelsY);
+				} else {
+					// TODO: indicate that placement is outside of canvas.
+				}
+			}
+		}
+	}
 
 	function drag(event: MouseEvent) {
 		positionReticule(event.clientX, event.clientY);
-		
-		if (event.buttons === 1) {
+
+		if (clicking) {
 			const dx = 2 * event.movementX / width;
 			const dy = 2 * event.movementY / height;
 			const scale = new Vec2(parameters.transform[0], parameters.transform[4]);
-			parameters.transform = parameters.transform
-				.translate(new Vec2(dx, dy)
-				.divide(scale));
-		}
+			const translate = new Vec2(dx, dy).divide(scale);
+			parameters.transform = parameters.transform.translate(translate);
 
-		// TODO: use this for dragging
-		//const viewbox = canvas.viewbox();
-		//const [boardX, boardY] = viewbox.into(event.clientX, event.clientY);
-		//if (event.buttons === 0) {
-		//	dragAnchor = undefined;
-		//} else if (typeof dragAnchor === "undefined") {
-		//	dragAnchor = new Vec2(boardX, boardY);
-		//} else {
-		//	const dragDelta = new Vec2(boardX, boardY).sub(dragAnchor);
-		//}
-
-		if (typeof gamestate.selectedColor !== "undefined") {
+			// break the placement if we move too far to avoid accidental place
 			const position = new Vec2(event.clientX, event.clientY);
-			if (event.buttons === 0) {
-				if (clicking && event.target === canvas.getElement()) {
-					clicking = false;
-					const x = event.clientX / width;
-					const y = event.clientY / height;
-					const viewbox = canvas.viewbox();
-					const [boardX, boardY] = viewbox.into(x, y);
-					const pixelsX = Math.floor(boardX * boardWidth);
-					const pixelsY = Math.floor(boardY * boardHeight);
-
-					const xInBounds = 0 <= pixelsX && pixelsX < boardWidth;
-					const yInBounds = 0 <= pixelsY && pixelsY < boardHeight;
-					if (xInBounds && yInBounds) {
-						place(pixelsX, pixelsY);
-					} else {
-						// TODO: indicate that placement is outside of canvas.
-					}
-				}
-				dragAnchor = undefined;
-			} else if (typeof dragAnchor === "undefined") {
-				dragAnchor = position;
-				clicking = true;
-			} else {
-				if (position.distance(dragAnchor) > 5) {
-					clicking = false;
-				}
+			if (position.distance(dragAnchor) > 5) {
+				placeValid = false;
 			}
 		}
 	}
@@ -163,6 +159,13 @@
 	}
 </script>
 <!--TODO: perhaps use actions to make some nice controls module -->
-<svelte:window bind:innerWidth bind:innerHeight on:mousemove={drag} on:wheel={zoom} on:mousedown={drag} on:mouseup={drag}/>
+<svelte:window
+	bind:innerWidth
+	bind:innerHeight
+	on:mousemove={drag}
+	on:wheel={zoom}
+	on:mousedown={dragState}
+	on:mouseup={dragState}
+/>
 <Render bind:this={canvas} {board} {parameters} {overrides} {width} {height} />
 <Reticule {gamestate} position={reticulePosition} size={reticuleSize} />

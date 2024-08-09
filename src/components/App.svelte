@@ -26,6 +26,7 @@
 	};
 
 	let render: RenderParameters = {
+		// TODO: center on the center of canvas
 		transform: new Mat3().identity().translate(new Vec2(-0.5, -0.5)),
 		templates: [] as Template[],
 		timestampStart: 0,
