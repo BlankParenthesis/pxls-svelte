@@ -9,13 +9,8 @@
 			"top-left     top     top-right"
 			"left         center  right"
 			"bottom-left  bottom  bottom-right";
-		pointer-events: none;
 		grid-template-columns: 1fr minmax(0, var(--maxwidth)) 1fr;
 		grid-template-rows: 1fr minmax(0, var(--maxheight)) 1fr;
-	}
-
-	.grid > :global(*) {
-		pointer-events: initial;
 	}
 
 	.grid > :global(.top-left) { grid-area: top-left; }
@@ -36,6 +31,6 @@
 	.grid > :global(.center) { grid-area: top / top / bottom / auto; }
 	.grid > :global(.right) { grid-area: top-right / top-right / bottom-right / auto; }
 </style>
-<div class="grid" style="--maxwidth: {maxwidth}; --maxheight: {maxheight}">
+<div class="grid cursor-transparent" style="--maxwidth: {maxwidth}; --maxheight: {maxheight}">
 	<slot></slot>
 </div>

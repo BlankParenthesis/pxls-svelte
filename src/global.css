@@ -9,3 +9,11 @@ body {
 body > * {
 	flex-grow: 1;
 }
+
+.cursor-transparent {
+	pointer-events: none;
+}
+
+.cursor-transparent > :not(.cursor-transparent) {
+	pointer-events: initial;
+}

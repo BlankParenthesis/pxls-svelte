@@ -56,20 +56,10 @@
 
 	// TODO: this is temporary
 	function createTemplate(): Template {
-		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 1);
-		const template = new Template(new Texture(canvas.gl, {
-			image: new Uint8Array(new Array(200 * 200).fill(1).map((_, i) => Math.floor(i / 200) + i % 2)),
-			width: 20,
-			height: 20,
-			format: canvas.gl.LUMINANCE,
-			internalFormat: canvas.gl.LUMINANCE,
-			minFilter: canvas.gl.NEAREST,
-			magFilter: canvas.gl.NEAREST,
-		}));
-		template.x = -20;
-		template.y = 4;
-		canvas.gl.pixelStorei(canvas.gl.UNPACK_ALIGNMENT, 4);
-		return template;
+		const data = new Uint8Array(new Array(200 * 200)
+			.fill(1)
+			.map((_, i) => Math.floor(i / 200) + i % 2));
+		return new Template(Template.texture(canvas.gl, data, 20, 20), -20, 5);
 	}
 
 	onMount(async () => {
