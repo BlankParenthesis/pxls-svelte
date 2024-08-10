@@ -6,6 +6,6 @@
 		margin: 0.5em 0;
 	}
 </style>
-<div class="toolbar">
+<div class="toolbar cursor-transparent">
 	<button>Nuke Canvas</button>
 </div>

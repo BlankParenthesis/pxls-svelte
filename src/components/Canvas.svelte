@@ -111,6 +111,10 @@
 	let maxZoom = $info.shape.sectors().slice(0, 1).size().map(v => v * 2);
 
 	async function zoom(event: WheelEvent) {
+		if (event.target !== canvas.getElement()) {
+			return;
+		}
+
 		let delta = -event.deltaY;
 
 		switch (event.deltaMode) {
