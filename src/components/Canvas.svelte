@@ -25,8 +25,9 @@
 		/ Math.max(...$info.shape.size())
 		/ 2;
 
+	const palette = $info.palette;
 
-	let [boardWidth, boardHeight] = $info.shape.size();
+	const [boardWidth, boardHeight] = $info.shape.size();
 	let reticulePosition = new Vec2(0, 0);
 
 	function positionReticule(mouseX: number, mouseY: number) {
@@ -168,4 +169,4 @@
 	on:mouseup={dragState}
 />
 <Render bind:this={canvas} {board} {parameters} {overrides} {width} {height} />
-<Reticule {gamestate} position={reticulePosition} size={reticuleSize} />
+<Reticule {palette} {gamestate} position={reticulePosition} size={reticuleSize} />

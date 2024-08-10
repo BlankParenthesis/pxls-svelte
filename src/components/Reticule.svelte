@@ -1,20 +1,25 @@
 <script lang="ts">
     import type { Vec2 } from "ogl";
     import type { GameState } from "../lib/util";
+    import type { Palette } from "../lib/board/palette";
 
 	export let position: Vec2;
 	export let size: number;
+
+	export let palette: Palette;
 	export let gamestate: GameState;
+
+	// duplicated from palette
+	function colorToHex(color: number | undefined) {
+		return color?.toString(16).padStart(8, "0");
+	}
 </script>
 <style>
 	.reticule {
 		position: absolute;
-		border: 2px solid red;
+		border: 2px solid black;
 		pointer-events: none;
 		box-sizing: border-box;
-		
-		line-height: 1em;
-		text-align: center;
 	}
 </style>
 {#if typeof gamestate.selectedColor !== "undefined" }
@@ -25,5 +30,6 @@
 		style:left="{position.x}px"
 		style:top="{position.y}px"
 		style:font-size="{size}px"
-	>{gamestate.selectedColor}</div>
+		style:background-color="#{colorToHex(palette.get(gamestate.selectedColor)?.value)}"
+	></div>
 {/if}

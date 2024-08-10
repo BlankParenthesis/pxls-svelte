@@ -11,11 +11,11 @@
 
 	function selectColor(this: HTMLButtonElement) {
 		const index = Index.parse(parseInt(this.dataset["index"] as string));
-		gamestate.selectedColor = index;
-	}
-
-	function deselectColor() {
-		gamestate.selectedColor = undefined;
+		if (gamestate.selectedColor == index) {
+			gamestate.selectedColor = undefined;
+		} else {
+			gamestate.selectedColor = index;
+		}
 	}
 
 	function colorToHex(color: number) {
@@ -41,6 +41,11 @@
 		height: 3em;
 		box-sizing: border-box;
 	}
+
+	.color.selected {
+		background-color: transparent !important;
+		border-style: dashed;
+	}
 </style>
 	
 <ul>
@@ -50,16 +55,11 @@
 				<button
 					data-index={index}
 					on:click={selectColor}
-					disabled={gamestate.selectedColor === index}
 					style:background-color="#{colorToHex(color.value)}"
+					class:selected={gamestate.selectedColor === index}
 					class="color"
 				/>
 			</li>
 		{/if}
 	{/each}
 </ul>
-<button
-	type="button"
-	on:click={deselectColor}
-	disabled={typeof gamestate.selectedColor === "undefined"}
->Delselect</button>
