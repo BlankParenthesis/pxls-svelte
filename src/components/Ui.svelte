@@ -41,6 +41,8 @@
 	}
 
 	let panel = Panel.None;
+
+	const currentUser = site.currentUser();
 </script>
 <style>
 	.card {
@@ -91,7 +93,14 @@
 	</div>
 	{#if panel == Panel.Account}
 		<div class="center-center card">
-			<Account {auth} />
+			{#await $currentUser}
+				<div class="flex space middle">
+					<h2>Account</h2>
+					<p>Loading</p>
+				</div>
+			{:then url}
+				<Account {auth} user={site.user(url)}/>
+			{/await}
 		</div>
 	{:else if panel == Panel.Admin}
 		<div class="center-center cursor-transparent end">

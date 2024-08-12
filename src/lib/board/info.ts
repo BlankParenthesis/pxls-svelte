@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { Palette } from "./palette";
 import { ShapeParser } from "../render/shape";
+import { reference } from "../reference";
+import { page } from "../page";
 
 /* eslint-disable camelcase */
 export const BoardInfo = z.object({
@@ -13,3 +15,5 @@ export const BoardInfo = z.object({
 });
 export type BoardInfo = z.infer<typeof BoardInfo>;
 /* eslint-enable camelcase */
+export const BoardReference = reference(BoardInfo);
+export const BoardsPage = page(BoardReference);

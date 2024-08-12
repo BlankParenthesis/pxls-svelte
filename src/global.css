@@ -17,3 +17,67 @@ body > * {
 .cursor-transparent > :not(.cursor-transparent) {
 	pointer-events: initial;
 }
+
+.flex {
+	display: flex;
+}
+
+.flex.space {
+	justify-content: space-between;
+}
+
+.flex.middle {
+	align-items: center;
+}
+
+.flex.top {
+	align-items: start;
+}
+
+.flex.vertical {
+	flex-direction: column;
+}
+
+.grow {
+	flex-grow: 1;
+}
+
+.no-shrink {
+	flex-shrink: 0;
+}
+
+.flex.wrap {
+	flex-wrap: wrap;
+}
+
+.fullwidth {
+	width: 100%;
+}
+
+ul, li {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+label {
+	display: inline-block;
+	position: relative;
+}
+
+input, select {
+	box-sizing: border-box;
+}
+
+.inline-label {
+	position: absolute;
+	top: 0;
+	left: 0.5em;
+	font-size: small;
+	background-color: white;
+}
+
+.inline-label + input, .inline-label + select {
+	padding-top: 0.5em;
+	margin-top: 0.75em;
+}

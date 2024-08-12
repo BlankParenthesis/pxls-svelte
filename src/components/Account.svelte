@@ -1,11 +1,25 @@
 <script lang="ts">
-    import type { Authentication } from "../lib/authentication";
-    import Login from "./Login.svelte";
+    import type { Readable } from "svelte/motion";
+	import type { Authentication } from "../lib/authentication";
+    import type { User } from "../lib/user";
+	import Login from "./Login.svelte";
+	import UserDisplay from "./User.svelte";
 
 	export let auth: Authentication;
+	export let user: Readable<Promise<User>>;
 </script>
 <style>
+	h2 {
+		font-size: medium;
+		margin: 0;
+	}
 </style>
-<h2>Account</h2>
-<p>You go here</p>
-<Login {auth} />
+<div class="flex space middle">
+	<h2>Account</h2>
+	<Login {auth} />
+</div>
+{#await $user}
+	<h3>Loading User Data</h3>
+{:then user}
+	<UserDisplay {user} />
+{/await}
