@@ -50,8 +50,16 @@ body > * {
 	flex-wrap: wrap;
 }
 
+.flex.wrap-reverse {
+	flex-wrap: wrap-reverse;
+}
+
 .fullwidth {
 	width: 100%;
+}
+
+.gap {
+	gap: 1.5em;
 }
 
 ul, li {

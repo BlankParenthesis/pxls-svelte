@@ -4,6 +4,7 @@
     import type { User } from "../lib/user";
 	import Login from "./Login.svelte";
 	import UserDisplay from "./User.svelte";
+    import Factions from "./Factions.svelte";
 
 	export let auth: Authentication;
 	export let user: Readable<Promise<User>>;
@@ -22,4 +23,8 @@
 	<h3>Loading User Data</h3>
 {:then user}
 	<UserDisplay {user} />
+	<div class="flex wrap-reverse space top">
+		<Factions {user} />
+		<!-- TODO: stats -->
+	</div>
 {/await}

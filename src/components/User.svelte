@@ -12,18 +12,20 @@
 		margin: 0;
 	}
 </style>
-<h3>{user.name}</h3>
-<div class="flex distribute top">
-	{#await $roles}
-		Loading Roles
-	{:then roles}
-		<ul class="roles grow flex wrap">
-			{#each roles as role}
-				<Role {role} />
-			{/each}
-		</ul>
-	{/await}
-	<div class="no-shrink">
-		Joined: <time datetime={user.createdAt.toISOString()}>{user.createdAt.toLocaleDateString()}</time>
+<section class="user">
+	<h3>{user.name}</h3>
+	<div class="flex space top">
+		{#await $roles}
+			Loading Roles
+		{:then roles}
+			<ul class="roles flex wrap">
+				{#each roles as role}
+					<Role {role} />
+				{/each}
+			</ul>
+		{/await}
+		<div class="no-shrink">
+			Joined <time datetime={user.createdAt.toISOString()}>{user.createdAt.toLocaleDateString()}</time>
+		</div>
 	</div>
-</div>
+</section>

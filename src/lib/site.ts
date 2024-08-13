@@ -11,6 +11,7 @@ import { Role } from "./role";
 import { Event } from "./events";
 import { BoardReference, BoardsPage } from "./board/info";
 import { writable, type Readable, type Writable } from "svelte/store";
+import { Faction } from "./faction";
 
 const SiteInfo = z.object({
 	name: z.string().nullable().optional(),
@@ -142,6 +143,33 @@ export class Site {
 			throw new Error("assertion error: role cache should contain a value");
 		}
 		return cachedRole;
+	}
+
+	private factionCache: Map<string, Writable<Promise<Faction>>> = new Map();
+	faction(location: string): Readable<Promise<Faction>> {
+		if (!this.factionCache.has(location)) {
+			const faction = this.http.get(location)
+				.then(Faction.parse);
+			this.factionCache.set(location, writable(faction));
+		}
+		
+		const faction = this.factionCache.get(location);
+		if (typeof faction === "undefined") {
+			throw new Error("assertion error: faction cache should contain a value");
+		}
+		return faction;
+	}
+
+	cacheFaction(location: string, faction: Promise<Faction>): Readable<Promise<Faction>> {
+		if (!this.factionCache.has(location)) {
+			this.factionCache.set(location, writable(faction));
+		}
+
+		const cachedFaction = this.factionCache.get(location);
+		if (typeof cachedFaction === "undefined") {
+			throw new Error("assertion error: faction cache should contain a value");
+		}
+		return cachedFaction;
 	}
 
 	// TODO: invalidate on auth change

@@ -6,6 +6,7 @@ import { Role, RolesPage } from "./role";
 import { collect } from "./util";
 import type { Readable } from "svelte/motion";
 import { writable, type Writable } from "svelte/store";
+import { FactionsPage, type Faction } from "./faction";
 
 export const RawUser = z.object({
 	"name": z.string(),
@@ -57,6 +58,48 @@ export class User  {
 			if (roles.next) {
 				roles = await this.http.get(roles.next)
 					.then(j => RolesPage.parse(j));
+			} else {
+				break;
+			}
+		}
+	}
+
+	private factionsCache?: Writable<Promise<Array<Readable<Promise<Faction>>>>>;
+	factions(): Readable<Promise<Array<Readable<Promise<Faction>>>>> {
+		if (typeof this.factionsCache === "undefined") {
+			this.factionsCache = writable(collect(this.fetchFactions()));
+		}
+
+		return this.factionsCache;
+	}
+
+	updatefactions() {
+		const newFactions = collect(this.fetchFactions());
+		if (typeof this.factionsCache === "undefined") {
+			this.factionsCache = writable(newFactions);
+		} else {
+			this.factionsCache.set(newFactions);
+		}
+	}
+
+	async *fetchFactions() {
+		// TODO: check permissions
+		let factions = await this.http.get("factions")
+			.then(j => FactionsPage.parse(j));
+		while(true) {
+			for (const reference of factions.items) {
+				let faction: Readable<Promise<Faction>>;
+				if (typeof reference.view !== "undefined") {
+					faction = this.site.cacheFaction(reference.uri, Promise.resolve(reference.view));
+				} else {
+					faction = this.site.faction(reference.uri);
+				}
+
+				yield faction;
+			}
+			if (factions.next) {
+				factions = await this.http.get(factions.next)
+					.then(j => FactionsPage.parse(j));
 			} else {
 				break;
 			}
