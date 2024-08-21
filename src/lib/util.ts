@@ -129,3 +129,14 @@ export function updateAttribute(attribute: Attribute, data: Array<Vec2 | number>
 export interface GameState {
 	selectedColor?: number;
 }
+
+export function debounce<A extends unknown[], R>(
+	callback: (...args: A) => R,
+	debounceTime = 300,
+): (...args: A) => void {
+	let timeout = 0;
+	return (...args: A) => {
+		clearTimeout(timeout);
+		timeout = setTimeout(() => callback(...args), debounceTime);
+	};
+}

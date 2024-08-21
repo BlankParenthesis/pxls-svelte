@@ -47,7 +47,6 @@
 <style>
 	.card {
 		background-color: white;
-		display: inline-block;
 	}
 
 	.grid-5 {
@@ -92,14 +91,14 @@
 		{/if}
 	</div>
 	{#if panel == Panel.Account}
-		<div class="center-center card">
+		<div class="center-center card flex vertical">
 			{#await $currentUser}
 				<div class="flex space middle">
 					<h2>Account</h2>
 					<p>Loading</p>
 				</div>
 			{:then url}
-				<Account {auth} user={site.user(url)}/>
+				<Account {auth} {site} user={site.user(url)}/>
 			{/await}
 		</div>
 	{:else if panel == Panel.Admin}

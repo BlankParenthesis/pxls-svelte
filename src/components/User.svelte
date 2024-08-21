@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { User } from "../lib/user";
     import Role from "./Role.svelte";
+    import Time from "./Time.svelte";
 
 	export let user: User;
 
@@ -25,7 +26,7 @@
 			</ul>
 		{/await}
 		<div class="no-shrink">
-			Joined <time datetime={user.createdAt.toISOString()}>{user.createdAt.toLocaleDateString()}</time>
+			Joined <Time time={user.createdAt} />
 		</div>
 	</div>
 </section>

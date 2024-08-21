@@ -1,6 +1,8 @@
 <script lang="ts">
-    import type { Readable } from "svelte/motion";
+    import type { Readable } from "svelte/store";
     import type { Faction } from "../lib/faction";
+    import Time from "./Time.svelte";
+    import FactionStatus from "./FactionStatus.svelte";
 
 	export let faction: Readable<Promise<Faction>>;
 </script>
@@ -14,16 +16,20 @@
 	{#await $faction}
 		Loading Role
 	{:then faction}
-		<div>
+		<div class="flex space">
 			<h5>{faction.name}</h5>
-			<!-- TODO: member status badge (owner, joined, invited, requested) -->
+			{#await faction.currentMember()}
+				<span>Loading Faction Members</span>
+			{:then member}
+				<FactionStatus {faction} {member} />
+			{/await}
 		</div>
 		<div class="flex space gap">
 			<span class="no-shrink">
-				{faction.size} Members
+				Created <Time time={faction.createdAt} />
 			</span>
 			<span class="no-shrink">
-				Created <time datetime={faction.created_at.toISOString()}>{faction.created_at.toLocaleDateString()}</time>
+				{faction.size} Members
 			</span>
 		</div>
 	{/await}

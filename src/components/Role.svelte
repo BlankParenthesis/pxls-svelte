@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Readable } from "svelte/motion";
+    import type { Readable } from "svelte/store";
     import type { Role } from "../lib/role";
 
 	export let role: Readable<Promise<Role>>;

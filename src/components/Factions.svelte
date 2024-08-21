@@ -1,10 +1,22 @@
 <script lang="ts">
+    import { writable } from "svelte/store";
+    import type { Site } from "../lib/site";
     import type { User } from "../lib/user";
+    import { debounce } from "../lib/util";
     import Faction from "./Faction.svelte";
+    import LazyList from "./LazyList.svelte";
 
+	export let site: Site;
 	export let user: User;
+	let search = "";
+	// this is a silly type dance we have to do, not sure why
+	type HTMLInputEventSvelte = Event & { currentTarget: EventTarget & HTMLInputElement };
+	type HTMLInputEvent = Event & { target: EventTarget & HTMLInputElement };
+	const updateSearch = debounce((e: HTMLInputEventSvelte) => {
+		search = (e as unknown as HTMLInputEvent).target.value;
+	});
 
-	const factions = user.factions();
+	const userFactions = user.factions();
 </script>
 <style>
 	h4 {
@@ -14,13 +26,20 @@
 </style>
 <section class="factions">
 	<h4>Factions</h4>
-	{#await $factions}
+	{#await $userFactions}
 		<p>Loading Factions</p>
 	{:then factions}
-		<ul class="roles flex wrap">
+		<ul class="flex wrap">
 			{#each factions as faction}
 				<Faction {faction} />
 			{/each}
 		</ul>
 	{/await}
+	<label class="fullwidth">
+		<span class="inline-label">Factions Search: {search}</span>
+		<input type="text" class="fullwidth" on:input={updateSearch} />
+	</label>
+	<LazyList itemSource={site.searchFactions(search)} let:item={faction}>
+		<Faction {faction} />
+	</LazyList>
 </section>

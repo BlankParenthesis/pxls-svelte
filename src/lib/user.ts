@@ -4,9 +4,9 @@ import type { Site } from "./site";
 import { reference } from "./reference";
 import { Role, RolesPage } from "./role";
 import { collect } from "./util";
-import type { Readable } from "svelte/motion";
+import type { Readable } from "svelte/store";
 import { writable, type Writable } from "svelte/store";
-import { FactionsPage, type Faction } from "./faction";
+import { FactionsPage, Faction } from "./faction";
 
 export const RawUser = z.object({
 	"name": z.string(),
@@ -20,6 +20,7 @@ export class User  {
 		private readonly http: Requester,
 		readonly name: string,
 		readonly createdAt: Date,
+		readonly url: string,
 	) {}
 
 	private rolesCache?: Writable<Promise<Array<Readable<Promise<Role>>>>>;

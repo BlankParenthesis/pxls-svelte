@@ -1,11 +1,13 @@
 <script lang="ts">
-    import type { Readable } from "svelte/motion";
+    import type { Readable } from "svelte/store";
 	import type { Authentication } from "../lib/authentication";
     import type { User } from "../lib/user";
 	import Login from "./Login.svelte";
 	import UserDisplay from "./User.svelte";
     import Factions from "./Factions.svelte";
+    import type { Site } from "../lib/site";
 
+	export let site: Site;
 	export let auth: Authentication;
 	export let user: Readable<Promise<User>>;
 </script>
@@ -23,8 +25,8 @@
 	<h3>Loading User Data</h3>
 {:then user}
 	<UserDisplay {user} />
-	<div class="flex wrap-reverse space top">
-		<Factions {user} />
+	<div class="flex wrap-reverse space top scroll">
+		<Factions {user} {site} />
 		<!-- TODO: stats -->
 	</div>
 {/await}

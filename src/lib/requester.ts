@@ -28,11 +28,17 @@ export class Requester {
 		return fetch(url, { headers });
 	}
 
-	public get(location?: string): Promise<unknown> {
-		return this.getRaw(location).then(r => r.json());
+	public get(location?: string): Promise<unknown | undefined> {
+		return this.getRaw(location).then(r => {
+			if (r.status === 404) {
+				return undefined;
+			} else {
+				return r.json();
+			}
+		});
 	}
 
-	public post(data: Record<string, unknown>, location?: string): Promise<unknown> {
+	public post(data: Record<string, unknown>, location?: string): Promise<{ uri: string, view: unknown }> {
 		const headers = this.headers() as Record<string, string>;
 		headers["content-type"] = "application/json";
 		let url: URL;
@@ -41,7 +47,26 @@ export class Requester {
 		} else {
 			url = resolveURL(this.baseURL, location);
 		}
-		return fetch(url, { method: "post", headers, body: JSON.stringify(data) });
+		return fetch(url, { method: "post", headers, body: JSON.stringify(data) })
+			.then(async r => {
+				const uri = r.headers.get("location");
+				if (uri === null) {
+					throw new Error("invalid post response (missing location)");
+				}
+				const view = await r.json() as unknown;
+				return { uri, view };
+			});
+	}
+
+	public delete(location?: string) {
+		const headers = this.headers();
+		let url: URL;
+		if (typeof location === "undefined") {
+			url = this.baseURL;
+		} else {
+			url = resolveURL(this.baseURL, location);
+		}
+		return fetch(url, { method: "delete", headers });
 	}
 
 	public data(start: number, end: number): Promise<ArrayBuffer> {
