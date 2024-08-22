@@ -40,10 +40,19 @@
 		width: 3em;
 		height: 3em;
 		box-sizing: border-box;
+		background-position: 0 0, 0 0, 50% 50%;
+		background-size: auto, 50% 50%, 50% 50%;
+		
+		--transparent-dark: #7E7F83;
+		--transparent-light: #C1C1C3;
+
+		background-image: linear-gradient(var(--color), var(--color)),
+			repeating-linear-gradient(45deg, var(--transparent-light) 25%, transparent 25%, transparent 75%, var(--transparent-light) 75%, var(--transparent-light)),
+			repeating-linear-gradient(45deg, var(--transparent-light) 25%, var(--transparent-dark) 25%, var(--transparent-dark) 75%, var(--transparent-light) 75%, var(--transparent-light));
 	}
 
 	.color.selected {
-		background-color: transparent !important;
+		background-image: transparent !important;
 		border-style: dashed;
 	}
 </style>
@@ -55,7 +64,7 @@
 				<button
 					data-index={index}
 					on:click={selectColor}
-					style:background-color="#{colorToHex(color.value)}"
+					style="--color: #{colorToHex(color.value)}"
 					class:selected={state.selectedColor === index}
 					class="color"
 				/>

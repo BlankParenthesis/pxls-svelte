@@ -191,14 +191,14 @@ export class Board {
 		}
 	}
 	
-	async place(x: number, y: number, color: number, overrides?: AdminOverrides): Promise<PlaceResult> {
+	async place(x: number, y: number, color: number, overrides: AdminOverrides): Promise<PlaceResult> {
 		const shape = get(this.info).shape;
 		const indexArray = shape.coordinatesToIndexArray(x, y);
 		const position = shape.indexArrayToPosition(indexArray);
 
 		const extra = {} as { overrides?: AdminOverrides };
 
-		if (typeof overrides !== "undefined") {
+		if (overrides.color || overrides.cooldown || overrides.mask) {
 			extra.overrides = overrides;
 		}
 		

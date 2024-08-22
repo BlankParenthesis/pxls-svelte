@@ -86,12 +86,13 @@ export class Canvas {
 			canvas,
 			autoClear: false,
 			depth: false,
+			alpha: true,
 		});
 		const gl = this.gl;
 
 		this.palette = toTexture(gl, palette);
 
-		gl.clearColor(0, 0, 0, 1);
+		gl.clearColor(0, 0, 0, 0);
 
 		this.textures = new CanvasTextures(gl, board, shape);
 		this.program = new CanvasProgram(gl);
