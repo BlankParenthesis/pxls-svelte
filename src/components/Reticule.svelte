@@ -1,13 +1,13 @@
 <script lang="ts">
     import type { Vec2 } from "ogl";
-    import type { GameState } from "../lib/util";
+    import type { AppState } from "../lib/settings";
     import type { Palette } from "../lib/board/palette";
 
 	export let position: Vec2;
 	export let size: number;
 
 	export let palette: Palette;
-	export let gamestate: GameState;
+	export let gamestate: AppState;
 
 	// duplicated from palette
 	function colorToHex(color: number | undefined) {

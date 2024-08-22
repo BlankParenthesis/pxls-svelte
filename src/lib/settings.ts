@@ -13,3 +13,14 @@ export type DebugSettings = {
 export type Settings = {
 	debug: DebugSettings;
 }
+
+export interface AppState {
+	selectedColor?: number;
+	adminOverrides: AdminOverrides;
+}
+
+export type AdminOverrides = {
+	mask: boolean,
+	color: boolean,
+	cooldown: boolean,
+}

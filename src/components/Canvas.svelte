@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Mat3, Vec2 } from "ogl";
-	import type { GameState } from "../lib/util";
+	import type { AppState } from "../lib/settings";
 	import type { Board } from "../lib/board/board";
 	import type { RenderParameters } from "../lib/render/canvas";
     import type { RendererOverrides } from "../lib/settings";
@@ -12,7 +12,7 @@
 	export let board: Board;
 	export let overrides: RendererOverrides;
 	export let parameters: RenderParameters;
-	export let gamestate: GameState;
+	export let gamestate: AppState;
 
 	let innerWidth: number;
 	let innerHeight: number;
@@ -48,7 +48,7 @@
 
 	async function place(x: number, y: number) {
 		if (typeof gamestate.selectedColor !== "undefined") {
-			await board.place(x, y, gamestate.selectedColor);
+			await board.place(x, y, gamestate.selectedColor, gamestate.adminOverrides);
 		} else {
 			throw new Error("Placed with no color selected");
 		}

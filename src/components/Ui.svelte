@@ -2,19 +2,19 @@
 	import Grid from "./layout/Grid.svelte";
 	import Login from "./Login.svelte";
 	import Palette from "./Palette.svelte";
-    import { type Settings } from "../lib/settings";
-    import { type Board } from "../lib/board/board";
-    import { type Site } from "../lib/site";
-    import { type GameState } from "../lib/util";
+    import type { Settings } from "../lib/settings";
+    import type { Board } from "../lib/board/board";
+    import type { Site } from "../lib/site";
+	import type { AppState } from "../lib/settings";
     import Cooldown from "./Cooldown.svelte";
     import SettingsPanel from "./Settings.svelte";
     import Account from "./Account.svelte";
-    import AdminTools from "./AdminTools.svelte";
+    import Tools from "./Tools.svelte";
     import Templates from "./Templates.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
-	export let gamestate: GameState;
+	export let state: AppState;
 	const auth = site.auth;
 	export let board: Board;
 	const cooldown = board.cooldown;
@@ -73,7 +73,7 @@
 			{:else}
 				<Login {auth} />
 			{/if}
-			<button class:active={panel == Panel.Admin} on:click={toggle(Panel.Admin)}>Admin Tools</button>
+			<button class:active={panel == Panel.Admin} on:click={toggle(Panel.Admin)}>Tools</button>
 			<div class="center">
 				{#if loggedIn}
 					<Cooldown info={$info} cooldown={$cooldown} />
@@ -87,7 +87,7 @@
 
 		
 		{#if loggedIn}
-			<Palette bind:gamestate {board} />
+			<Palette bind:state {board} />
 		{/if}
 	</div>
 	{#if panel == Panel.Account}
@@ -103,7 +103,7 @@
 		</div>
 	{:else if panel == Panel.Admin}
 		<div class="center-center cursor-transparent end">
-			<AdminTools />
+			<Tools bind:state />
 		</div>
 	{:else if panel == Panel.Templates}
 		<div class="center-center card">

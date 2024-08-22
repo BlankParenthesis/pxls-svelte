@@ -1,4 +1,5 @@
 import { Vec2, type Attribute } from "ogl";
+import type { AdminOverrides } from "./settings";
 
 export function randomBytes(length: number): Uint8Array {
 	return crypto.getRandomValues(new Uint8Array(length));
@@ -124,10 +125,6 @@ export function updateAttribute(attribute: Attribute, data: Array<Vec2 | number>
 	attribute.data = Float32Array.from(data.flat());
 	attribute.count = data.length;
 	attribute.needsUpdate = true;
-}
-
-export interface GameState {
-	selectedColor?: number;
 }
 
 export function debounce<A extends unknown[], R>(

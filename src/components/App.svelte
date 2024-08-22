@@ -1,13 +1,13 @@
 <script lang="ts">
     import type { RenderParameters } from "../lib/render/canvas";
-    import type { Settings } from "../lib/settings";
+    import type { AppState, Settings } from "../lib/settings";
 	import Canvas from "./Canvas.svelte";
 	import Ui from "./Ui.svelte";
 	import Stack from "./layout/Stack.svelte";
 	import { Site } from "../lib/site";
     import type { Template } from "../lib/render/template";
     import { Mat3, Vec2 } from "ogl";
-    import { collect, type GameState } from "../lib/util";
+    import { collect } from "../lib/util";
     import type { BoardStub } from "../lib/board/board";
 
 	let settings: Settings = {
@@ -21,8 +21,13 @@
 		},
 	};
 
-	let gamestate: GameState = {
+	let gamestate: AppState = {
 		selectedColor: undefined,
+		adminOverrides: {
+			mask: false,
+			color: false,
+			cooldown: false,
+		}
 	};
 
 	let render: RenderParameters = {
@@ -65,7 +70,7 @@
 			{:then board}
 				<Stack>
 					<Canvas {gamestate} {board} parameters={render} overrides={settings.debug.render}/>
-					<Ui bind:gamestate {site} {board} bind:settings />
+					<Ui bind:state={gamestate} {site} {board} bind:settings />
 				</Stack>
 			{:catch e}
 				Board {e}

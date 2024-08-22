@@ -4,6 +4,7 @@ import { DataCache, DataCache32 } from "./sector";
 import { Event, BoardUpdate, PixelsAvailable } from "./events";
 import type { Requester } from "../requester";
 import { get, writable, type Readable, type Writable } from "svelte/store";
+import type { AdminOverrides } from "../settings";
 
 type PlaceResult = boolean; // TODO: a bit more detail would be nice
 
@@ -190,13 +191,19 @@ export class Board {
 		}
 	}
 	
-	async place(x: number, y: number, color: number): Promise<PlaceResult> {
+	async place(x: number, y: number, color: number, overrides?: AdminOverrides): Promise<PlaceResult> {
 		const shape = get(this.info).shape;
 		const indexArray = shape.coordinatesToIndexArray(x, y);
 		const position = shape.indexArrayToPosition(indexArray);
+
+		const extra = {} as { overrides?: AdminOverrides };
+
+		if (typeof overrides !== "undefined") {
+			extra.overrides = overrides;
+		}
 		
 		try {
-			await this.http.post({ color }, `pixels/${position}`);
+			await this.http.post({ color, ...extra }, `pixels/${position}`);
 			return true;
 		} catch(_) {
 			return false;

@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { z } from "zod";
 	import { Board } from "../lib/board/board";
-    import type { GameState } from "../lib/util";
+    import type { AppState } from "../lib/settings";
 
 	export let board: Board;
-	export let gamestate: GameState;
+	export let state: AppState;
 	const info = board.info; // TODO: listen to the palette directly
 
 	const Index = z.number().int().min(0);
 
 	function selectColor(this: HTMLButtonElement) {
 		const index = Index.parse(parseInt(this.dataset["index"] as string));
-		if (gamestate.selectedColor == index) {
-			gamestate.selectedColor = undefined;
+		if (state.selectedColor == index) {
+			state.selectedColor = undefined;
 		} else {
-			gamestate.selectedColor = index;
+			state.selectedColor = index;
 		}
 	}
 
@@ -50,13 +50,13 @@
 	
 <ul>
 	{#each $info.palette as [index, color]}
-		{#if !color.system_only }
+		{#if !color.system_only || state.adminOverrides.color }
 			<li>
 				<button
 					data-index={index}
 					on:click={selectColor}
 					style:background-color="#{colorToHex(color.value)}"
-					class:selected={gamestate.selectedColor === index}
+					class:selected={state.selectedColor === index}
 					class="color"
 				/>
 			</li>
