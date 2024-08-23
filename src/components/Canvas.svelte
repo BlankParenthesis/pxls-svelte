@@ -1,18 +1,29 @@
 <script lang="ts">
     import { Mat3, Vec2 } from "ogl";
-	import type { AppState } from "../lib/settings";
+	import type { AppState, Settings } from "../lib/settings";
 	import type { Board } from "../lib/board/board";
 	import type { RenderParameters } from "../lib/render/canvas";
     import type { RendererOverrides } from "../lib/settings";
+    import type { Template } from "../lib/render/template";
 	import Render from "./Render.svelte";
     import Reticule from "./Reticule.svelte";
+    import { now } from "./Cooldown.svelte";
 
 	let canvas: Render;
 
 	export let board: Board;
-	export let overrides: RendererOverrides;
-	export let parameters: RenderParameters;
+	export let settings: Settings;
 	export let gamestate: AppState;
+	
+	$: overrides = settings.debug.render;
+	let parameters = {
+		// TODO: center on the center of canvas
+		transform: new Mat3().identity().translate(new Vec2(-0.5, -0.5)),
+		templates: [] as Template[],
+		timestampStart: 0,
+		timestampEnd: 0,
+		heatmapDim: 0,
+	} as RenderParameters;
 
 	let innerWidth: number;
 	let innerHeight: number;
@@ -28,6 +39,24 @@
 	const palette = $info.palette;
 
 	const [boardWidth, boardHeight] = $info.shape.size();
+
+	$: canvasnow = Math.round($now / 1000) - $info.created_at;
+
+	$: if (settings.heatmap.enabled) {
+		if (settings.heatmap.position < 0){
+			parameters.timestampEnd = canvasnow + settings.heatmap.position + 1;
+			parameters.timestampStart = parameters.timestampEnd - settings.heatmap.duration;
+		} else {
+			parameters.timestampEnd = canvasnow + settings.heatmap.position;
+			parameters.timestampStart = parameters.timestampEnd - settings.heatmap.duration;
+		}
+		parameters.heatmapDim = settings.heatmap.dimming;
+	} else {
+		parameters.timestampEnd = -1;
+		parameters.timestampStart = -2;
+		parameters.heatmapDim = 0;
+	}
+
 	let reticulePosition = new Vec2(0, 0);
 
 	function positionReticule(mouseX: number, mouseY: number) {

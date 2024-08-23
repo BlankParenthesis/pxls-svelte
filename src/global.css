@@ -26,12 +26,16 @@ body > * {
 	justify-content: space-between;
 }
 
+.flex.top {
+	align-items: start;
+}
+
 .flex.middle {
 	align-items: center;
 }
 
-.flex.top {
-	align-items: start;
+.flex.bottom {
+	align-items: end;
 }
 
 .flex.vertical {

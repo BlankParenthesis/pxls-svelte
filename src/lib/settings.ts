@@ -12,6 +12,12 @@ export type DebugSettings = {
 
 export type Settings = {
 	debug: DebugSettings;
+	heatmap: {
+		enabled: boolean;
+		duration: number;
+		position: number;
+		dimming: number;
+	};
 }
 
 export interface AppState {
@@ -20,7 +26,7 @@ export interface AppState {
 }
 
 export type AdminOverrides = {
-	mask: boolean,
-	color: boolean,
-	cooldown: boolean,
+	mask: boolean;
+	color: boolean;
+	cooldown: boolean;
 }

@@ -1,12 +1,9 @@
 <script lang="ts">
-    import type { RenderParameters } from "../lib/render/canvas";
     import type { AppState, Settings } from "../lib/settings";
 	import Canvas from "./Canvas.svelte";
 	import Ui from "./Ui.svelte";
 	import Stack from "./layout/Stack.svelte";
 	import { Site } from "../lib/site";
-    import type { Template } from "../lib/render/template";
-    import { Mat3, Vec2 } from "ogl";
     import { collect } from "../lib/util";
     import type { BoardStub } from "../lib/board/board";
 
@@ -19,6 +16,12 @@
 				zoom: false,
 			},
 		},
+		heatmap: {
+			enabled: false,
+			duration: 3600, // one hour
+			position: -1, // "now" (`-1 + 1` seconds ago)
+			dimming: 0.75,
+		},
 	};
 
 	let gamestate: AppState = {
@@ -28,15 +31,6 @@
 			color: false,
 			cooldown: false,
 		}
-	};
-
-	let render: RenderParameters = {
-		// TODO: center on the center of canvas
-		transform: new Mat3().identity().translate(new Vec2(-0.5, -0.5)),
-		templates: [] as Template[],
-		timestampStart: 0,
-		timestampEnd: 0,
-		heatmapDim: 0,
 	};
 
 	const connecting = Site.connect(new URL(import.meta.env.VITE_TARGET_SITE));
@@ -69,7 +63,7 @@
 				Loading board…
 			{:then board}
 				<Stack>
-					<Canvas {gamestate} {board} parameters={render} overrides={settings.debug.render}/>
+					<Canvas {gamestate} {board} {settings}/>
 					<Ui bind:state={gamestate} {site} {board} bind:settings />
 				</Stack>
 			{:catch e}
