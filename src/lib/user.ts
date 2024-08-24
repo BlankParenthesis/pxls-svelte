@@ -47,14 +47,7 @@ export class User  {
 			.then(j => RolesPage.parse(j));
 		while(true) {
 			for (const reference of roles.items) {
-				let role: Readable<Promise<Role>>;
-				if (typeof reference.view !== "undefined") {
-					role = this.site.cacheRole(reference.uri, Promise.resolve(reference.view));
-				} else {
-					role = this.site.role(reference.uri);
-				}
-
-				yield role;
+				yield this.site.roleFromReference(reference);
 			}
 			if (roles.next) {
 				roles = await this.http.get(roles.next)
@@ -89,14 +82,7 @@ export class User  {
 			.then(j => FactionsPage.parse(j));
 		while(true) {
 			for (const reference of factions.items) {
-				let faction: Readable<Promise<Faction>>;
-				if (typeof reference.view !== "undefined") {
-					faction = this.site.cacheFaction(reference.uri, Promise.resolve(reference.view));
-				} else {
-					faction = this.site.faction(reference.uri);
-				}
-
-				yield faction;
+				yield this.site.factionFromReference(reference);
 			}
 			if (factions.next) {
 				factions = await this.http.get(factions.next)
@@ -112,3 +98,4 @@ export class User  {
 	}
 }
 export const UserReference = reference(RawUser);
+export type UserReference = z.infer<typeof UserReference>;

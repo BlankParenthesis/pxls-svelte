@@ -20,8 +20,23 @@ export type Settings = {
 	};
 }
 
+export interface Pointer {
+	type: string,
+	background: string;
+	activate(x: number, y: number): Promise<void>;
+}
+
+export interface PlacingPointer extends Pointer {
+	type: "place",
+	selected: number;
+}
+
+export interface LookupPointer extends Pointer {
+	type: "lookup",
+}
+
 export interface AppState {
-	selectedColor?: number;
+	pointer?: PlacingPointer | LookupPointer;
 	adminOverrides: AdminOverrides;
 }
 

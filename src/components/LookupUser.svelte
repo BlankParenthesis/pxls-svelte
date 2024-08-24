@@ -1,17 +1,19 @@
 <script lang="ts">
+    import type { Readable } from "svelte/store";
     import type { User } from "../lib/user";
     import Roles from "./Roles.svelte";
     import Time from "./Time.svelte";
 
-	export let user: User;
+	export let user: Readable<Promise<User>>;
 </script>
 <style>
 	h3 {
-		font-size: xx-large;
 		margin: 0;
 	}
 </style>
-<section class="user">
+{#await $user}
+	Loading user info…
+{:then user}
 	<h3>{user.name}</h3>
 	<div class="flex space top">
 		<Roles roles={user.roles()} />
@@ -19,4 +21,4 @@
 			Joined <Time time={user.createdAt} />
 		</div>
 	</div>
-</section>
+{/await}

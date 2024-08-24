@@ -103,7 +103,7 @@
 		</div>
 	{:else if panel == Panel.Admin}
 		<div class="center-center cursor-transparent end">
-			<Tools bind:state bind:settings />
+			<Tools {board} bind:state bind:settings />
 		</div>
 	{:else if panel == Panel.Templates}
 		<div class="center-center card">

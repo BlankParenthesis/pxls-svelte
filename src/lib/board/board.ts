@@ -5,6 +5,8 @@ import { Event, BoardUpdate, PixelsAvailable } from "./events";
 import type { Requester } from "../requester";
 import { get, writable, type Readable, type Writable } from "svelte/store";
 import type { AdminOverrides } from "../settings";
+import { Pixel } from "../pixel";
+import type { Site } from "../site";
 
 type PlaceResult = boolean; // TODO: a bit more detail would be nice
 
@@ -28,8 +30,8 @@ export class BoardStub {
 		readonly info?: BoardInfo,
 	) {}
 
-	async connect(): Promise<Board> {
-		return Board.connect(this.http);
+	async connect(site: Site): Promise<Board> {
+		return Board.connect(site, this.http);
 	}
 
 	get uri(): URL {
@@ -42,7 +44,7 @@ export class Board {
 		pixelsAvailable: [] as Array<(data: PixelsAvailable) => void>,
 	};
 
-	static async connect(http: Requester) {
+	static async connect(site: Site, http: Requester) {
 		const events = [
 			"cooldown",
 			"data.colors",
@@ -55,7 +57,7 @@ export class Board {
 			cooldown: writable(Cooldown.parse(Object.fromEntries(r.headers.entries()))),
 			info: writable(BoardInfo.parse(await r.json())),
 		}));
-		return new Board(http, socket, info, cooldown);
+		return new Board(site, http, socket, info, cooldown);
 	}
 	
 	protected readonly colorsCache: DataCache;
@@ -66,6 +68,7 @@ export class Board {
 	public readonly cooldown: Readable<Cooldown>;
 
 	private constructor(
+		private readonly site: Site,
 		private readonly http: Requester,
 		private readonly socket: WebSocket,
 		private readonly infoStore: Writable<BoardInfo>,
@@ -162,7 +165,7 @@ export class Board {
 					(await sector).set(change.values, offset);
 				}
 			} else {
-				this.colorsCache.invalidate(index);
+				this.timestampsCache.invalidate(index);
 			}
 		}
 
@@ -174,7 +177,7 @@ export class Board {
 					(await sector).set(change.values, offset);
 				}
 			} else {
-				this.colorsCache.invalidate(index);
+				this.maskCache.invalidate(index);
 			}
 		}
 
@@ -186,9 +189,54 @@ export class Board {
 					(await sector).set(change.values, offset);
 				}
 			} else {
-				this.colorsCache.invalidate(index);
+				this.initialCache.invalidate(index);
 			}
 		}
+
+		const pixelInvalidatingUpdates = colorUpdates.concat(timestampUpdates);
+		const changedPositions = new Set(pixelInvalidatingUpdates.flatMap(change => {
+			const length = ("values" in change) ? change.values.length : change.length;
+			return new Array(length)
+				.fill(0)
+				.map((_, i) => change.position + i);
+		}));
+
+		for (const position of changedPositions) {
+			// this notifies anything that may have a reference that this is now invalid.
+			this.pixelCache.get(position)?.set(undefined);
+			this.pixelCache.delete(position);
+		}
+	}
+
+	private pixelCache: Map<number, Writable<Promise<Pixel | undefined> | undefined>> = new Map();
+	pixel(location: number): Readable<Promise<Pixel | undefined> | undefined> {
+		if (!this.pixelCache.has(location)) {
+			const pixel = this.http.get("pixels/" + location)
+				.then(p => {
+					if (typeof p === "undefined") {
+						return undefined;
+					}
+					
+					const { position, color, modified, user } = Pixel.parse(p);
+					
+					let newUser = undefined;
+					if (typeof user !== "undefined") {
+						newUser = this.site.userFromReference(user);
+					}
+					
+					const canvasStart = get(this.info).created_at;
+					const timestamp = new Date((modified + canvasStart) * 1000);
+					
+					return new Pixel(position, color, timestamp, newUser);
+				});
+			this.pixelCache.set(location, writable(pixel));
+		}
+		
+		const pixel = this.pixelCache.get(location);
+		if (typeof pixel === "undefined") {
+			throw new Error("assertion error: pixel cache should contain a value");
+		}
+		return pixel;
 	}
 	
 	async place(x: number, y: number, color: number, overrides: AdminOverrides): Promise<PlaceResult> {

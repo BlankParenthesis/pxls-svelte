@@ -6,13 +6,13 @@ import { BoardStub } from "./board/board";
 import { resolveURL } from "./util";
 import { SiteAuthUnverified, Authentication } from "./authentication";
 import { Requester } from "./requester";
-import { User, UserReference } from "./user";
-import { Role } from "./role";
+import { RawUser, User, UserReference } from "./user";
+import { Role, RoleReference } from "./role";
 import { Event } from "./events";
 import { BoardReference, BoardsPage } from "./board/info";
 import { get, writable, type Readable, type Writable } from "svelte/store";
-import { Faction, FactionsPage, RawFaction } from "./faction";
-import { FactionMember, RawFactionMember } from "./factionmember";
+import { Faction, FactionReference, FactionsPage, RawFaction } from "./faction";
+import { FactionMember, FactionMemberReference, RawFactionMember } from "./factionmember";
 
 const SiteInfo = z.object({
 	name: z.string().nullable().optional(),
@@ -223,6 +223,34 @@ export class Site {
 		return user;
 	}
 
+	private cacheUser(location: string, rawuser: Promise<RawUser>): Readable<Promise<User>> {
+		if (!this.userCache.has(location)) {
+			const user = rawuser.then(u => new User(
+				this,
+				this.http.subpath(location),
+				u.name,
+				u.created_at,
+				location,
+			));
+			
+			this.userCache.set(location, writable(user));
+		}
+
+		const cachedUser = this.userCache.get(location);
+		if (typeof cachedUser === "undefined") {
+			throw new Error("assertion error: role cache should contain a value");
+		}
+		return cachedUser;
+	}
+
+	userFromReference(reference: UserReference): Readable<Promise<User>> {
+		if (typeof reference.view !== "undefined") {
+			return this.cacheUser(reference.uri, Promise.resolve(reference.view));
+		} else {
+			return this.user(reference.uri);
+		}
+	}
+
 	private roleCache: Map<string, Writable<Promise<Role>>> = new Map();
 	role(location: string): Readable<Promise<Role>> {
 		if (!this.roleCache.has(location)) {
@@ -238,7 +266,7 @@ export class Site {
 		return role;
 	}
 
-	cacheRole(location: string, role: Promise<Role>): Readable<Promise<Role>> {
+	private cacheRole(location: string, role: Promise<Role>): Readable<Promise<Role>> {
 		if (!this.roleCache.has(location)) {
 			this.roleCache.set(location, writable(role));
 		}
@@ -248,6 +276,14 @@ export class Site {
 			throw new Error("assertion error: role cache should contain a value");
 		}
 		return cachedRole;
+	}
+
+	roleFromReference(reference: RoleReference): Readable<Promise<Role>> {
+		if (typeof reference.view !== "undefined") {
+			return this.cacheRole(reference.uri, Promise.resolve(reference.view));
+		} else {
+			return this.role(reference.uri);
+		}
 	}
 
 	private factionCache: Map<string, Writable<Promise<Faction>>> = new Map();
@@ -272,7 +308,7 @@ export class Site {
 		return faction;
 	}
 
-	cacheFaction(location: string, faction: Promise<RawFaction>): Readable<Promise<Faction>> {
+	private cacheFaction(location: string, faction: Promise<RawFaction>): Readable<Promise<Faction>> {
 		if (!this.factionCache.has(location)) {
 			const f = faction.then(f => new Faction(
 				this,
@@ -290,6 +326,14 @@ export class Site {
 			throw new Error("assertion error: faction cache should contain a value");
 		}
 		return cachedFaction;
+	}
+
+	factionFromReference(reference: FactionReference): Readable<Promise<Faction>> {
+		if (typeof reference.view !== "undefined") {
+			return this.cacheFaction(reference.uri, Promise.resolve(reference.view));
+		} else {
+			return this.faction(reference.uri);
+		}
 	}
 
 	private factionMemberCache: Map<string, Writable<Promise<FactionMember>>> = new Map();
@@ -319,7 +363,7 @@ export class Site {
 		return faction;
 	}
 
-	cacheFactionMember(location: string, member: Promise<RawFactionMember>): Readable<Promise<FactionMember>> {
+	private cacheFactionMember(location: string, member: Promise<RawFactionMember>): Readable<Promise<FactionMember>> {
 		if (!this.factionMemberCache.has(location)) {
 			const m = member.then(m => new FactionMember(
 				this.http.subpath(location),
@@ -335,6 +379,14 @@ export class Site {
 			throw new Error("assertion error: faction member cache should contain a value");
 		}
 		return cachedFaction;
+	}
+
+	factionMemberFromReference(reference: FactionMemberReference): Readable<Promise<FactionMember>> {
+		if (typeof reference.view !== "undefined") {
+			return this.cacheFactionMember(reference.uri, Promise.resolve(reference.view));
+		} else {
+			return this.factionMember(reference.uri);
+		}
 	}
 
 	async *searchFactions(name: string) {

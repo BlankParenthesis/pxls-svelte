@@ -188,10 +188,23 @@ export class Shape {
 			const subPosition = subsectionX + (subsectionY * sectionWidth);
 			const rest = subsection.coordinatesToIndexArray(
 				x % subsectionWidth,
-				y  % subsectionHeight,
+				y % subsectionHeight,
 			);
 						
 			return [subPosition].concat(rest);
+		}
+	}
+
+	positionToIndexArray(position: number): number[] {
+		if (this.depth === 1) {
+			return [position];
+		} else {
+			const subsection = this.slice(1);
+			const [subsectionWidth, subsectionHeight] = subsection.size();
+			const size = subsectionWidth * subsectionHeight;
+			const sector = Math.floor(position / size);
+			const subIndex = subsection.positionToIndexArray(position % size);
+			return [sector].concat(subIndex);
 		}
 	}
 
@@ -203,6 +216,17 @@ export class Shape {
 			const [width, height] = this.slice(depth + 1).size();
 			return position + index * width * height;
 		}, 0);
+	}
+
+	indexArrayToCoordinates(indexArray: number[]): [number, number] {
+		return indexArray.reduce(([x, y], index, depth) => {
+			const [width, height] = this.slice(depth + 1).size();
+			const [sectorSpan, _] = this.get(depth);
+
+			const sectorStartX = width * (index % sectorSpan);
+			const sectorStartY = height * Math.floor(index / sectorSpan);
+			return [x + sectorStartX, y + sectorStartY];
+		}, [0, 0]);
 	}
 
 	mergeSectors(location: number[]): MergeInstructions {

@@ -76,8 +76,9 @@
 	}
 
 	async function place(x: number, y: number) {
-		if (typeof gamestate.selectedColor !== "undefined") {
-			await board.place(x, y, gamestate.selectedColor, gamestate.adminOverrides);
+		if (typeof gamestate.pointer !== "undefined") {
+			// TODO: feedback for waiting and error
+			await gamestate.pointer.activate(x, y);
 		} else {
 			throw new Error("Placed with no color selected");
 		}
@@ -98,7 +99,7 @@
 			// stop clicking
 			clicking = false;
 
-			const isPlacing = typeof gamestate.selectedColor !== "undefined";
+			const isPlacing = typeof gamestate.pointer !== "undefined";
 
 			if (placeValid && isPlacing) {
 				const x = event.clientX / width;
@@ -202,4 +203,6 @@
 	on:mouseup={dragState}
 />
 <Render bind:this={canvas} {board} {parameters} {overrides} {width} {height} />
-<Reticule {palette} {gamestate} position={reticulePosition} size={reticuleSize} />
+{#if typeof gamestate.pointer !== "undefined"} 
+	<Reticule pointer={gamestate.pointer} position={reticulePosition} size={reticuleSize} />
+{/if}

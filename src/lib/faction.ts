@@ -15,7 +15,9 @@ export const RawFaction = z.object({
 export type RawFaction = z.infer<typeof RawFaction>;
 
 export const FactionReference = reference(RawFaction);
+export type FactionReference = z.infer<typeof FactionReference>;
 export const FactionsPage = page(FactionReference);
+export type FactionsPage = z.infer<typeof FactionsPage>;
 
 export class Faction {
 	constructor(
@@ -39,13 +41,7 @@ export class Faction {
 				});
 
 			if(typeof reference !== "undefined") {
-				let member;
-				if (typeof reference.view !== "undefined") {
-					member = this.site.cacheFactionMember(reference.uri, Promise.resolve(reference.view));
-				} else {
-					member = this.site.factionMember(reference.uri);
-				}
-				this.currentMemberCache = member;
+				this.currentMemberCache = this.site.factionMemberFromReference(reference);
 			} else {
 				this.currentMemberCache = writable(Promise.resolve(undefined));
 			}
@@ -84,14 +80,7 @@ export class Faction {
 			.then(j => FactionMembersPage.parse(j));
 		while(true) {
 			for (const reference of members.items) {
-				let member: Readable<Promise<FactionMember>>;
-				if (typeof reference.view !== "undefined") {
-					member = this.site.cacheFactionMember(reference.uri, Promise.resolve(reference.view));
-				} else {
-					member = this.site.factionMember(reference.uri);
-				}
-
-				yield member;
+				yield this.site.factionMemberFromReference(reference);
 			}
 			if (members.next) {
 				members = await this.http.get(members.next)
@@ -102,19 +91,15 @@ export class Faction {
 		}
 	}
 
-	async join() {
+	async join(): Promise<Readable<Promise<FactionMember>>> {
 		const data = {
 			user: await get(this.site.currentUser()),
 			owner: false,
 		};
-		const reference = await this.http.post(data, "members")
-			.then(FactionMemberReference.parse);
 		
-		if (typeof reference.view !== "undefined") {
-			this.site.cacheFactionMember(reference.uri, Promise.resolve(reference.view));
-		} else {
-			this.site.factionMember(reference.uri);
-		}
+		return await this.http.post(data, "members")
+			.then(FactionMemberReference.parse)
+			.then(r => this.site.factionMemberFromReference(r));
 	}
 
 	static parse(input: unknown): RawFaction {

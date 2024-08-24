@@ -9,4 +9,6 @@ export const Role = z.object({
 export type Role = z.infer<typeof Role>;
 
 export const RoleReference = reference(Role);
+export type RoleReference = z.infer<typeof RoleReference>;
 export const RolesPage = page(RoleReference);
+export type RolesPage = z.infer<typeof RoleReference>;

@@ -25,7 +25,7 @@
 	};
 
 	let gamestate: AppState = {
-		selectedColor: undefined,
+		pointer: undefined,
 		adminOverrides: {
 			mask: false,
 			color: false,
@@ -59,7 +59,7 @@
 				{/each}
 			</ul>
 		{:then board}
-			{#await board.connect()}
+			{#await board.connect(site)}
 				Loading board…
 			{:then board}
 				<Stack>

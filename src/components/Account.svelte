@@ -1,19 +1,24 @@
 <script lang="ts">
     import type { Readable } from "svelte/store";
 	import type { Authentication } from "../lib/authentication";
-    import type { User } from "../lib/user";
+    import type { User as UserData } from "../lib/user";
 	import Login from "./Login.svelte";
-	import UserDisplay from "./User.svelte";
+	import User from "./User.svelte";
     import Factions from "./Factions.svelte";
     import type { Site } from "../lib/site";
 
 	export let site: Site;
 	export let auth: Authentication;
-	export let user: Readable<Promise<User>>;
+	export let user: Readable<Promise<UserData>>;
 </script>
 <style>
 	h2 {
 		font-size: medium;
+		margin: 0;
+	}
+	
+	h3 {
+		font-size: xx-large;
 		margin: 0;
 	}
 </style>
@@ -24,7 +29,7 @@
 {#await $user}
 	<h3>Loading User Data</h3>
 {:then user}
-	<UserDisplay {user} />
+	<User {user} />
 	<div class="flex wrap-reverse space top scroll">
 		<Factions {user} {site} />
 		<!-- TODO: stats -->

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { z } from "zod";
 	import { Board } from "../lib/board/board";
     import type { AppState } from "../lib/settings";
 
@@ -7,14 +6,23 @@
 	export let state: AppState;
 	const info = board.info; // TODO: listen to the palette directly
 
-	const Index = z.number().int().min(0);
+	function selectColor(index: number) {
+		const color = $info.palette.get(index);
+		if (typeof color === "undefined") {
+			throw new Error("invalid color");
+		}
 
-	function selectColor(this: HTMLButtonElement) {
-		const index = Index.parse(parseInt(this.dataset["index"] as string));
-		if (state.selectedColor == index) {
-			state.selectedColor = undefined;
+		if (state.pointer?.type === "place" && state.pointer.selected === index) {
+			state.pointer = undefined;
 		} else {
-			state.selectedColor = index;
+			state.pointer = {
+				type: "place",
+				selected: index,
+				background: "#" + colorToHex(color.value),
+				async activate(x, y) {
+					await board.place(x, y, index, state.adminOverrides);
+				}
+			}
 		}
 	}
 
@@ -62,10 +70,9 @@
 		{#if !color.system_only || state.adminOverrides.color }
 			<li>
 				<button
-					data-index={index}
-					on:click={selectColor}
+					on:click={() => selectColor(index)}
 					style="--color: #{colorToHex(color.value)}"
-					class:selected={state.selectedColor === index}
+					class:selected={state.pointer?.type === "place" && state.pointer?.selected === index}
 					class="color"
 				/>
 			</li>

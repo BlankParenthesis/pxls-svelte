@@ -1,5 +1,4 @@
 import { Vec2, type Attribute } from "ogl";
-import type { AdminOverrides } from "./settings";
 
 export function randomBytes(length: number): Uint8Array {
 	return crypto.getRandomValues(new Uint8Array(length));

@@ -51,4 +51,8 @@ export class DataCache32 {
 
 		return this.data.get(sector) as unknown as Promise<Uint32Array>;
 	}
+
+	invalidate(sector: number) {
+		this.data.delete(sector);
+	}
 }

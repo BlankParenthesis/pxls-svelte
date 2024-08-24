@@ -1,6 +1,13 @@
 <script lang="ts">
+    import type { Readable } from "svelte/store";
+    import type { Board } from "../lib/board/board";
+    import type { Pixel } from "../lib/pixel";
     import type { AppState, Settings } from "../lib/settings";
+    import Time from "./Time.svelte";
+    import LookupUser from "./LookupUser.svelte";
+    import { onDestroy } from "svelte";
 
+	export let board: Board;
 	export let state: AppState;
 	export let settings: Settings;
 
@@ -80,10 +87,36 @@
 		}
 	}
 
+	function setLookupPointer() {
+		if (state.pointer?.type === "lookup") {
+			state.pointer = undefined;
+		} else {
+			state.pointer = {
+				type: "lookup",
+				background: "transparent",
+				async activate(x: number, y: number) {
+					const shape =$info.shape;
+					const position = shape.indexArrayToPosition(shape.coordinatesToIndexArray(x, y))
+					lookup = board.pixel(position);
+					await lookup;
+				},
+			}
+		}
+	}
+
 	let duration = durationToValue(settings.heatmap.duration);
 	$: settings.heatmap.duration = valueToDuration(duration);
 	let offset = durationToValue(-settings.heatmap.position);
 	$: settings.heatmap.position = -valueToDuration(offset);
+
+	let lookup: Readable<Promise<Pixel | undefined> | undefined> | undefined;
+	let info = board.info;
+
+	onDestroy(() => {
+		if (state.pointer?.type === "lookup") {
+			state.pointer = undefined;
+		}
+	});
 </script>
 <style>
 	.toolbar {
@@ -97,6 +130,10 @@
 
 	.user-tools {
 		text-align: right;
+	}
+
+	.user-tools > * {
+		text-align: left;
 	}
 
 	button.enabled {
@@ -128,12 +165,37 @@
 		>Place Anywhere</button>
 	</div>
 	<div class="user-tools flex bottom">
-		<button>Inspect Pixel</button>
+		<div class="flex vertical group">
+			{#if lookup}
+				{#if $lookup}
+					<div class="lookup">
+						{#await $lookup }
+							Loading Pixel…
+						{:then pixel }
+							{#if typeof pixel === "undefined"}
+								Never placed
+							{:else}
+								<div>{$info.shape.indexArrayToCoordinates($info.shape.positionToIndexArray(pixel.position))}</div>
+								<Time time={pixel.modified} />
+
+								{#if typeof pixel.user !== "undefined"}
+									<LookupUser user={pixel.user} />
+								{/if}
+							{/if}
+						{/await}
+					</div>
+				{:else}
+					<div class="lookup">
+						Outdated
+					</div>
+				{/if}
+			{/if}
+			<button class:enabled={state.pointer?.type === "lookup"} on:click={setLookupPointer}>Inspect Pixel</button>
+		</div>
 		<div class="flex vertical group">
 			{#if settings.heatmap.enabled}
 				<label>
 					<span class="inline-label">Offset: {printDurationRelative(-settings.heatmap.position - 1)}</span>
-					
 					<input
 						type="range"
 						class="flipped"

@@ -4,11 +4,11 @@ import { reference } from "./reference";
 import type { Requester } from "./requester";
 
 // TODO: this is here to remove circular dep for now
-export const RawUser = z.object({
+const RawUser = z.object({
 	"name": z.string(),
 	"created_at": z.number().int().min(0).transform(unix => new Date(unix * 1000)),
 });
-export type RawUser = z.infer<typeof RawUser>;
+type RawUser = z.infer<typeof RawUser>;
 
 export const RawFactionMember = z.object({
 	"join_intent": z.object({
@@ -21,7 +21,9 @@ export const RawFactionMember = z.object({
 export type RawFactionMember = z.infer<typeof RawFactionMember>;
 
 export const FactionMemberReference = reference(RawFactionMember);
+export type FactionMemberReference = z.infer<typeof FactionMemberReference>;
 export const FactionMembersPage = page(FactionMemberReference);
+export type FactionMembersPage = z.infer<typeof FactionMembersPage>;
 
 export enum MemberStatus {
 	Invited,

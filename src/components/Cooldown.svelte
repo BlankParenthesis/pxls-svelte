@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-    import { writable, type Readable } from "svelte/store";
+	import { writable, type Readable } from "svelte/store";
 
 	let internalNow = writable(Date.now());
 	setInterval(() => internalNow.set(Date.now()), 1000);
@@ -7,7 +7,7 @@
 </script>
 <script lang="ts">
 	import type { Cooldown } from "../lib/board/board";
-    import type { BoardInfo } from "../lib/board/info";
+	import type { BoardInfo } from "../lib/board/info";
 
 	export let cooldown: Cooldown;
 	export let info: BoardInfo;
