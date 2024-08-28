@@ -22,17 +22,33 @@ export function toTexture(
 	const maxEntry = [...palette.keys()]
 		.reduce((length, i) => Math.max(i + 1, length), 0);
 
+	let nextColor = [0, 0, 0, 0];
 	const array = new Array(maxEntry)
 		.fill(undefined)
 		.map((_, i) => {
 			const color = palette.get(i);
 			if(color === undefined) {
-				return [0, 0, 0, 0];
+				return nextColor;
 			} else {
 				const r = (color.value >> 24) & 0xFF;
 				const g = (color.value >> 16) & 0xFF;
 				const b = (color.value >> 8) & 0xFF;
 				const a = (color.value & 0xFF);
+				// This sets the previous missing colors to this one.
+				// We want to do this because when looking through the palette
+				// linearly we want to find that the best distance is to a real
+				// index and not just some false value here, so all values there
+				// must be real colors.
+				// We backfill rather than front-fill because the first index
+				// may be empty but the last one will not because we stop there.
+				// NOTE: this means that ties when searching for color distance
+				// should favour the color with the highest index.
+				nextColor[0] = r;
+				nextColor[1] = g;
+				nextColor[2] = b;
+				nextColor[3] = a;
+				// reset the variable for the next set of missing colors
+				nextColor = [0, 0, 0, 0];
 				return [r, g, b, a];
 			}
 		})

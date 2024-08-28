@@ -107,11 +107,11 @@
 		</div>
 	{:else if panel == Panel.Templates}
 		<div class="center-center card">
-			<Templates />
+			<Templates bind:templates={state.templates} />
 		</div>
 	{:else if panel == Panel.Settings}
 		<div class="center-center card">
-			<SettingsPanel bind:settings={settings} />
+			<SettingsPanel bind:settings />
 		</div>
 	{/if}
 </Grid>

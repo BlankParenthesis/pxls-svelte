@@ -3,7 +3,6 @@
 	import type { AppState, Settings } from "../lib/settings";
 	import type { Board } from "../lib/board/board";
 	import type { RenderParameters } from "../lib/render/canvas";
-    import type { RendererOverrides } from "../lib/settings";
     import type { Template } from "../lib/render/template";
 	import Render from "./Render.svelte";
     import Reticule from "./Reticule.svelte";
@@ -25,6 +24,8 @@
 		heatmapDim: 0,
 	} as RenderParameters;
 
+	$: parameters.templates = gamestate.templates;
+
 	let innerWidth: number;
 	let innerHeight: number;
 	$: width = innerWidth;
@@ -36,7 +37,8 @@
 		/ Math.max(...$info.shape.size())
 		/ 2;
 
-	const palette = $info.palette;
+	const templateStyle = new Image();
+	$: templateStyle.src = settings.template.source;
 
 	const [boardWidth, boardHeight] = $info.shape.size();
 
@@ -202,7 +204,7 @@
 	on:mousedown={dragState}
 	on:mouseup={dragState}
 />
-<Render bind:this={canvas} {board} {parameters} {overrides} {width} {height} />
+<Render bind:this={canvas} {board} {parameters} {overrides} {width} {height} {templateStyle}/>
 {#if typeof gamestate.pointer !== "undefined"} 
 	<Reticule pointer={gamestate.pointer} position={reticulePosition} size={reticuleSize} />
 {/if}

@@ -98,3 +98,8 @@ input, select {
 .scroll {
 	overflow: auto;
 }
+
+button.destructive {
+	background-color: #ae1414;
+	color: white;
+}

@@ -1,6 +1,6 @@
 import { Texture, Vec2, Renderer, Mesh, Mat3, Program } from "ogl";
 import type { Board } from "../board/board";
-import { QuadQuad } from "./gl";
+import { InstancedQuad } from "./gl";
 import { Palette, toTexture } from "../board/palette";
 import { Shape } from "./shape";
 import { Template } from "./template";
@@ -67,9 +67,9 @@ export class Canvas {
 	private readonly program: CanvasProgram;
 	private readonly debugProgram: DebugProgram;
 	private readonly templateProgram: TemplateProgram;
-	private mesh: Mesh<QuadQuad, CanvasProgram>;
-	private debugMesh: Mesh<QuadQuad, DebugProgram>;
-	private templateMesh: Mesh<QuadQuad, TemplateProgram>;
+	private mesh: Mesh<InstancedQuad, CanvasProgram>;
+	private debugMesh: Mesh<InstancedQuad, DebugProgram>;
+	private templateMesh: Mesh<InstancedQuad, TemplateProgram>;
 	private textures: CanvasTextures;
 
 	get gl() {
@@ -81,12 +81,15 @@ export class Canvas {
 		private shape: Shape,
 		palette: Palette,
 		canvas: HTMLCanvasElement,
+		templateStyle: HTMLImageElement,
 	) {
 		this.renderer = new Renderer({
 			canvas,
 			autoClear: false,
 			depth: false,
 			alpha: true,
+			premultipliedAlpha: true,
+			powerPreference: "low-power",
 		});
 		const gl = this.gl;
 
@@ -97,9 +100,9 @@ export class Canvas {
 		this.textures = new CanvasTextures(gl, board, shape);
 		this.program = new CanvasProgram(gl);
 		this.debugProgram = new DebugProgram(gl);
-		this.templateProgram = new TemplateProgram(gl);
+		this.templateProgram = new TemplateProgram(gl, templateStyle);
 
-		const geometry = new QuadQuad(gl);
+		const geometry = new InstancedQuad(gl);
 		this.mesh = new Mesh(this.gl, { geometry, program: this.program });
 		this.debugMesh = new Mesh(this.gl, { geometry, program: this.debugProgram });
 		this.templateMesh = new Mesh(this.gl, { geometry, program: this.templateProgram });
@@ -202,7 +205,6 @@ export class Canvas {
 
 	async render(parameters: RenderParameters, overrides: RendererOverrides) {
 		const palette = await this.palette;
-
 		// this is redudant with the zooming code now handling this, but I'm
 		// leaving it here for now
 		if (!overrides.zoom) {
@@ -218,7 +220,7 @@ export class Canvas {
 
 		this.updateUniforms(palette, parameters, overrides);
 
-		type Scene = Mesh<QuadQuad, Program & Instanceable>;
+		type Scene = Mesh<InstancedQuad, Program & Instanceable>;
 		const scene = (overrides.debug ? this.debugMesh : this.mesh);
 		const visible = this.visibleArea();
 
@@ -248,7 +250,7 @@ export class Canvas {
 	}
 
 	private renderSectors<P extends Program & Instanceable>(
-		scene: Mesh<QuadQuad, P>,
+		scene: Mesh<InstancedQuad, P>,
 		sectors: Array<Vec2>,
 		detail: number,
 	) {
@@ -280,11 +282,15 @@ export class Canvas {
 		const parallelism = this.templateProgram.maxParallelism;
 		while (templates.length > 0) {
 			const nextSet = templates.splice(0, parallelism);
-			updateAttribute(attributes.offset, nextSet.map(t => new Vec2(t.x / t.image.width, t.y / t.image.height)));
-			updateAttribute(attributes.size, nextSet.map(t => new Vec2(width / t.image.width, height / t.image.height)));
-			updateAttribute(attributes.texture, nextSet.map((_, i) => i));
+			const offsets = nextSet.map(t => new Vec2(t.x / t.width, t.y / t.height));
+			const sizes = nextSet.map(t => new Vec2(width / t.width, height / t.height));
+			const indices = nextSet.map((_, i) => i);
+			updateAttribute(attributes.offset, offsets);
+			updateAttribute(attributes.size, sizes);
+			updateAttribute(attributes.texture, indices);
 			this.templateMesh.geometry.setInstancedCount(nextSet.length);
-			this.templateProgram.uniforms.tTemplate.value = nextSet.map(t => t.image);
+			const textures = nextSet.map(t => t.prepare(this.renderer, palette));
+			this.templateProgram.uniforms.tTemplate.value = textures;
 			this.renderer.render({ scene: this.templateMesh });
 		}
 	}

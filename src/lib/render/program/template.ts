@@ -1,6 +1,5 @@
 import { type OGLRenderingContext, Program, Texture, Vec2, Mat3 } from "ogl";
 import { QUAD_VERTEX_SHADER } from "../gl";
-import templateStyleImage from "/src/assets/large_template_style.png";
 import type { Instanceable } from "../../util";
 
 type TemplateUniforms = {
@@ -9,7 +8,7 @@ type TemplateUniforms = {
 	tPalette: { value: Texture };
 	uPaletteSize: { value: number };
 	tTemplate: { value: Array<Texture> };
-	tStyle: { value: Texture }
+	tStyle: { value: Texture };
 	uHeatmapDim: { value: number };
 	uBoardSize: { value: Vec2 };
 };
@@ -59,7 +58,7 @@ export class TemplateProgram extends Program implements Instanceable {
 	public readonly uniforms: TemplateUniforms;
 	public readonly maxParallelism: number = 7;
 
-	constructor(gl: OGLRenderingContext) {
+	constructor(gl: OGLRenderingContext, styleImage: HTMLImageElement) {
 		// NOTE: this would be more efficient as a single channel texture,
 		// webgl doesn't support conversion and it's hard to do in js.
 		const templateStyle = new Texture(gl, {
@@ -67,17 +66,16 @@ export class TemplateProgram extends Program implements Instanceable {
 			height: 32,
 			magFilter: gl.NEAREST,
 		});
-		const styleImage = new Image();
-		styleImage.onload = () => {
-			templateStyle.image = styleImage;
-		};
-		styleImage.src = templateStyleImage;
+
+		styleImage.onload = () => templateStyle.image = styleImage;
 	
 		super(gl, {
 			vertex: QUAD_VERTEX_SHADER,
 			fragment: TEMPLATE_FRAGMENT_SHADER,
 			transparent: true,
 		});
+
+		this.setBlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.SRC_ALPHA, gl.DST_ALPHA);
 	
 		this.uniforms = {
 			uView: { value: new Mat3().identity() },

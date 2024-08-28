@@ -1,3 +1,5 @@
+import type { Template } from "./render/template";
+
 export type RendererOverrides = {
 	detailLevel?: number;
 	debug: boolean;
@@ -17,6 +19,9 @@ export type Settings = {
 		duration: number;
 		position: number;
 		dimming: number;
+	};
+	template: {
+		source: string;
 	};
 }
 
@@ -38,6 +43,7 @@ export interface LookupPointer extends Pointer {
 export interface AppState {
 	pointer?: PlacingPointer | LookupPointer;
 	adminOverrides: AdminOverrides;
+	templates: Template[];
 }
 
 export type AdminOverrides = {

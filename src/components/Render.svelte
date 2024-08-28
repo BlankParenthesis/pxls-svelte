@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { Texture } from "ogl";
 	import { onMount } from "svelte";
 	import { get } from "svelte/store";
 	import type { Board } from "../lib/board/board";
 	import { Canvas, type RenderParameters, type ViewBox } from "../lib/render/canvas";
-	import { Template } from "../lib/render/template";
     import { type RendererOverrides } from "../lib/settings";
 
 	let canvasElement: HTMLCanvasElement;
@@ -15,6 +13,7 @@
 	export let parameters: RenderParameters;
 
 	export let width, height;
+	export let templateStyle: HTMLImageElement;
 
 	export function viewbox(): ViewBox {
 		return canvas?.visibleArea() || {
@@ -54,20 +53,10 @@
 	
 	const info = board.info;
 
-	// TODO: this is temporary
-	function createTemplate(): Template {
-		const data = new Uint8Array(new Array(200 * 200)
-			.fill(1)
-			.map((_, i) => Math.floor(i / 200) + i % 2));
-		return new Template(Template.texture(canvas.gl, data, 20, 20), -20, 5);
-	}
-
 	onMount(async () => {
 		// TODO: pass and use the info store directly
 		const i = get(info);
-		canvas = new Canvas(board, i.shape, i.palette, canvasElement);
-		
-		parameters.templates.push(createTemplate());
+		canvas = new Canvas(board, i.shape, i.palette, canvasElement, templateStyle);
 		
 		board.onUpdate(_ => renderQueued = true);
 	})

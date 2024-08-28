@@ -6,6 +6,7 @@
 	import { Site } from "../lib/site";
     import { collect } from "../lib/util";
     import type { BoardStub } from "../lib/board/board";
+    import templateStyle from "../assets/large_template_style.webp";
 
 	let settings: Settings = {
 		debug: {
@@ -22,6 +23,9 @@
 			position: -1, // "now" (`-1 + 1` seconds ago)
 			dimming: 0.75,
 		},
+		template: {
+			source: templateStyle,
+		},
 	};
 
 	let gamestate: AppState = {
@@ -30,7 +34,8 @@
 			mask: false,
 			color: false,
 			cooldown: false,
-		}
+		},
+		templates: [],
 	};
 
 	const connecting = Site.connect(new URL(import.meta.env.VITE_TARGET_SITE));

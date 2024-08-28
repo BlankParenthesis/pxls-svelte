@@ -45,7 +45,7 @@ const QUAD_UV = [
 	1, 1,
 ];
 
-export class QuadQuad extends Geometry {
+export class InstancedQuad extends Geometry {
 	declare public readonly attributes: {
 		position: Attribute;
 		uv: Attribute;
