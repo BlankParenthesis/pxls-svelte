@@ -1,4 +1,5 @@
 import { Vec2, type Attribute } from "ogl";
+import type { Requester } from "./requester";
 
 export function randomBytes(length: number): Uint8Array {
 	return crypto.getRandomValues(new Uint8Array(length));
@@ -136,3 +137,5 @@ export function debounce<A extends unknown[], R>(
 		timeout = setTimeout(() => callback(...args), debounceTime);
 	};
 }
+
+export type Parser<T> = (context: Requester) => ((data: unknown) => T);

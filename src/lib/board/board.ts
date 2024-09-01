@@ -24,27 +24,14 @@ const Cooldown = z.object({
 	nextTimestamp: h["pxls-next-available"],
 }));
 export type Cooldown = z.infer<typeof Cooldown>;
-export class BoardStub {
-	constructor(
-		private readonly http: Requester,
-		readonly info?: BoardInfo,
-	) {}
 
-	async connect(site: Site): Promise<Board> {
-		return Board.connect(site, this.http);
-	}
-
-	get uri(): URL {
-		return this.http.baseURL;
-	}
-}
 export class Board {
 	private listeners = {
 		boardUpdate: [] as Array<(data: BoardUpdate) => void>,
 		pixelsAvailable: [] as Array<(data: PixelsAvailable) => void>,
 	};
 
-	static async connect(site: Site, http: Requester) {
+	static async connect(site: Site, http: Requester): Promise<Board> {
 		const events = [
 			"cooldown",
 			"data.colors",
@@ -52,10 +39,12 @@ export class Board {
 			"info", // TODO: this is also an extension
 		];
 		const socket = await http.socket("events", events);
+		const parser = BoardInfo.parser();
+		const parse = parser(http);
 		// TODO: catch events in socket and replay them after this is fetched
 		const { cooldown, info } = await http.getRaw().then(async r => ({
 			cooldown: writable(Cooldown.parse(Object.fromEntries(r.headers.entries()))),
-			info: writable(BoardInfo.parse(await r.json())),
+			info: writable(parse(await r.json())),
 		}));
 		return new Board(site, http, socket, info, cooldown);
 	}
@@ -132,12 +121,23 @@ export class Board {
 		// cannot deduce that the next call will set it.
 		let info!: BoardInfo;
 		this.infoStore.update(oldInfo => {
+			if (typeof update.info?.name !== "undefined") {
+				oldInfo.name = update.info.name;
+			}
+
 			if (typeof update.info?.shape !== "undefined") {
 				throw new Error("TODO: shape change handling");
 			}
 
-			info = { ...oldInfo, ...update.info };
-			return info;
+			if (typeof update.info?.max_pixels_available !== "undefined") {
+				oldInfo.maxPixelsAvailable = update.info.max_pixels_available;
+			}
+			
+			if (typeof update.info?.palette !== "undefined") {
+				oldInfo.palette = update.info.palette;
+			}
+
+			return info = oldInfo;
 		});
 
 		const colorUpdates = update.data?.colors || [];
@@ -211,24 +211,10 @@ export class Board {
 	private pixelCache: Map<number, Writable<Promise<Pixel | undefined> | undefined>> = new Map();
 	pixel(location: number): Readable<Promise<Pixel | undefined> | undefined> {
 		if (!this.pixelCache.has(location)) {
-			const pixel = this.http.get("pixels/" + location)
-				.then(p => {
-					if (typeof p === "undefined") {
-						return undefined;
-					}
-					
-					const { position, color, modified, user } = Pixel.parse(p);
-					
-					let newUser = undefined;
-					if (typeof user !== "undefined") {
-						newUser = this.site.userFromReference(user);
-					}
-					
-					const canvasStart = get(this.info).created_at;
-					const timestamp = new Date((modified + canvasStart) * 1000);
-					
-					return new Pixel(position, color, timestamp, newUser);
-				});
+			const parser = Pixel.parser(get(this.info).createdAt, this.site.parsers.userReference);
+			const parse = parser(this.http);
+
+			const pixel = this.http.get("pixels/" + location).then(parse);
 			this.pixelCache.set(location, writable(pixel));
 		}
 		

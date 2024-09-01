@@ -1,23 +1,9 @@
 import { z } from "zod";
-import { reference } from "./reference";
-import { page } from "./page";
 import type { Site } from "./site";
 import type { Requester } from "./requester";
 import { get, writable, type Readable, type Writable } from "svelte/store";
-import { collect } from "./util";
-import { FactionMemberReference, FactionMembersPage, FactionMember } from "./factionmember";
-
-export const RawFaction = z.object({
-	"name": z.string(),
-	"created_at": z.number().int().min(0).transform(unix => new Date(unix * 1000)),
-	"size": z.number(),
-});
-export type RawFaction = z.infer<typeof RawFaction>;
-
-export const FactionReference = reference(RawFaction);
-export type FactionReference = z.infer<typeof FactionReference>;
-export const FactionsPage = page(FactionReference);
-export type FactionsPage = z.infer<typeof FactionsPage>;
+import { collect, type Parser } from "./util";
+import { FactionMember } from "./factionmember";
 
 export class Faction {
 	constructor(
@@ -31,20 +17,13 @@ export class Faction {
 	private currentMemberCache?: Readable<Promise<FactionMember | undefined>>;
 	async currentMember(): Promise<Readable<Promise<FactionMember | undefined>>> {
 		if (typeof this.currentMemberCache === "undefined") {
+			const parse = this.site.parsers.factionMemberReference(this.http);
+			// FIXME: handle 404
 			const reference = await this.http.get("members/current")
-				.then(f => {
-					if (typeof f === "undefined") {
-						return undefined;
-					} else {
-						return FactionMemberReference.parse(f);
-					}
-				});
+				.then(parse)
+				.then(r => r.get());
 
-			if(typeof reference !== "undefined") {
-				this.currentMemberCache = this.site.factionMemberFromReference(reference);
-			} else {
-				this.currentMemberCache = writable(Promise.resolve(undefined));
-			}
+			this.currentMemberCache = reference;
 		}
 
 		return this.currentMemberCache;
@@ -75,16 +54,15 @@ export class Faction {
 	}
 
 	async *fetchMembers() {
+		const parse = this.site.parsers.factionMembersPage(this.http);
 		// TODO: check permissions
-		let members = await this.http.get("members")
-			.then(j => FactionMembersPage.parse(j));
+		let members = await this.http.get("members").then(parse);
 		while(true) {
 			for (const reference of members.items) {
-				yield this.site.factionMemberFromReference(reference);
+				yield reference.get();
 			}
 			if (members.next) {
-				members = await this.http.get(members.next)
-					.then(j => FactionMembersPage.parse(j));
+				members = await this.http.get(members.next).then(parse);
 			} else {
 				break;
 			}
@@ -97,12 +75,21 @@ export class Faction {
 			owner: false,
 		};
 		
+		const parse = this.site.parsers.factionMemberReference(this.http);
+		
 		return await this.http.post(data, "members")
-			.then(FactionMemberReference.parse)
-			.then(r => this.site.factionMemberFromReference(r));
+			.then(parse)
+			.then(r => r.get());
 	}
 
-	static parse(input: unknown): RawFaction {
-		return RawFaction.parse(input);
+	/* eslint-disable camelcase */
+	static parser(site: Site): Parser<Faction> {
+		return (http: Requester) => z.object({
+			name: z.string(),
+			created_at: z.number().int().min(0).transform(unix => new Date(unix * 1000)),
+			size: z.number(),
+		}).transform(({ name, created_at, size }) => {
+			return new Faction(site, http, name, created_at, size);
+		}).parse;
 	}
 }

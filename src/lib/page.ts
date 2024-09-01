@@ -1,15 +1,22 @@
-import { z, type ZodTypeAny } from "zod";
+import { z } from "zod";
+import type { Parser } from "./util";
+import type { Requester } from "./requester";
 
-/**
- * creates a parser for a page of objects
- * @param view the parser for the object
- * @returns the parser for a page
- */
-export function page<T extends ZodTypeAny>(view: T) {
-	return z.object({
-		items: z.array(view),
-		next: z.string().nullable().optional(),
-		previous: z.string().nullable().optional(),
-	});
+export class Page<T> {
+	private constructor(
+		readonly items: Array<T>,
+		readonly next?: string | null,
+		readonly previous?: string | null,
+	) {}
+
+	static parser<T>(sub: Parser<T>): Parser<Page<T>> {
+		return (http: Requester) => z.object({
+			items: z.array(z.unknown()),
+			next: z.string().nullable().optional(),
+			previous: z.string().nullable().optional(),
+		}).transform(({ items, next, previous }) => {
+			const parse = sub(http);
+			return new Page(items.map(parse), next, previous);
+		}).parse;
+	}
 }
-

@@ -1,14 +1,19 @@
 import { z } from "zod";
-import { reference } from "./reference";
-import { page } from "./page";
+import type { Parser } from "./util";
+import type { Requester } from "./requester";
 
-export const Role = z.object({
-	"name": z.string(),
-	"icon": z.string().optional(),
-});
-export type Role = z.infer<typeof Role>;
+export class Role {
+	constructor(
+		readonly name: string,
+		readonly icon?: string,
+	) {}
 
-export const RoleReference = reference(Role);
-export type RoleReference = z.infer<typeof RoleReference>;
-export const RolesPage = page(RoleReference);
-export type RolesPage = z.infer<typeof RoleReference>;
+	static parser(): Parser<Role> {
+		return (http: Requester) => z.object({
+			"name": z.string(),
+			"icon": z.string().optional(),
+		}).transform(({ name, icon}) => {
+			return new Role(name, icon);
+		}).parse;
+	}
+}

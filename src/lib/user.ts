@@ -1,18 +1,11 @@
 import { z } from "zod";
 import type { Requester } from "./requester";
 import type { Site } from "./site";
-import { reference } from "./reference";
-import { Role, RolesPage } from "./role";
-import { collect } from "./util";
+import { Role } from "./role";
+import { collect, type Parser } from "./util";
 import type { Readable } from "svelte/store";
 import { writable, type Writable } from "svelte/store";
-import { FactionsPage, Faction } from "./faction";
-
-export const RawUser = z.object({
-	"name": z.string(),
-	"created_at": z.number().int().min(0).transform(unix => new Date(unix * 1000)),
-});
-export type RawUser = z.infer<typeof RawUser>;
+import { Faction } from "./faction";
 
 export class User  {
 	constructor(
@@ -20,7 +13,6 @@ export class User  {
 		private readonly http: Requester,
 		readonly name: string,
 		readonly createdAt: Date,
-		readonly url: string,
 	) {}
 
 	private rolesCache?: Writable<Promise<Array<Readable<Promise<Role>>>>>;
@@ -43,15 +35,14 @@ export class User  {
 
 	async *fetchRoles() {
 		// TODO: check permissions
-		let roles = await this.http.get("roles")
-			.then(j => RolesPage.parse(j));
+		const parse = this.site.parsers.rolesPage(this.http);
+		let roles = await this.http.get("roles").then(parse);
 		while(true) {
 			for (const reference of roles.items) {
-				yield this.site.roleFromReference(reference);
+				yield reference.get();
 			}
 			if (roles.next) {
-				roles = await this.http.get(roles.next)
-					.then(j => RolesPage.parse(j));
+				roles = await this.http.get(roles.next).then(parse);
 			} else {
 				break;
 			}
@@ -78,24 +69,27 @@ export class User  {
 
 	async *fetchFactions() {
 		// TODO: check permissions
-		let factions = await this.http.get("factions")
-			.then(j => FactionsPage.parse(j));
+		const parse = this.site.parsers.factionsPage(this.http);
+		let factions = await this.http.get("factions").then(parse);
 		while(true) {
 			for (const reference of factions.items) {
-				yield this.site.factionFromReference(reference);
+				yield reference.get();
 			}
 			if (factions.next) {
-				factions = await this.http.get(factions.next)
-					.then(j => FactionsPage.parse(j));
+				factions = await this.http.get(factions.next).then(parse);
 			} else {
 				break;
 			}
 		}
 	}
 
-	static parse(input: unknown): RawUser {
-		return RawUser.parse(input);
+	/* eslint-disable camelcase */
+	static parser(site: Site): Parser<User> {
+		return (http: Requester) => z.object({
+			"name": z.string(),
+			"created_at": z.number().int().min(0).transform(unix => new Date(unix * 1000)),
+		}).transform(({ name, created_at }) => {
+			return new User(site, http, name, created_at);
+		}).parse;
 	}
 }
-export const UserReference = reference(RawUser);
-export type UserReference = z.infer<typeof UserReference>;

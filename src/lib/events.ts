@@ -1,47 +1,58 @@
 import { z } from "zod";
-import { UserReference } from "./user";
-import { FactionReference } from "./faction";
-import { FactionMemberReference } from "./factionmember";
+import type { Reference } from "./reference";
+import type { User } from "./user";
+import type { Faction } from "./faction";
+import type { FactionMember } from "./factionmember";
+import type { Requester } from "./requester";
+import type { Parser } from "./util";
 
-export const UserUpdated = z.object({
+const UserUpdated = (sub: (data: unknown) => Reference<User>) => z.object({
 	type: z.literal("user-updated"),
-	user: UserReference,
+	user: z.unknown().transform(sub),
 });
-export type UserUpdated = z.infer<typeof UserUpdated>;
 
-export const UserRolesUpdated = z.object({
+const UserRolesUpdated = z.object({
 	type: z.literal("user-roles-updated"),
 	user: z.string(),
 });
-export type UserRolesUpdated = z.infer<typeof UserRolesUpdated>;
 
-export const FactionCreated = z.object({
+const FactionCreated = (sub: (data: unknown) => Reference<Faction>) => z.object({
 	type: z.literal("faction-created"),
-	faction: FactionReference,
+	faction: z.unknown().transform(sub),
 });
-export type FactionCreated = z.infer<typeof FactionCreated>;
-export const FactionUpdated = z.object({
+
+const FactionUpdated = (sub: (data: unknown) => Reference<Faction>) => z.object({
 	type: z.literal("faction-updated"),
-	faction: FactionReference,
+	faction: z.unknown().transform(sub),
 });
-export type FactionUpdated = z.infer<typeof FactionUpdated>;
-export const FactionDeleted = z.object({
+
+const FactionDeleted = z.object({
 	type: z.literal("faction-deleted"),
 	faction: z.string(),
 });
-export type FactionDeleted = z.infer<typeof FactionDeleted>;
 
-export const FactionMemberUpdated = z.object({
+const FactionMemberUpdated = (
+	factionParser: (data: unknown) => Reference<Faction>,
+	memberParser: (data: unknown) => Reference<FactionMember>,
+) => z.object({
 	type: z.literal("faction-member-updated"),
-	faction: FactionReference,
-	member: FactionMemberReference,
+	faction: z.unknown().transform(factionParser),
+	member: z.unknown().transform(memberParser),
 });
-export type FactionMemberUpdated = z.infer<typeof FactionMemberUpdated>;
 
-export const Event = UserUpdated
-	.or(UserRolesUpdated)
-	.or(FactionCreated)
-	.or(FactionUpdated)
-	.or(FactionDeleted)
-	.or(FactionMemberUpdated);
-export type Event = z.infer<typeof Event>;
+export function parser(context: Requester, parsers: {
+	userReference: Parser<Reference<User>>,
+	factionReference: Parser<Reference<Faction>>,
+	factionMemberReference: Parser<Reference<FactionMember>>,
+}) {
+	return UserUpdated(parsers.userReference(context))
+		.or(UserRolesUpdated)
+		.or(FactionCreated(parsers.factionReference(context)))
+		.or(FactionUpdated(parsers.factionReference(context)))
+		.or(FactionDeleted)
+		.or(FactionMemberUpdated(
+			parsers.factionReference(context),
+			parsers.factionMemberReference(context),
+		))
+		.parse;
+}

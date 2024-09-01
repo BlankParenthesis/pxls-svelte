@@ -5,8 +5,11 @@
 	import Stack from "./layout/Stack.svelte";
 	import { Site } from "../lib/site";
     import { collect } from "../lib/util";
-    import type { BoardStub } from "../lib/board/board";
+    import { Board } from "../lib/board/board";
+    import { BoardInfo } from "../lib/board/info";
     import templateStyle from "../assets/large_template_style.webp";
+    import BoardSelect from "./BoardSelect.svelte";
+    import type { Reference } from "../lib/reference";
 
 	let settings: Settings = {
 		debug: {
@@ -39,32 +42,25 @@
 	};
 
 	const connecting = Site.connect(new URL(import.meta.env.VITE_TARGET_SITE));
-	let select: (board: BoardStub) => void;
-	const boardSelect = new Promise<BoardStub>(resolve => select = resolve);
+	let select: (board: Reference<BoardInfo>) => void;
+	const boardSelect = new Promise<Reference<BoardInfo>>(resolve => select = resolve);
 </script>
 {#await connecting}
 	Connecting…
 {:then site}
-	{#await collect(site.boards())}
+	{#await collect(site.fetchBoards())}
 		Loading boards…
 	{:then boards}
 		{#await boardSelect}
 			<ul>
 				{#each boards as board}
 					<li>
-						{#if board.info}
-							<h4>{board.info.name}</h4>
-							<p>Shape: {board.info.shape}<p/>
-							<button on:click="{() => select(board)}">Connect</button>
-						{:else}
-							<h4>Info unknown</h4>
-							<p>Location: {board.uri.href}</p>
-						{/if}
+						<BoardSelect info={board} on:select={b => select(b.detail)}/>
 					</li>
 				{/each}
 			</ul>
-		{:then board}
-			{#await board.connect(site)}
+		{:then reference}
+			{#await site.boards.get(reference.uri)}
 				Loading board…
 			{:then board}
 				<Stack>

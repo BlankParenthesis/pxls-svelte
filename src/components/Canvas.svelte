@@ -42,7 +42,7 @@
 
 	const [boardWidth, boardHeight] = $info.shape.size();
 
-	$: canvasnow = Math.round($now / 1000) - $info.created_at;
+	$: canvasnow = Math.round($now / 1000) - $info.createdAt.valueOf();
 
 	$: if (settings.heatmap.enabled) {
 		if (settings.heatmap.position < 0){

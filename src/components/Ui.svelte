@@ -97,8 +97,8 @@
 					<h2>Account</h2>
 					<p>Loading</p>
 				</div>
-			{:then url}
-				<Account {auth} {site} user={site.user(url)}/>
+			{:then user}
+				<Account {auth} {site} user={user.get()}/>
 			{/await}
 		</div>
 	{:else if panel == Panel.Admin}

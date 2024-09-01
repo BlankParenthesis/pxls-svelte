@@ -1,17 +1,9 @@
 import { z } from "zod";
-import { page } from "./page";
 import type { Readable } from "svelte/store";
-import { UserReference, type User } from "./user";
-
-const RawPixel = z.object({
-	"position": z.number().int().min(0),
-	"color": z.number().int().min(0),
-	"modified": z.number().int().min(0),
-	"user": UserReference,
-});
-export type RawPixel = z.infer<typeof RawPixel>;
-
-export const PixelsPage = page(RawPixel);
+import { type User } from "./user";
+import type { Parser } from "./util";
+import type { Requester } from "./requester";
+import type { Reference } from "./reference";
 
 export class Pixel  {
 	constructor(
@@ -21,7 +13,17 @@ export class Pixel  {
 		readonly user?: Readable<Promise<User>>,
 	) {}
 
-	static parse(input: unknown): RawPixel {
-		return RawPixel.parse(input);
+	static parser(boardCreated: Date, sub: Parser<Reference<User>>): Parser<Pixel> {
+		const epoch = boardCreated.valueOf();
+		return (http: Requester) => z.object({
+			position: z.number().int().min(0),
+			color: z.number().int().min(0),
+			modified: z.number().int().min(0).transform(pixel => new Date(epoch + pixel * 1000)),
+			user: z.unknown(),
+		}).transform(({position, color, modified, user}) => {
+			const parse = sub(http);
+			const parsedUser = z.unknown().transform(parse).optional().parse(user);
+			return new Pixel(position, color, modified, parsedUser?.get());
+		}).parse;
 	}
 }
