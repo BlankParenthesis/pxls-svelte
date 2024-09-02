@@ -7,6 +7,7 @@ import { get, writable, type Readable, type Writable } from "svelte/store";
 import type { AdminOverrides } from "../settings";
 import { Pixel } from "../pixel";
 import type { Site } from "../site";
+import { navigationState } from "../../components/Login.svelte";
 
 type PlaceResult = boolean; // TODO: a bit more detail would be nice
 
@@ -83,6 +84,13 @@ export class Board {
 				}
 			} catch(e) {
 				console.error("Failed to parse packet", e);
+			}
+		});
+
+		socket.addEventListener("close", () => {
+			// TODO: as with socket, proper state handling to recover from this
+			if (!navigationState.navigating) {
+				document.location.reload();
 			}
 		});
 		

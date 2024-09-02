@@ -16,6 +16,7 @@ import { Cache, CacheOnce } from "./cache";
 import { Page } from "./page";
 import { Reference } from "./reference";
 import { Board } from "./board/board";
+import { navigationState } from "../components/Login.svelte";
 
 const SiteInfo = z.object({
 	name: z.string().nullable().optional(),
@@ -186,6 +187,14 @@ export class Site {
 				}
 			} catch(e) {
 				console.error("Failed to parse packet", e);
+			}
+		});
+
+		socket?.addEventListener("close", () => {
+			// TODO: proper state handling to recover from this
+			// for now, just do as pxls: reload the page.
+			if (!navigationState.navigating) {
+				document.location.reload();
 			}
 		});
 	}

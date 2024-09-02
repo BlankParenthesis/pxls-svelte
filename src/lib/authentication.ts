@@ -165,6 +165,7 @@ export class Authentication {
 		
 		let tokenRefresh: number | undefined;
 		let cancelationNumber = 0;
+
 		tokenStore.subscribe(token => {
 			if (typeof token !== "undefined") {
 				// milliseconds until 30s before token expires
@@ -181,12 +182,16 @@ export class Authentication {
 					tokenRefresh = setTimeout(async () => {
 						cancelationNumber += 1;
 						const localCancel = cancelationNumber;
-						const newToken = await authentication.refreshToken(token.refresh_token as string);
-						// account for token being set between requesting and recieving the new token
-						if (localCancel !== cancelationNumber) {
-							return;
+						try {
+							const newToken = await authentication.refreshToken(token.refresh_token as string);
+							// account for token being set between requesting and recieving the new token
+							if (localCancel !== cancelationNumber) {
+								return;
+							}
+							tokenStore.set(newToken);
+						} catch(e) {
+							tokenStore.reset();
 						}
-						tokenStore.set(newToken);
 					}, wait);
 				} else {
 					// if we have no refresh token, just invalidate the store
