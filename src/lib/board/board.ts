@@ -8,6 +8,7 @@ import type { AdminOverrides } from "../settings";
 import { Pixel } from "../pixel";
 import type { Site } from "../site";
 import { navigationState } from "../../components/Login.svelte";
+import type { Parser } from "../util";
 
 type PlaceResult = boolean; // TODO: a bit more detail would be nice
 
@@ -33,13 +34,40 @@ export class Board {
 	};
 
 	static async connect(site: Site, http: Requester): Promise<Board> {
-		const events = [
-			"cooldown",
-			"data.colors",
-			"data.timestamps", // TODO: this is an extension, test if it's available
-			"info", // TODO: this is also an extension
-		];
-		const socket = await http.socket("events", events);
+		const extensions = await site.info.extensions;
+		const access = await get(site.access());
+
+		if (!extensions.has("board_timestamps")) {
+			throw new Error("TODO: render without timestamps");
+		}
+
+		if (!access.has("boards.data.get")) {
+			throw new Error("Forbidden from viewing board data");
+		}
+
+		const events = [];
+
+		if (access.has("boards.events.cooldown")) {
+			events.push("cooldown");
+		}
+
+		if (access.has("boards.events.data.colors")) {
+			console.warn("Not allowed to listen to board changes");
+			events.push("data.colors");
+		}
+
+		if (extensions.has("board_timestamps") && access.has("board.events.data.timestamps")) {
+			events.push("data.timestamps");
+		}
+
+		if (extensions.has("board_lifecycle") && access.has("board.events.info")) {
+			events.push("info");
+		}
+
+		let socket;
+		if (events.length > 0) {
+			socket = await http.socket("events", events);
+		}
 		const parser = BoardInfo.parser();
 		const parse = parser(http);
 		// TODO: catch events in socket and replay them after this is fetched
@@ -57,10 +85,14 @@ export class Board {
 	public readonly info: Readable<BoardInfo>;
 	public readonly cooldown: Readable<Cooldown>;
 
+	private readonly parsers: {
+		pixel: Parser<Pixel>,
+	};
+
 	private constructor(
 		private readonly site: Site,
 		private readonly http: Requester,
-		private readonly socket: WebSocket,
+		private readonly socket: WebSocket | undefined,
 		private readonly infoStore: Writable<BoardInfo>,
 		private readonly cooldownStore: Writable<Cooldown>,
 	) {
@@ -71,7 +103,7 @@ export class Board {
 			pixelsAvailable: p.count,
 			nextTimestamp: p.next,
 		}));
-		socket.addEventListener("message", e => {
+		socket?.addEventListener("message", e => {
 			try {
 				const packet = Event.parse(JSON.parse(e.data) as unknown);
 				switch (packet.type) {
@@ -87,7 +119,7 @@ export class Board {
 			}
 		});
 
-		socket.addEventListener("close", () => {
+		socket?.addEventListener("close", () => {
 			// TODO: as with socket, proper state handling to recover from this
 			if (!navigationState.navigating) {
 				document.location.reload();
@@ -98,6 +130,10 @@ export class Board {
 		this.timestampsCache = new DataCache32(this.http.subpath("data/timestamps"));
 		this.maskCache = new DataCache(this.http.subpath("data/mask"));
 		this.initialCache = new DataCache(this.http.subpath("data/initial"));
+
+		this.parsers = {
+			pixel: Pixel.parser(this.site.access(), this.info, this.site.parsers.userReference),
+		};
 	}
 
 	onUpdate(callback: (packet: BoardUpdate) => void) {
@@ -219,9 +255,7 @@ export class Board {
 	private pixelCache: Map<number, Writable<Promise<Pixel | undefined> | undefined>> = new Map();
 	pixel(location: number): Readable<Promise<Pixel | undefined> | undefined> {
 		if (!this.pixelCache.has(location)) {
-			const parser = Pixel.parser(get(this.info).createdAt, this.site.parsers.userReference);
-			const parse = parser(this.http);
-
+			const parse = this.parsers.pixel(this.http);
 			const pixel = this.http.get("pixels/" + location).then(parse);
 			this.pixelCache.set(location, writable(pixel));
 		}

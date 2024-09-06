@@ -22,6 +22,10 @@ body > * {
 	display: flex;
 }
 
+.flex.reverse {
+	flex-direction: row-reverse;
+}
+
 .flex.space {
 	justify-content: space-between;
 }
@@ -41,6 +45,10 @@ body > * {
 
 .flex.vertical {
 	flex-direction: column;
+}
+
+.flex.vertical.reverse {
+	flex-direction: column-reverse;
 }
 
 .grow {

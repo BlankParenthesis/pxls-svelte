@@ -65,7 +65,13 @@
 			{:then board}
 				<Stack>
 					<Canvas {gamestate} {board} {settings}/>
-					<Ui bind:state={gamestate} {site} {board} bind:settings />
+					<Ui
+						{site}
+						{board}
+						bind:state={gamestate}
+						bind:settings
+						access={site.access()}
+					/>
 				</Stack>
 			{:catch e}
 				Board {e}

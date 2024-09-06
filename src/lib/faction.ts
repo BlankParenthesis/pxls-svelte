@@ -21,7 +21,7 @@ export class Faction {
 			// FIXME: handle 404
 			const reference = await this.http.get("members/current")
 				.then(parse)
-				.then(r => r.get());
+				.then(r => r.fetch());
 
 			this.currentMemberCache = reference;
 		}
@@ -59,7 +59,7 @@ export class Faction {
 		let members = await this.http.get("members").then(parse);
 		while(true) {
 			for (const reference of members.items) {
-				yield reference.get();
+				yield reference.fetch();
 			}
 			if (members.next) {
 				members = await this.http.get(members.next).then(parse);
@@ -79,7 +79,7 @@ export class Faction {
 		
 		return await this.http.post(data, "members")
 			.then(parse)
-			.then(r => r.get());
+			.then(r => r.fetch());
 	}
 
 	/* eslint-disable camelcase */

@@ -10,6 +10,14 @@
 	export let board: Board;
 	export let state: AppState;
 	export let settings: Settings;
+	export let access: Set<string>;
+
+	const canIgnoreCooldown = access.has("boards.pixels.override.cooldown");
+	const canUseStaffColors = access.has("boards.pixels.override.color");
+	const canIgnoreMask = access.has("boards.pixels.override.mask");
+	const hasAdminTool = canIgnoreCooldown || canUseStaffColors || canIgnoreMask;
+	
+	const canLookup = access.has("boards.pixels.get");
 
 	// https://www.desmos.com/calculator/mlugvy8kwy
 	const DURATION_KNOWN_POINT = 0.25; 
@@ -119,11 +127,6 @@
 	});
 </script>
 <style>
-	.toolbar {
-		display: flex;
-		justify-content: space-between;
-	}
-
 	.admin-tools {
 		text-align: left;
 	}
@@ -149,21 +152,7 @@
 		direction: rtl;
 	}
 </style>
-<div class="toolbar cursor-transparent">
-	<div class="admin-tools flex wrap-reverse bottom">
-		<button
-			class:enabled={state.adminOverrides.color}
-			on:click={() => state.adminOverrides.color = !state.adminOverrides.color}
-		>Enable Admin Colors</button>
-		<button
-			class:enabled={state.adminOverrides.cooldown}
-			on:click={() => state.adminOverrides.cooldown = !state.adminOverrides.cooldown}
-		>Ignore Cooldown</button>
-		<button
-			class:enabled={state.adminOverrides.mask}
-			on:click={() => state.adminOverrides.mask = !state.adminOverrides.mask}
-		>Place Anywhere</button>
-	</div>
+<div class="flex reverse space cursor-transparent">
 	<div class="user-tools flex bottom">
 		<div class="flex vertical group">
 			{#if lookup}
@@ -179,7 +168,7 @@
 								<Time time={pixel.modified} />
 
 								{#if typeof pixel.user !== "undefined"}
-									<LookupUser user={pixel.user} />
+									<LookupUser {access} user={pixel.user} />
 								{/if}
 							{/if}
 						{/await}
@@ -190,7 +179,9 @@
 					</div>
 				{/if}
 			{/if}
-			<button class:enabled={state.pointer?.type === "lookup"} on:click={setLookupPointer}>Inspect Pixel</button>
+			{#if canLookup}
+				<button class:enabled={state.pointer?.type === "lookup"} on:click={setLookupPointer}>Inspect Pixel</button>
+			{/if}
 		</div>
 		<div class="flex vertical group">
 			{#if settings.heatmap.enabled}
@@ -242,4 +233,26 @@
 			>Activity Overlay</button>
 		</div>
 	</div>
+	{#if hasAdminTool}
+		<div class="admin-tools flex wrap-reverse bottom">
+			{#if canUseStaffColors}
+				<button
+					class:enabled={state.adminOverrides.color}
+					on:click={() => state.adminOverrides.color = !state.adminOverrides.color}
+				>Enable Admin Colors</button>
+			{/if}
+			{#if canIgnoreCooldown}
+				<button
+					class:enabled={state.adminOverrides.cooldown}
+					on:click={() => state.adminOverrides.cooldown = !state.adminOverrides.cooldown}
+				>Ignore Cooldown</button>
+			{/if}
+			{#if canIgnoreMask}
+				<button
+					class:enabled={state.adminOverrides.mask}
+					on:click={() => state.adminOverrides.mask = !state.adminOverrides.mask}
+				>Place Anywhere</button>
+			{/if}
+		</div>
+	{/if}
 </div>

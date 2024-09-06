@@ -102,8 +102,8 @@ export class Site {
 
 	private constructor(
 		private readonly http: Requester,
-		private readonly info: SiteInfo,
-		readonly auth: Authentication,
+		public readonly info: SiteInfo,
+		public readonly auth: Authentication,
 		private readonly socket?: WebSocket,
 	) {
 		// parsers
@@ -154,30 +154,30 @@ export class Site {
 				const packet = parseEvent(e.data);
 				switch (packet.type) {
 					case "user-updated": 
-						packet.user.get();
+						packet.user.fetch();
 						break;
 					case "user-roles-updated": 
-						get(this.users.get(packet.user)).then(u => {
+						get(this.users.fetch(packet.user)).then(u => {
 							u.updateRoles();
 							return u;
 						});
 						break;
 					case "faction-created": throw new Error("TODO");
 					case "faction-updated": 
-						packet.faction.get();
+						packet.faction.fetch();
 						break;
 					case "faction-deleted": throw new Error("TODO");
 					case "faction-member-updated": 
 						// Mark the faction current member if the faction
 						// doesn't have it set.
 						Promise.all([
-							get(packet.member.get()),
-							get(packet.faction.get()),
+							get(packet.member.fetch()),
+							get(packet.faction.fetch()),
 							get(this.currentUser()),
 						]).then(([member, faction, currentUser]) => {
 							if (member.user?.uri === currentUser.uri) {
 								faction.initCurrentMember(member);
-								get(currentUser.get()).then(u => {
+								get(currentUser.fetch()).then(u => {
 									u.updatefactions();
 								});
 							}
@@ -231,7 +231,7 @@ export class Site {
 		let factions = await this.http.get("factions" + query).then(parse);
 		while(true) {
 			for (const reference of factions.items) {
-				yield reference.get();
+				yield reference.fetch();
 			}
 			if (factions.next) {
 				factions = await this.http.get(factions.next).then(parse);
@@ -254,11 +254,13 @@ export class Site {
 		return this.currentUserCache;
 	}
 
-	private accessCache?: Promise<Permissions>;
-	access(): Promise<Permissions> {
+	private accessCache?: Writable<Promise<Permissions>>;
+	access(): Readable<Promise<Permissions>> {
 		if (typeof this.accessCache === "undefined") {
-			this.accessCache = this.http.get("access")
+			const access = this.http.get("access")
 				.then(j => Permissions.parse(j));
+
+			this.accessCache = writable(access);
 		}
 
 		return this.accessCache;

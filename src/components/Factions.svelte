@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { writable } from "svelte/store";
     import type { Site } from "../lib/site";
     import type { User } from "../lib/user";
     import { debounce } from "../lib/util";
@@ -8,6 +7,7 @@
 
 	export let site: Site;
 	export let user: User;
+	export let access: Set<string>;
 	let search = "";
 	// this is a silly type dance we have to do, not sure why
 	type HTMLInputEventSvelte = Event & { currentTarget: EventTarget & HTMLInputElement };
@@ -32,14 +32,18 @@
 		<ul class="flex wrap">
 			{#each factions as faction}
 				<Faction {faction} />
+			{:else}
+				No Factions Joined
 			{/each}
 		</ul>
 	{/await}
-	<label class="fullwidth">
-		<span class="inline-label">Factions Search: {search}</span>
-		<input type="text" class="fullwidth" on:input={updateSearch} />
-	</label>
-	<LazyList itemSource={site.searchFactions(search)} let:item={faction}>
-		<Faction {faction} />
-	</LazyList>
+	{#if access.has("factions.list")}
+		<label class="fullwidth">
+			<span class="inline-label">Factions Search: {search}</span>
+			<input type="text" class="fullwidth" on:input={updateSearch} />
+		</label>
+		<LazyList itemSource={site.searchFactions(search)} let:item={faction}>
+			<Faction {faction} />
+		</LazyList>
+	{/if}
 </section>

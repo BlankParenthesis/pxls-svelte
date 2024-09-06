@@ -5,6 +5,7 @@
     import Time from "./Time.svelte";
 
 	export let user: Readable<Promise<User>>;
+	export let access: Set<string>;
 </script>
 <style>
 	h3 {
@@ -16,7 +17,9 @@
 {:then user}
 	<h3>{user.name}</h3>
 	<div class="flex space top">
-		<Roles roles={user.roles()} />
+		{#if access.has("users.roles.get")}
+			<Roles roles={user.roles()} />
+		{/if}
 		<div class="no-shrink">
 			Joined <Time time={user.createdAt} />
 		</div>

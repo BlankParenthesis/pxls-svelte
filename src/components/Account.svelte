@@ -3,13 +3,14 @@
 	import type { Authentication } from "../lib/authentication";
     import type { User as UserData } from "../lib/user";
 	import Login from "./Login.svelte";
-	import User from "./User.svelte";
+	import CurrentUser from "./CurrentUser.svelte";
     import Factions from "./Factions.svelte";
     import type { Site } from "../lib/site";
 
 	export let site: Site;
 	export let auth: Authentication;
 	export let user: Readable<Promise<UserData>>;
+	export let access: Set<string>;
 </script>
 <style>
 	h2 {
@@ -29,9 +30,11 @@
 {#await $user}
 	<h3>Loading User Data</h3>
 {:then user}
-	<User {user} />
+	<CurrentUser {user} {access} />
 	<div class="flex wrap-reverse space top scroll">
-		<Factions {user} {site} />
+		{#if access.has("users.current.factions.list")}
+			<Factions {user} {site} {access} />
+		{/if}
 		<!-- TODO: stats -->
 	</div>
 {/await}

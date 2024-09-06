@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Cache } from "./cache";
 import type { Parser } from "./util";
 import type { Requester } from "./requester";
+import type { Readable } from "svelte/store";
 
 export class Reference<T> {
 	private constructor(
@@ -10,9 +11,17 @@ export class Reference<T> {
 		private readonly view?: T,
 	) {}
 
-	get() {
+	get(): Readable<Promise<T>> | undefined {
 		if (typeof this.view === "undefined") {
 			return this.cache.get(this.uri);
+		} else {
+			return this.cache.update(this.uri, Promise.resolve(this.view));
+		}
+	}
+
+	fetch(): Readable<Promise<T>> {
+		if (typeof this.view === "undefined") {
+			return this.cache.fetch(this.uri);
 		} else {
 			// FIXME: if this is reference is held onto, this can be called 
 			// later to overwrite new data with old.

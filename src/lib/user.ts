@@ -39,7 +39,7 @@ export class User  {
 		let roles = await this.http.get("roles").then(parse);
 		while(true) {
 			for (const reference of roles.items) {
-				yield reference.get();
+				yield reference.fetch();
 			}
 			if (roles.next) {
 				roles = await this.http.get(roles.next).then(parse);
@@ -73,7 +73,7 @@ export class User  {
 		let factions = await this.http.get("factions").then(parse);
 		while(true) {
 			for (const reference of factions.items) {
-				yield reference.get();
+				yield reference.fetch();
 			}
 			if (factions.next) {
 				factions = await this.http.get(factions.next).then(parse);

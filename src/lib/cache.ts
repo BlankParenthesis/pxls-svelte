@@ -7,7 +7,11 @@ export class Cache<V, K = string> {
 
 	private readonly map: Map<K, Writable<V>> = new Map();
 
-	get(key: K): Readable<V> {
+	get(key: K): Readable<V> | undefined {
+		return this.map.get(key);
+	}
+
+	fetch(key: K): Readable<V> {
 		const value = this.map.get(key);
 		if (typeof value === "undefined") {
 			const newValue = writable(this.generate(key));

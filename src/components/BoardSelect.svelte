@@ -4,7 +4,7 @@
     import type { Reference } from "../lib/reference";
 
 	export let info: Reference<BoardInfo>;
-	const board = info.get();
+	const board = info.fetch();
 
 	const dispatch = createEventDispatcher();
 </script>
