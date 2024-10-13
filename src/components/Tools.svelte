@@ -139,17 +139,20 @@
 		text-align: left;
 	}
 
-	button.enabled {
-		background-color: #789abc;
-		color: white;
-	}
-
-	.group {
-		background-color: white;
-	}
-
 	.flipped {
 		direction: rtl;
+	}
+
+	.tool {
+		background: var(--tool-button-background);
+		border: 1px solid #222;
+		width: 4em;
+		height: 4em;
+	}
+
+	.tool.active {
+		color: var(--tool-button-active-foreground);
+		background: var(--tool-button-active-background);
 	}
 </style>
 <div class="flex reverse space cursor-transparent">
@@ -180,7 +183,10 @@
 				{/if}
 			{/if}
 			{#if canLookup}
-				<button class:enabled={state.pointer?.type === "lookup"} on:click={setLookupPointer}>Inspect Pixel</button>
+				<button class="round tool" class:active={state.pointer?.type === "lookup"} on:click={setLookupPointer}>
+					<div class="icon large">🔍</div>
+					<small>Inspect</small>
+				</button>
 			{/if}
 		</div>
 		<div class="flex vertical group">
@@ -228,28 +234,35 @@
 				</label>
 			{/if}
 			<button
-				class:enabled={settings.heatmap.enabled}
+				class="round tool"
+				class:active={settings.heatmap.enabled}
 				on:click={() => settings.heatmap.enabled = !settings.heatmap.enabled}
-			>Activity Overlay</button>
+			>
+				<div class="icon large">👁️</div>
+				<small>Heatmap</small>
+			</button>
 		</div>
 	</div>
 	{#if hasAdminTool}
 		<div class="admin-tools flex wrap-reverse bottom">
 			{#if canUseStaffColors}
 				<button
-					class:enabled={state.adminOverrides.color}
+					class="round tool"
+					class:active={state.adminOverrides.color}
 					on:click={() => state.adminOverrides.color = !state.adminOverrides.color}
 				>Enable Admin Colors</button>
 			{/if}
 			{#if canIgnoreCooldown}
 				<button
-					class:enabled={state.adminOverrides.cooldown}
+					class="round tool"
+					class:active={state.adminOverrides.cooldown}
 					on:click={() => state.adminOverrides.cooldown = !state.adminOverrides.cooldown}
 				>Ignore Cooldown</button>
 			{/if}
 			{#if canIgnoreMask}
 				<button
-					class:enabled={state.adminOverrides.mask}
+					class="round tool"
+					class:active={state.adminOverrides.mask}
 					on:click={() => state.adminOverrides.mask = !state.adminOverrides.mask}
 				>Place Anywhere</button>
 			{/if}

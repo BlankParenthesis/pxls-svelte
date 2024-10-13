@@ -1,0 +1,36 @@
+@media (prefers-color-scheme: dark) {
+	:root {
+		--foreground-color: #fff;
+		--page-background: #000;
+		--panel-background: #333;
+		--drawer-background: #222;
+		--drawer-border: 2px solid #000;
+		--button-background: #77777733;
+		--button-hover-background: #77777777;
+		--button-destructive-foreground: #ffffff;
+		--button-destructive-background: #bb4455;
+		--button-destructive-hover-background: #dd6677;
+		--text-input-border: 1px solid #222;
+		--tool-button-background: #333;
+		--tool-button-active-foreground: #fff;
+		--tool-button-active-background: #47a;
+	}
+}
+
+@media (prefers-color-scheme: light) {
+	:root {
+		--foreground-color: #000;
+		--panel-background: #ddd;
+		--drawer-background: #ddd;
+		--drawer-border: 1px solid #bbb;
+		--button-background: #7777773a;
+		--button-hover-background: #7777775a;
+		--button-destructive-foreground: #ffffff;
+		--button-destructive-background: #bb4455;
+		--button-destructive-hover-background: #dd6677;
+		--text-input-border: 1px solid #777;
+		--tool-button-background: #eee;
+		--tool-button-active-foreground: #fff;
+		--tool-button-active-background: #47a;
+	}
+}

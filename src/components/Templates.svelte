@@ -38,7 +38,7 @@
 		<li class="template flex">
 			<img src={template.url} alt="template preview">
 			<div class="grow flex vertical">
-				<div class="flex">
+				<div class="flex bottom">
 					<label class="grow">
 						<span class="inline-label">Title</span>
 						<input placeholder="Unnamed Template" class="fullwidth" type="text" bind:value={template.title} />
@@ -57,7 +57,7 @@
 						<!-- FIXME: this does not correctly update when the template loads-->
 						<input type="number" bind:value={template.width} />
 					</label>
-					<button class="destructive" on:click={() => deleteTemplate(template)}>Delete</button>
+					<button class="button destructive" on:click={() => deleteTemplate(template)}>Delete</button>
 				</div>
 				<label class="grow">
 					<span class="inline-label">Source URL</span>
@@ -67,4 +67,4 @@
 		</li>
 	{/each}
 </ul>
-<button on:click={addTemplate}>New Template</button>
+<button class="button" on:click={addTemplate}>New Template</button>

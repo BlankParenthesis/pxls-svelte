@@ -1,3 +1,7 @@
+:root {
+	font-family: sans-serif;
+}
+
 body {
 	margin: 0;
 	min-height: 100vh;
@@ -72,42 +76,27 @@ body > * {
 }
 
 .gap {
-	gap: 1.5em;
-}
-
-ul, li {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-label {
-	display: inline-block;
-	position: relative;
-}
-
-input, select {
-	box-sizing: border-box;
-}
-
-.inline-label {
-	position: absolute;
-	top: 0;
-	left: 0.5em;
-	font-size: small;
-	background-color: white;
-}
-
-.inline-label + input, .inline-label + select {
-	padding-top: 0.5em;
-	margin-top: 0.75em;
+	gap: 0.5em;
 }
 
 .scroll {
 	overflow: auto;
 }
 
-button.destructive {
-	background-color: #ae1414;
-	color: white;
+.icon {
+	line-height: 0.7em;
+	padding-top: 0.3em;
+}
+
+.icon.large {
+	font-size: large;
+}
+
+.glass {
+	backdrop-filter: blur(1em);
+}
+
+
+.round {
+	border-radius: 50%;
 }

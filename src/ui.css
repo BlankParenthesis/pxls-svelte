@@ -1,0 +1,76 @@
+:root {
+	color: var(--foreground-color);
+	background: var(--page-background);
+}
+
+.panel {
+	background: var(--panel-background);
+}
+
+.switcher {
+	gap: 0.25em;
+	padding: 0.25em;
+}
+
+.switcher-button {
+	padding: 0.125em 0.25em;
+	border-radius: 0.5em;
+}
+
+.switcher-button:not(:disabled):not(.active):hover {
+	background-color: var(--button-background);
+}
+
+.switcher-button.active {
+	background-color: var(--button-hover-background);
+}
+
+.switcher-button:disabled {
+	filter: saturate(0.4) contrast(0.4);
+}
+
+.drawer {
+	background: var(--drawer-background);
+	border: var(--drawer-border);
+	padding: 0.5em
+}
+
+.button {
+	border-radius: .25em;
+	padding: .25em .5em;
+	background: var(--button-background);
+	cursor: pointer;
+}
+
+.button:hover {
+	background: var(--button-hover-background);
+}
+
+.button.destructive {
+	color: var(--button-destructive-foreground);
+	background: var(--button-destructive-background);
+}
+
+.button.destructive:hover {
+	background: var(--button-destructive-hover-background);
+}
+
+input[type="text"], input[type="number"] {
+	border: var(--text-input-border);
+	cursor: text;
+}
+
+/* TODO: temporary (?) styles: */
+
+.inline-label {
+	position: absolute;
+	top: 0;
+	left: 0.5em;
+	font-size: small;
+	background: var(--panel-background);
+}
+
+.inline-label + input, .inline-label + select {
+	padding-top: 0.5em;
+	margin-top: 0.75em;
+}

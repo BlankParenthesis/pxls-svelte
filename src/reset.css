@@ -1,0 +1,33 @@
+button {
+	appearance: none;
+	border: none;
+	color: inherit;
+	background: transparent;
+	font: inherit;
+	margin: 0;
+	padding: 0;
+	cursor: default;
+}
+
+ul, li {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+label {
+	display: inline-block;
+	position: relative;
+}
+
+input, select {
+	box-sizing: border-box;
+	appearance: none;
+	border: none;
+	color: inherit;
+	background: transparent;
+	font: inherit;
+	margin: 0;
+	padding: 0;
+	cursor: default;
+}

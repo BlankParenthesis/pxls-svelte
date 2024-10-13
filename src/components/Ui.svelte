@@ -36,8 +36,8 @@
 
 	enum Panel {
 		None,
+		Place,
 		Account,
-		Admin,
 		Templates,
 		Settings,
 	}
@@ -47,18 +47,9 @@
 	const currentUser = site.currentUser();
 </script>
 <style>
-	.card {
-		background-color: white;
-	}
-
 	.grid-5 {
 		display: grid;
-		grid-template-columns: 1fr 1fr auto 1fr 1fr;
-	}
-
-	button.active {
-		background-color: #789abc;
-		color: white;
+		grid-template-columns: 3fr 3fr 2fr 3fr 3fr;
 	}
 
 	.end {
@@ -67,34 +58,62 @@
 		justify-content: end;
 	}
 </style>
-<Grid maxwidth="40em" maxheight="100%">
+<Grid maxwidth="43em" maxheight="100%">
 	{#await $access then access}
-		<div class="bottom-center card">
-			<nav class="grid-5">
+		<div class="bottom-center flex vertical reverse panel">
+			<nav class="grid-5 switcher">
 				{#if loggedIn && access.has("users.current.get")}
-					<button class:active={panel == Panel.Account} on:click={toggle(Panel.Account)}>Account</button>
+					<button 
+						class="switcher-button"
+						class:active={panel == Panel.Account}
+						on:click={toggle(Panel.Account)}
+					>
+						<div class="icon large">👤</div>
+						<small>Account</small>
+					</button>
 				{:else}
 					<Login {auth} />
 				{/if}
-				<button class:active={panel == Panel.Admin} on:click={toggle(Panel.Admin)}>Tools</button>
-				<div class="center">
-					{#if access.has("boards.pixels.post")}
+				<div></div>
+				<button
+					class="switcher-button"
+					class:active={panel == Panel.Place}
+					disabled={!access.has("boards.pixels.post")}
+					on:click={toggle(Panel.Place)}
+				>
+					<div class="icon large">🎨</div>
+					<small>Palette</small>
+				</button>
+				<button
+					class="switcher-button"
+					class:active={panel == Panel.Templates}
+					on:click={toggle(Panel.Templates)}
+				>
+					<div class="icon large">📐</div>
+					<small>Templates</small>
+				</button>
+				<button
+					class="switcher-button"
+					class:active={panel == Panel.Settings}
+					on:click={toggle(Panel.Settings)}
+				>
+					<div class="icon large">🔧</div>
+					<small>Settings</small>
+				</button>
+			</nav>
+			
+			{#if panel == Panel.Place}
+				<div class="drawer">
+					{#if panel == Panel.Place}
 						<Cooldown info={$info} cooldown={$cooldown} />
-					{:else if !loggedIn}
-						Login to place pixels
+						<Palette bind:state {board} />
 					{/if}
 				</div>
-				<button class:active={panel == Panel.Templates} on:click={toggle(Panel.Templates)}>Templates</button>
-				<button class:active={panel == Panel.Settings} on:click={toggle(Panel.Settings)}>Settings</button>
-			</nav>
-
-			
-			{#if access.has("boards.pixels.post")}
-				<Palette bind:state {board} />
 			{/if}
 		</div>
 		{#if panel == Panel.Account}
-			<div class="center-center card flex vertical">
+			<div class="glass left"></div>
+			<div class="center-center panel flex vertical">
 				{#await $currentUser}
 					<div class="flex space middle">
 						<h2>Account</h2>
@@ -104,18 +123,23 @@
 					<Account {access} {auth} {site} user={user.fetch()}/>
 				{/await}
 			</div>
-		{:else if panel == Panel.Admin}
+			<div class="glass right"></div>
+		{:else if panel == Panel.Place}
 			<div class="center-center cursor-transparent end">
 				<Tools {board} {access} bind:state bind:settings />
 			</div>
 		{:else if panel == Panel.Templates}
-			<div class="center-center card">
+			<div class="glass left"></div>
+			<div class="center-center panel">
 				<Templates bind:templates={state.templates} />
 			</div>
+			<div class="glass right"></div>
 		{:else if panel == Panel.Settings}
-			<div class="center-center card">
+			<div class="glass left"></div>
+			<div class="center-center panel">
 				<SettingsPanel bind:settings />
 			</div>
+			<div class="glass right"></div>
 		{/if}
 	{/await}
 </Grid>

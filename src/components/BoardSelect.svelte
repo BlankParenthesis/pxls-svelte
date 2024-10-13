@@ -13,5 +13,5 @@
 {:then board}
 	<h4>{board.name}</h4>
 	<p>Shape: {board.shape}<p/>
-	<button on:click="{() => dispatch("select", info)}">Connect</button>
+	<button class="button" on:click="{() => dispatch("select", info)}">Connect</button>
 {/await}

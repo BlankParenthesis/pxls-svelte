@@ -23,9 +23,7 @@
 <style>
 </style>
 {#if loggedIn}
-	<button on:click="{() => auth.logout()}">Logout</button>
+	<button class="button" on:click="{() => auth.logout()}">Logout</button>
 {:else}
-	<button on:click="{login}">
-		Login
-	</button>
+	<button class="button" on:click="{login}">Login</button>
 {/if}
