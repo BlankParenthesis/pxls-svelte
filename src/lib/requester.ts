@@ -104,9 +104,10 @@ export class Requester {
 					});
 				};
 			}
-			socket.onmessage = m => {
+			
+			function onmessage(message: MessageEvent) {
 				try {
-					const packet = JSON.parse(m.data);
+					const packet = JSON.parse(message.data);
 					if (packet.type === "ready") {
 						resolve(null);
 					} else {
@@ -114,8 +115,12 @@ export class Requester {
 					}
 				} catch (e) {
 					reject(e);
+				} finally {
+					socket.removeEventListener("message", onmessage);
 				}
-			};
+			}
+
+			socket.addEventListener("message", onmessage);
 		});
 		return socket;
 	}
