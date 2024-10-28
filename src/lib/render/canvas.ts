@@ -51,6 +51,15 @@ export class ViewBox {
 			(y - this.top) / (this.bottom - this.top),
 		];
 	}
+
+	static default(): ViewBox {
+		return new ViewBox({
+			left: 0,
+			right: 1,
+			top: 0,
+			bottom: 1,
+		});
+	}
 };
 
 export type RenderParameters = {
@@ -124,7 +133,7 @@ export class Canvas {
 	/** 
 	 * @returns The viewbox relative to the top left of the unit board.
 	 */
-	visibleArea(): ViewBox {
+	private visibleArea(): ViewBox {
 		const inverse = new Mat3(...this.program.uniforms.uView.value)
 			.multiply(new Mat3().identity().scale(this.program.uniforms.uAspect.value))
 			.inverse();
@@ -203,8 +212,7 @@ export class Canvas {
 		this.templateProgram.uniforms.uBoardSize.value = new Vec2(width, height);
 	}
 
-	async render(parameters: RenderParameters, overrides: RendererOverrides) {
-		const palette = await this.palette;
+	render(parameters: RenderParameters, overrides: RendererOverrides): ViewBox {
 		// this is redudant with the zooming code now handling this, but I'm
 		// leaving it here for now
 		if (!overrides.zoom) {
@@ -218,7 +226,7 @@ export class Canvas {
 			}
 		}
 
-		this.updateUniforms(palette, parameters, overrides);
+		this.updateUniforms(this.palette, parameters, overrides);
 
 		type Scene = Mesh<InstancedQuad, Program & Instanceable>;
 		const scene = (overrides.debug ? this.debugMesh : this.mesh);
@@ -245,8 +253,10 @@ export class Canvas {
 			sectors.splice(4);
 		}
 		this.renderSectors(scene as Scene, sectors, detail);
-		this.renderTemplates(palette, [...parameters.templates]);
+		this.renderTemplates(this.palette, [...parameters.templates]);
 		this.textures.prune();
+
+		return this.visibleArea();
 	}
 
 	private renderSectors<P extends Program & Instanceable>(

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { get } from "svelte/store";
+	import { get, writable, type Readable } from "svelte/store";
 	import type { Board } from "../lib/board/board";
-	import { Canvas, type RenderParameters, type ViewBox } from "../lib/render/canvas";
+	import { Canvas, ViewBox, type RenderParameters } from "../lib/render/canvas";
     import { type RendererOverrides } from "../lib/settings";
 
 	let canvasElement: HTMLCanvasElement;
@@ -15,14 +15,9 @@
 	export let width, height;
 	export let templateStyle: HTMLImageElement;
 
-	export function viewbox(): ViewBox {
-		return canvas?.visibleArea() || {
-			left: 0,
-			right: 1,
-			top: 0,
-			bottom: 1,
-		};
-	}
+	const viewbox = writable(ViewBox.default());
+
+	export const view = { subscribe: viewbox.subscribe } as Readable<ViewBox>;
 
 	export function getElement() {
 		return canvasElement;
@@ -42,7 +37,11 @@
 	{
 		async function render(timestamp?: number) {
 			if (canvas && renderQueued) {
-				await canvas.render(parameters, overrides).catch(console.error);
+				try {
+					viewbox.set(canvas.render(parameters, overrides));
+				} catch(e) {
+					console.error(e);
+				}
 				renderQueued = false;
 			}
 			requestAnimationFrame(render);
