@@ -11,6 +11,7 @@
 			"bottom-left  bottom  bottom-right";
 		grid-template-columns: 1fr minmax(0, var(--maxwidth)) 1fr;
 		grid-template-rows: 1fr minmax(0, var(--maxheight)) 1fr;
+		overflow: hidden;
 	}
 
 	.grid > :global(.top-left) { grid-area: top-left; }

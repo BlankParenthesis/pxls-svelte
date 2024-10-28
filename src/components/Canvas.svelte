@@ -9,6 +9,7 @@
     import { now } from "./Cooldown.svelte";
     import CanvasSpace from "./CanvasSpace.svelte";
     import { derived, readable, writable, type Readable } from "svelte/store";
+    import Exact from "./layout/Exact.svelte";
 
 	let render: Render;
 
@@ -26,6 +27,7 @@
 		heatmapDim: 0,
 	} as RenderParameters;
 
+	$: translate = [parameters.transform[1], parameters.transform[2]];
 	$: scale = [parameters.transform[0], parameters.transform[4]];
 
 	$: parameters.templates = gamestate.templates;
@@ -68,7 +70,8 @@
 		parameters.heatmapDim = 0;
 	}
 
-	let reticulePosition = 0;
+	let reticulePosition = new Vec2(0, 0);
+	let reticuleSize = new Vec2(0, 0);
 
 	function positionReticule(mouseX: number, mouseY: number) {
 		const x = mouseX / width;
@@ -80,9 +83,9 @@
 		const clippedX = Math.max(0, Math.min(pixelsX, boardWidth - 1));
 		const clippedY = Math.max(0, Math.min(pixelsY, boardHeight - 1));
 
-		// NOTE: this is a round-trip, but it should be good enough for now
-		const indexArray = $info.shape.coordinatesToIndexArray(clippedX, clippedY);
-		reticulePosition = $info.shape.indexArrayToPosition(indexArray);
+		const [x2, y2] = $viewbox.outof(clippedX / boardWidth, clippedY / boardHeight);
+		reticulePosition = new Vec2(x2 * width, y2 * height);
+		reticuleSize = new Vec2(scale[0] * 2, scale[1] * 2);
 	}
 
 	async function place(x: number, y: number) {
@@ -130,7 +133,13 @@
 	}
 
 	function drag(event: MouseEvent) {
-		positionReticule(event.clientX, event.clientY);
+		if (event.target === render.getElement()) {
+			positionReticule(event.clientX, event.clientY);
+		} else {
+			const SIZE = 60;
+			reticuleSize = new Vec2(SIZE, SIZE);
+			reticulePosition = new Vec2(event.clientX - SIZE / 2, event.clientY - SIZE / 2);
+		}
 
 		if (clicking) {
 			const dx = 2 * event.movementX / width;
@@ -198,7 +207,6 @@
 		parameters.transform = parameters.transform
 			.translate(position.scale(-1));
 
-		// TODO: this is out of date so displays wrong
 		positionReticule(event.clientX, event.clientY);
 	}
 </script>
@@ -212,8 +220,12 @@
 	on:mouseup={dragState}
 />
 <Render bind:this={render} {board} {parameters} {overrides} {width} {height} {templateStyle}/>
-{#if typeof gamestate.pointer !== "undefined"} 
-	<CanvasSpace position={reticulePosition} viewbox={$viewbox} shape={$info.shape} {scale}>
+{#if typeof gamestate.pointer !== "undefined"}
+	<Exact
+		x={reticulePosition.x}
+		y={reticulePosition.y}
+		width={reticuleSize.x}
+		height={reticuleSize.y}>
 		<Reticule pointer={gamestate.pointer} />
-	</CanvasSpace>
+	</Exact>
 {/if}

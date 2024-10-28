@@ -10,6 +10,7 @@
 		height: 100%;
 		border: 2px solid black;
 		box-sizing: border-box;
+		z-index: 2;
 	}
 </style>
 <div class="reticule cursor-transparent" style:background="{pointer.background}"></div>

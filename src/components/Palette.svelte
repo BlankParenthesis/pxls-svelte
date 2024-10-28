@@ -61,7 +61,7 @@
 	}
 
 	.color.selected {
-		background-image: transparent !important;
+		background: transparent !important;
 		border-style: dashed;
 	}
 </style>
