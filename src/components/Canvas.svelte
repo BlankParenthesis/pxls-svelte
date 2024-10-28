@@ -2,18 +2,20 @@
     import { Mat3, Vec2 } from "ogl";
 	import type { AppState, Settings } from "../lib/settings";
 	import type { Board } from "../lib/board/board";
-	import type { RenderParameters } from "../lib/render/canvas";
+	import { ViewBox, type RenderParameters } from "../lib/render/canvas";
     import type { Template } from "../lib/render/template";
 	import Render from "./Render.svelte";
     import Reticule from "./Reticule.svelte";
     import { now } from "./Cooldown.svelte";
+    import CanvasSpace from "./CanvasSpace.svelte";
+    import { derived, readable, writable, type Readable } from "svelte/store";
 
-	let canvas: Render;
+	let render: Render;
 
 	export let board: Board;
 	export let settings: Settings;
 	export let gamestate: AppState;
-	
+
 	$: overrides = settings.debug.render;
 	let parameters = {
 		// TODO: center on the center of canvas
@@ -24,15 +26,22 @@
 		heatmapDim: 0,
 	} as RenderParameters;
 
+	$: scale = [parameters.transform[0], parameters.transform[4]];
+
 	$: parameters.templates = gamestate.templates;
 
 	let innerWidth: number;
 	let innerHeight: number;
 	$: width = innerWidth;
 	$: height = innerHeight;
+
+	let viewbox = readable(ViewBox.default());
+	$: if (render) {
+		viewbox = render.view;
+	}
 	
 	const info = board.info;
-	$: reticuleSize = Math.min(parameters.transform[0], parameters.transform[4])
+	$: pixelSize = Math.min(parameters.transform[0], parameters.transform[4])
 		* Math.max(window.innerWidth, window.innerHeight)
 		/ Math.max(...$info.shape.size())
 		/ 2;
@@ -59,22 +68,21 @@
 		parameters.heatmapDim = 0;
 	}
 
-	let reticulePosition = new Vec2(0, 0);
+	let reticulePosition = 0;
 
 	function positionReticule(mouseX: number, mouseY: number) {
 		const x = mouseX / width;
 		const y = mouseY / height;
-		const viewbox = canvas.viewbox();
-		const [boardX, boardY] = viewbox.into(x, y);
+		const [boardX, boardY] = $viewbox.into(x, y);
 		
 		const pixelsX = Math.floor(boardX * boardWidth);
 		const pixelsY = Math.floor(boardY * boardHeight);
-		const clippedX = Math.max(0, Math.min(pixelsX, boardWidth));
-		const clippedY = Math.max(0, Math.min(pixelsY, boardHeight));
-		
-		const [x2, y2] = viewbox.outof(clippedX / boardWidth, clippedY / boardHeight);
+		const clippedX = Math.max(0, Math.min(pixelsX, boardWidth - 1));
+		const clippedY = Math.max(0, Math.min(pixelsY, boardHeight - 1));
 
-		reticulePosition = new Vec2(x2 * width, y2 * height);
+		// NOTE: this is a round-trip, but it should be good enough for now
+		const indexArray = $info.shape.coordinatesToIndexArray(clippedX, clippedY);
+		reticulePosition = $info.shape.indexArrayToPosition(indexArray);
 	}
 
 	async function place(x: number, y: number) {
@@ -92,7 +100,7 @@
 
 	function dragState(event: MouseEvent) {
 		const position = new Vec2(event.clientX, event.clientY);
-		if (!clicking && event.buttons & 1 && event.target === canvas.getElement()) {
+		if (!clicking && event.buttons & 1 && event.target === render.getElement()) {
 			// start clicking
 			dragAnchor = position;
 			clicking = true;
@@ -106,8 +114,7 @@
 			if (placeValid && isPlacing) {
 				const x = event.clientX / width;
 				const y = event.clientY / height;
-				const viewbox = canvas.viewbox();
-				const [boardX, boardY] = viewbox.into(x, y);
+				const [boardX, boardY] = $viewbox.into(x, y);
 				const pixelsX = Math.floor(boardX * boardWidth);
 				const pixelsY = Math.floor(boardY * boardHeight);
 
@@ -143,7 +150,7 @@
 	let maxZoom = $info.shape.sectors().slice(0, 1).size().map(v => v * 2);
 
 	async function zoom(event: WheelEvent) {
-		if (event.target !== canvas.getElement()) {
+		if (event.target !== render.getElement()) {
 			return;
 		}
 
@@ -204,7 +211,9 @@
 	on:mousedown={dragState}
 	on:mouseup={dragState}
 />
-<Render bind:this={canvas} {board} {parameters} {overrides} {width} {height} {templateStyle}/>
+<Render bind:this={render} {board} {parameters} {overrides} {width} {height} {templateStyle}/>
 {#if typeof gamestate.pointer !== "undefined"} 
-	<Reticule pointer={gamestate.pointer} position={reticulePosition} size={reticuleSize} />
+	<CanvasSpace position={reticulePosition} viewbox={$viewbox} shape={$info.shape} {scale}>
+		<Reticule pointer={gamestate.pointer} />
+	</CanvasSpace>
 {/if}
