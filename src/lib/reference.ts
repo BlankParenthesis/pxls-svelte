@@ -35,7 +35,7 @@ export class Reference<T> {
 	): Parser<Reference<T>> {
 		return (http: Requester) => z.object({
 			uri: z.string(),
-			view: z.unknown(),
+			view: z.unknown().transform(v => v ?? undefined),
 		}).transform(({ uri, view }) => {
 			const subHttp = http.subpath(uri);
 			const parse = sub(subHttp);
