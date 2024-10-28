@@ -81,6 +81,8 @@ export class Canvas {
 	private templateMesh: Mesh<InstancedQuad, TemplateProgram>;
 	private textures: CanvasTextures;
 
+	private updateListeners: Array<() => void> = [];
+
 	get gl() {
 		return this.renderer.gl;
 	}
@@ -106,7 +108,7 @@ export class Canvas {
 
 		gl.clearColor(0, 0, 0, 0);
 
-		this.textures = new CanvasTextures(gl, board, shape);
+		this.textures = new CanvasTextures(gl, board, shape, () => this.update());
 		this.program = new CanvasProgram(gl);
 		this.debugProgram = new DebugProgram(gl);
 		this.templateProgram = new TemplateProgram(gl, templateStyle);
@@ -115,6 +117,16 @@ export class Canvas {
 		this.mesh = new Mesh(this.gl, { geometry, program: this.program });
 		this.debugMesh = new Mesh(this.gl, { geometry, program: this.debugProgram });
 		this.templateMesh = new Mesh(this.gl, { geometry, program: this.templateProgram });
+	}
+
+	private update() {
+		for (const callback of this.updateListeners) {
+			callback();
+		}
+	}
+
+	onUpdate(callback: () => void) {
+		this.updateListeners.push(callback);
 	}
 
 	setSize(newWidth: number, newHeight: number) {

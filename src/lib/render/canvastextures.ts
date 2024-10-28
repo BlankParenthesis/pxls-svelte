@@ -24,6 +24,7 @@ class SectorTextures {
 		private readonly sectorCreationInstructions: MergeInstructions,
 		private readonly width: number,
 		private readonly height: number,
+		private readonly onload = () => {},
 	) {}
 
 	private newTexture8(): Texture {
@@ -67,6 +68,7 @@ class SectorTextures {
 			gl.pixelStorei(gl.UNPACK_ALIGNMENT, size);
 			texture.update();
 			gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+			this.onload();
 		}).catch(console.error);
 	}
 
@@ -162,6 +164,7 @@ export class CanvasTextures {
 		private gl: OGLRenderingContext,
 		private board: Board,
 		private shape: Shape,
+		private readonly onupdate = () => {},
 	) {
 		this.cache = new Array(shape.depth).fill(null).map(() => new Map());
 		// make each [1, 1] shape level map to the level above
@@ -176,6 +179,7 @@ export class CanvasTextures {
 			update.data?.timestamps?.forEach(c => this.updateTimestamps(c));
 			update.data?.mask?.forEach(c => this.updateMask(c));
 			update.data?.initial?.forEach(c => this.updateInitial(c));
+			this.onupdate();
 		});
 	}
 
@@ -203,6 +207,7 @@ export class CanvasTextures {
 				this.shape.mergeSectors(arrayIndex),
 				width,
 				height,
+				this.onupdate,
 			);
 
 			this.cache[detailLevel].set(sectorPosition, sector);

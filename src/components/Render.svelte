@@ -56,8 +56,7 @@
 		// TODO: pass and use the info store directly
 		const i = get(info);
 		canvas = new Canvas(board, i.shape, i.palette, canvasElement, templateStyle);
-		
-		board.onUpdate(_ => renderQueued = true);
+		canvas.onUpdate(() => renderQueued = true);
 	})
 </script>
 <style>
