@@ -56,26 +56,37 @@ export class Board {
 			events.push("data.colors");
 		}
 
-		if (extensions.has("board_timestamps") && access.has("board.events.data.timestamps")) {
+		if (extensions.has("board_timestamps") && access.has("boards.events.data.timestamps")) {
 			events.push("data.timestamps");
 		}
 
-		if (extensions.has("board_lifecycle") && access.has("board.events.info")) {
+		if (extensions.has("board_lifecycle") && access.has("boards.events.info")) {
 			events.push("info");
 		}
-
+		
+		const missedEvents = [] as Array<MessageEvent>;
+		function missEvent(e: MessageEvent) {
+			missedEvents.push(e);
+		}
+		
 		let socket;
 		if (events.length > 0) {
 			socket = await http.socket("events", events);
+			socket.addEventListener("message", missEvent);
 		}
 		const parser = BoardInfo.parser();
 		const parse = parser(http);
-		// TODO: catch events in socket and replay them after this is fetched
+
 		const { cooldown, info } = await http.getRaw().then(async r => ({
 			cooldown: writable(Cooldown.parse(Object.fromEntries(r.headers.entries()))),
 			info: writable(parse(await r.json())),
 		}));
-		return new Board(site, http, socket, info, cooldown);
+
+		if (typeof socket !== "undefined") {
+			socket = await http.socket("events", events);
+			socket.removeEventListener("message", missEvent);
+		}
+		return new Board(site, http, socket, info, cooldown, missedEvents);
 	}
 	
 	protected readonly colorsCache: DataCache;
@@ -89,12 +100,29 @@ export class Board {
 		pixel: Parser<Pixel>,
 	};
 
+	private processMessage(message: MessageEvent) {
+		try {
+			const packet = Event.parse(JSON.parse(message.data) as unknown);
+			switch (packet.type) {
+				case "board-update": 
+					this.listeners.boardUpdate.forEach(l => l(packet));
+					break;
+				case "pixels-available": 
+					this.listeners.pixelsAvailable.forEach(l => l(packet));
+					break;
+			}
+		} catch(e) {
+			console.error("Failed to parse packet", e);
+		}
+	}
+
 	private constructor(
 		private readonly site: Site,
 		private readonly http: Requester,
 		private readonly socket: WebSocket | undefined,
 		private readonly infoStore: Writable<BoardInfo>,
 		private readonly cooldownStore: Writable<Cooldown>,
+		missedEvents: Array<MessageEvent>,
 	) {
 		this.info = { subscribe: infoStore.subscribe };
 		this.cooldown = { subscribe: cooldownStore.subscribe };
@@ -103,21 +131,12 @@ export class Board {
 			pixelsAvailable: p.count,
 			nextTimestamp: p.next,
 		}));
-		socket?.addEventListener("message", e => {
-			try {
-				const packet = Event.parse(JSON.parse(e.data) as unknown);
-				switch (packet.type) {
-					case "board-update": 
-						this.listeners.boardUpdate.forEach(l => l(packet));
-						break;
-					case "pixels-available": 
-						this.listeners.pixelsAvailable.forEach(l => l(packet));
-						break;
-				}
-			} catch(e) {
-				console.error("Failed to parse packet", e);
-			}
-		});
+
+		for (const event of missedEvents) {
+			this.processMessage(event);
+		}
+
+		socket?.addEventListener("message", e => this.processMessage(e));
 
 		socket?.addEventListener("close", () => {
 			// TODO: as with socket, proper state handling to recover from this
