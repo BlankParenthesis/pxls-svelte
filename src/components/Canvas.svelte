@@ -70,8 +70,15 @@
 		parameters.heatmapDim = 0;
 	}
 
+	const RETICULE_SIZE = 60;
 	let reticulePosition = new Vec2(0, 0);
-	let reticuleSize = new Vec2(0, 0);
+	let reticuleOnBoard = false;
+	$: reticuleSize = reticuleOnBoard
+		? Math.min(...scale) 
+			* Math.max(innerWidth, innerHeight)
+			/ Math.max(...$info.shape.size())
+			/ 2
+		: RETICULE_SIZE;
 
 	function positionReticule(mouseX: number, mouseY: number) {
 		const x = mouseX / width;
@@ -85,7 +92,6 @@
 
 		const [x2, y2] = $viewbox.outof(clippedX / boardWidth, clippedY / boardHeight);
 		reticulePosition = new Vec2(x2 * width, y2 * height);
-		reticuleSize = new Vec2(scale[0] * 2, scale[1] * 2);
 	}
 
 	let dragAnchor: Vec2 | undefined;
@@ -144,11 +150,12 @@
 
 	function drag(event: MouseEvent) {
 		if (event.target === render.getElement()) {
+			reticuleOnBoard = true;
 			positionReticule(event.clientX, event.clientY);
 		} else {
-			const SIZE = 60;
-			reticuleSize = new Vec2(SIZE, SIZE);
-			reticulePosition = new Vec2(event.clientX - SIZE / 2, event.clientY - SIZE / 2);
+			reticuleOnBoard = false;
+			const offset = RETICULE_SIZE / 2;
+			reticulePosition = new Vec2(event.clientX - offset, event.clientY - offset);
 		}
 
 		if (clicking) {
@@ -235,8 +242,8 @@
 	<Exact
 		x={reticulePosition.x}
 		y={reticulePosition.y}
-		width={reticuleSize.x}
-		height={reticuleSize.y}>
+		width={reticuleSize}
+		height={reticuleSize}>
 		<Reticule pointer={gamestate.pointer} />
 	</Exact>
 {/if}
