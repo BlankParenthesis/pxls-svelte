@@ -88,22 +88,25 @@
 		reticuleSize = new Vec2(scale[0] * 2, scale[1] * 2);
 	}
 
-	async function place(x: number, y: number) {
-		if (typeof gamestate.pointer !== "undefined") {
-			// TODO: feedback for waiting and error
-			await gamestate.pointer.activate(x, y);
-		} else {
-			throw new Error("Placed with no color selected");
-		}
-	}
-
 	let dragAnchor: Vec2 | undefined;
 	let clicking = false;
 	let placeValid = false;
 
 	function dragState(event: MouseEvent) {
 		const position = new Vec2(event.clientX, event.clientY);
-		if (!clicking && event.buttons & 1 && event.target === render.getElement()) {
+		const pressing = event.buttons & 1;
+		const onCanvas = event.target === render.getElement();
+		const usingTool = typeof gamestate.pointer !== "undefined";
+		const quickPlacing = gamestate.pointer?.type === "quick-place";
+
+		if (quickPlacing && !pressing) {
+			if (onCanvas) {
+				tryPlace(position);
+			}
+			gamestate.pointer = undefined;
+		}
+
+		if (!clicking && event.buttons & 1 && pressing && onCanvas) {
 			// start clicking
 			dragAnchor = position;
 			clicking = true;
@@ -112,23 +115,30 @@
 			// stop clicking
 			clicking = false;
 
-			const isPlacing = typeof gamestate.pointer !== "undefined";
-
-			if (placeValid && isPlacing) {
-				const x = event.clientX / width;
-				const y = event.clientY / height;
-				const [boardX, boardY] = $viewbox.into(x, y);
-				const pixelsX = Math.floor(boardX * boardWidth);
-				const pixelsY = Math.floor(boardY * boardHeight);
-
-				const xInBounds = 0 <= pixelsX && pixelsX < boardWidth;
-				const yInBounds = 0 <= pixelsY && pixelsY < boardHeight;
-				if (xInBounds && yInBounds) {
-					place(pixelsX, pixelsY);
-				} else {
-					// TODO: indicate that placement is outside of canvas.
-				}
+			if (usingTool && placeValid) {
+				tryPlace(position);
 			}
+		}
+	}
+
+	async function tryPlace(clickPosition: Vec2) {
+		const x = clickPosition.x / width;
+		const y = clickPosition.y / height;
+		const [boardX, boardY] = $viewbox.into(x, y);
+		const pixelsX = Math.floor(boardX * boardWidth);
+		const pixelsY = Math.floor(boardY * boardHeight);
+
+		const xInBounds = 0 <= pixelsX && pixelsX < boardWidth;
+		const yInBounds = 0 <= pixelsY && pixelsY < boardHeight;
+		if (xInBounds && yInBounds) {
+			if (typeof gamestate.pointer !== "undefined") {
+				// TODO: feedback for waiting and error
+				await gamestate.pointer.activate(pixelsX, pixelsY);
+			} else {
+				throw new Error("Placed with no color selected");
+			}
+		} else {
+			// TODO: indicate that placement is outside of canvas.
 		}
 	}
 
@@ -207,6 +217,7 @@
 		parameters.transform = parameters.transform
 			.translate(position.scale(-1));
 
+		// TODO: this is out of date since the canvas is about to render and change the viewbox
 		positionReticule(event.clientX, event.clientY);
 	}
 </script>

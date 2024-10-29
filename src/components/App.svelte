@@ -64,7 +64,7 @@
 				Loading board…
 			{:then board}
 				<Stack>
-					<Canvas {gamestate} {board} {settings}/>
+					<Canvas bind:gamestate {board} {settings}/>
 					<Ui
 						{site}
 						{board}

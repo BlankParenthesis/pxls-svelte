@@ -32,7 +32,7 @@ export interface Pointer {
 }
 
 export interface PlacingPointer extends Pointer {
-	type: "place",
+	type: "place" | "quick-place",
 	selected: number;
 }
 

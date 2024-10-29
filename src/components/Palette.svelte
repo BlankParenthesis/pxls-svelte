@@ -6,17 +6,28 @@
 	export let state: AppState;
 	const info = board.info; // TODO: listen to the palette directly
 
-	function selectColor(index: number) {
+	$: pointerDefined = typeof state.pointer !== "undefined";
+	$: placing = state.pointer?.type === "place";
+	$: quickPlacing = state.pointer?.type === "quick-place";
+	$: selectedColor = (pointerDefined && (placing || quickPlacing))
+		/* @ts-ignore: Validated through the above checks */
+		? state.pointer.selected
+		: undefined;
+
+	let movedDistance = 0;
+
+	function toggleColor(index: number) {
 		const color = $info.palette.get(index);
 		if (typeof color === "undefined") {
 			throw new Error("invalid color");
 		}
-
+		
 		if (state.pointer?.type === "place" && state.pointer.selected === index) {
-			state.pointer = undefined;
+			deselectColor();
 		} else {
+			movedDistance = 0;
 			state.pointer = {
-				type: "place",
+				type: "quick-place",
 				selected: index,
 				background: "#" + colorToHex(color.value),
 				async activate(x, y) {
@@ -26,8 +37,23 @@
 		}
 	}
 
+	function deselectColor() {
+		const DISTANCE_THRESHOLD = 10;
+		if (movedDistance > DISTANCE_THRESHOLD) {
+			state.pointer = undefined;
+		} else if (state.pointer?.type === "quick-place") {
+			state.pointer.type = "place";
+		} else {
+			state.pointer = undefined;
+		}
+	}
+
 	function colorToHex(color: number) {
 		return color.toString(16).padStart(8, "0");
+	}
+
+	function trackMouse(event: MouseEvent) {
+		movedDistance += Math.sqrt(event.movementX ** 2 + event.movementY ** 2);
 	}
 </script>
 <style>
@@ -65,15 +91,16 @@
 		border-style: dashed;
 	}
 </style>
-	
+<svelte:window on:mousemove={trackMouse} />
 <ul>
 	{#each $info.palette as [index, color]}
 		{#if !color.system_only || state.adminOverrides.color }
 			<li>
 				<button
-					on:click={() => selectColor(index)}
+					on:mousedown={() => toggleColor(index)}
+					on:mouseup={() => deselectColor()}
 					style="--color: #{colorToHex(color.value)}"
-					class:selected={state.pointer?.type === "place" && state.pointer?.selected === index}
+					class:selected={selectedColor === index}
 					class="color"
 				/>
 			</li>
