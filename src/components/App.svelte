@@ -10,6 +10,7 @@
     import templateStyle from "../assets/large_template_style.webp";
     import BoardSelect from "./BoardSelect.svelte";
     import type { Reference } from "../lib/reference";
+    import Login from "./Login.svelte";
 
 	let settings: Settings = {
 		debug: {
@@ -52,13 +53,17 @@
 		Loading boards…
 	{:then boards}
 		{#await boardSelect}
-			<ul>
-				{#each boards as board}
-					<li>
-						<BoardSelect info={board} on:select={b => select(b.detail)}/>
-					</li>
-				{/each}
-			</ul>
+			<div>
+				<ul>
+					{#each boards as board}
+						<li>
+							<BoardSelect info={board} on:select={b => select(b.detail)}/>
+						</li>
+					{/each}
+				</ul>
+				<hr />
+				<Login auth={site.auth}/>
+			</div>
 		{:then reference}
 			{#await site.boards.get(reference.uri)}
 				Loading board…
