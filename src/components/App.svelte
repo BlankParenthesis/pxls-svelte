@@ -83,7 +83,11 @@
 			{/await}
 		{/await}
 	{:catch e}
-		Board {e}
+		<div>
+			Board {e}
+			<hr />
+			<Login auth={site.auth}/>
+		</div>
 	{/await}
 {:catch e}
 	Site {e}
