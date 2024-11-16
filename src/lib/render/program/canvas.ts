@@ -44,7 +44,7 @@ void main() {
 	}
 
 	float index = floor(canvasData.r * 255.0 + 0.5);
-	vec4 color = texture2D(tPalette, vec2(index / uPaletteSize, 0.0));
+	vec4 color = texture2D(tPalette, vec2((index + 0.5) / uPaletteSize, 0.5));
 
 	// Our timestamp is packed into a RGBA color.
 	// It's an unsigned 32-bit integer in little endian form.
