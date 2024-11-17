@@ -9,6 +9,7 @@ import { Pixel } from "../pixel";
 import type { Site } from "../site";
 import { navigationState } from "../../components/Login.svelte";
 import type { Parser } from "../util";
+import { UserCount } from "../usercount";
 
 type PlaceResult = boolean; // TODO: a bit more detail would be nice
 
@@ -98,6 +99,7 @@ export class Board {
 
 	private readonly parsers: {
 		pixel: Parser<Pixel>,
+		userCount: Parser<UserCount>,
 	};
 
 	private processMessage(message: MessageEvent) {
@@ -152,6 +154,7 @@ export class Board {
 
 		this.parsers = {
 			pixel: Pixel.parser(this.site.access(), this.info, this.site.parsers.userReference),
+			userCount: UserCount.parser(),
 		};
 	}
 
@@ -303,5 +306,23 @@ export class Board {
 		} catch(_) {
 			return false;
 		}
+	}
+
+	private userCountCache?: Writable<Promise<UserCount>>;
+	userCount(): Readable<Promise<UserCount>> {
+		if (typeof this.userCountCache === "undefined") {
+			const parse = this.parsers.userCount(this.http);
+			const userCount = this.http.get("users").then(parse);
+			this.userCountCache = writable(userCount);
+
+			setInterval(() => {
+				const userCount = this.http.get("users").then(parse);
+				if (typeof this.userCountCache !== "undefined") {
+					this.userCountCache.set(userCount);
+				}
+			}, 60 * 1000); // manually refresh every 60 seconds
+		}
+
+		return this.userCountCache;
 	}
 }

@@ -12,6 +12,7 @@
     import Tools from "./Tools.svelte";
     import Templates from "./Templates.svelte";
     import type { Readable } from "svelte/store";
+    import UserCount from "./UserCount.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
@@ -22,6 +23,7 @@
 	const cooldown = board.cooldown;
 	const info = board.info;
 	const token = auth.token;
+	const userCount = board.userCount();
 	$: loggedIn = typeof $token === "string";
 
 	const toggle = (panelMode: Panel) => {
@@ -106,6 +108,9 @@
 				<div class="drawer">
 					{#if panel == Panel.Place}
 						<Cooldown info={$info} cooldown={$cooldown} />
+						{#if access.has("boards.users")}
+							<UserCount count={$userCount} />
+						{/if}
 						<Palette bind:state {board} />
 					{/if}
 				</div>
