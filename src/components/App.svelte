@@ -11,6 +11,7 @@
     import BoardSelect from "./BoardSelect.svelte";
     import type { Reference } from "../lib/reference";
     import Login from "./Login.svelte";
+    import Splash from "./layout/Splash.svelte";
 
 	let settings: Settings = {
 		debug: {
@@ -46,29 +47,35 @@
 	let select: (board: Reference<BoardInfo>) => void;
 	const boardSelect = new Promise<Reference<BoardInfo>>(resolve => select = resolve);
 </script>
-{#await connecting}
-	Connecting…
-{:then site}
-	{#await collect(site.fetchBoards())}
-		Loading boards…
-	{:then boards}
-		{#await boardSelect}
-			<div>
-				<ul>
-					{#each boards as board}
-						<li>
-							<BoardSelect info={board} on:select={b => select(b.detail)}/>
-						</li>
-					{/each}
-				</ul>
-				<hr />
-				<Login auth={site.auth}/>
-			</div>
-		{:then reference}
-			{#await site.boards.get(reference.uri)}
-				Loading board…
-			{:then board}
-				<Stack>
+<Stack>
+	{#await connecting}
+		<Splash>
+			<p>Connecting…</p>
+			<progress max=1 value=0.1 />
+		</Splash>
+	{:then site}
+		{#await collect(site.fetchBoards())}
+			<Splash>
+				<p>Loading boards…</p>
+				<progress max=1 value=0.6 />
+			</Splash>
+		{:then boards}
+			{#await boardSelect}
+				<div>
+					<ul>
+						{#each boards as board}
+							<li>
+								<BoardSelect info={board} on:select={b => select(b.detail)}/>
+							</li>
+						{/each}
+					</ul>
+					<hr />
+					<Login auth={site.auth}/>
+				</div>
+			{:then reference}
+				{#await site.boards.get(reference.uri)}
+					<Splash><p>Loading board…</p></Splash>
+				{:then board}
 					<Canvas bind:gamestate {board} {settings}/>
 					<Ui
 						{site}
@@ -77,18 +84,24 @@
 						bind:settings
 						access={site.access()}
 					/>
-				</Stack>
-			{:catch e}
-				Board {e}
+				{:catch e}
+					<Splash>
+						<h2>Failed to load board</h2>
+						<p>{e}</p>
+					</Splash>
+				{/await}
 			{/await}
+		{:catch e}
+			<Splash>
+				<h2>Loading error</h2>
+				<p>{e}</p>
+				<Login auth={site.auth}/>
+			</Splash>
 		{/await}
 	{:catch e}
-		<div>
-			Board {e}
-			<hr />
-			<Login auth={site.auth}/>
-		</div>
+		<Splash>
+			<h2>Connection error</h2>
+			<p>{e}</p>
+		</Splash>
 	{/await}
-{:catch e}
-	Site {e}
-{/await}
+</Stack>
