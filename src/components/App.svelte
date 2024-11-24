@@ -54,49 +54,81 @@
 			<progress max=1 value=0.1 />
 		</Splash>
 	{:then site}
-		{#await collect(site.fetchBoards())}
+		{#await site.defaultBoard()}
 			<Splash>
-				<p>Loading boards…</p>
-				<progress max=1 value=0.6 />
+				<p>Finding default board…</p>
+				<progress max=1 value=0.4 />
 			</Splash>
-		{:then boards}
-			{#await boardSelect}
-				<div>
-					<ul>
-						{#each boards as board}
-							<li>
-								<BoardSelect info={board} on:select={b => select(b.detail)}/>
-							</li>
-						{/each}
-					</ul>
-					<hr />
+		{:then defaultBoard}
+			{#await site.boards.get(defaultBoard.uri)}
+				<Splash>
+					<p>Loading board…</p>
+					<progress max=1 value=0.8 />
+				</Splash>
+			{:then board}
+				<Canvas bind:gamestate {board} {settings}/>
+				<Ui
+					{site}
+					{board}
+					bind:state={gamestate}
+					bind:settings
+					access={site.access()}
+				/>
+			{:catch e}
+				<Splash>
+					<h2>Loading error</h2>
+					<p>{e}</p>
 					<Login auth={site.auth}/>
-				</div>
-			{:then reference}
-				{#await site.boards.get(reference.uri)}
-					<Splash><p>Loading board…</p></Splash>
-				{:then board}
-					<Canvas bind:gamestate {board} {settings}/>
-					<Ui
-						{site}
-						{board}
-						bind:state={gamestate}
-						bind:settings
-						access={site.access()}
-					/>
-				{:catch e}
-					<Splash>
-						<h2>Failed to load board</h2>
-						<p>{e}</p>
-					</Splash>
-				{/await}
+				</Splash>
 			{/await}
-		{:catch e}
-			<Splash>
-				<h2>Loading error</h2>
-				<p>{e}</p>
-				<Login auth={site.auth}/>
-			</Splash>
+		{:catch}
+			{#await collect(site.fetchBoards())}
+				<Splash>
+					<p>Loading board list…</p>
+					<progress max=1 value=0.6 />
+				</Splash>
+			{:then boards}
+				{#await boardSelect}
+					<div>
+						<ul>
+							{#each boards as board}
+								<li>
+									<BoardSelect info={board} on:select={b => select(b.detail)}/>
+								</li>
+							{/each}
+						</ul>
+						<hr />
+						<Login auth={site.auth}/>
+					</div>
+				{:then reference}
+					{#await site.boards.get(reference.uri)}
+						<Splash>
+							<p>Loading board…</p>
+							<progress max=1 value=0.8 />
+						</Splash>
+					{:then board}
+						<Canvas bind:gamestate {board} {settings}/>
+						<Ui
+							{site}
+							{board}
+							bind:state={gamestate}
+							bind:settings
+							access={site.access()}
+						/>
+					{:catch e}
+						<Splash>
+							<h2>Failed to load board</h2>
+							<p>{e}</p>
+						</Splash>
+					{/await}
+				{/await}
+			{:catch e}
+				<Splash>
+					<h2>Loading error</h2>
+					<p>{e}</p>
+					<Login auth={site.auth}/>
+				</Splash>
+			{/await}
 		{/await}
 	{:catch e}
 		<Splash>
