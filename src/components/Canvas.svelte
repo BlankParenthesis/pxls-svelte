@@ -280,7 +280,14 @@
 			settings.input.scrollSensitivity ** clampSmoothing(excessScale.y, scaleMargin.y),
 		);
 
-		const finalScale = baseScale.multiply(overscaleScaled);
+		let finalScale;
+		if (excessScale.x < excessScale.y) {
+			const scale = baseScale.x * overscaleScaled.x;
+			finalScale = new Vec2(scale, scale);
+		} else {
+			const scale = baseScale.y * overscaleScaled.y;
+			finalScale = new Vec2(scale, scale);
+		}
 
 		transform = transform
 			.translate(origin)
