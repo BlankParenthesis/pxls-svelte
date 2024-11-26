@@ -17,9 +17,10 @@
 	export let settings: Settings;
 	export let site: Site;
 	export let state: AppState;
-	export let access: Readable<Promise<Set<string>>>;
-	const auth = site.auth;
 	export let board: Board;
+	
+	const access = site.access();
+	const auth = site.auth;
 	const cooldown = board.cooldown;
 	const info = board.info;
 	const token = auth.token;

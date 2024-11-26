@@ -289,11 +289,7 @@ export class Board {
 		return pixel;
 	}
 	
-	async place(x: number, y: number, color: number, overrides: AdminOverrides): Promise<PlaceResult> {
-		const shape = get(this.info).shape;
-		const indexArray = shape.coordinatesToIndexArray(x, y);
-		const position = shape.indexArrayToPosition(indexArray);
-
+	async place(position: number, color: number, overrides: AdminOverrides): Promise<PlaceResult> {
 		const extra = {} as { overrides?: AdminOverrides };
 
 		if (overrides.color || overrides.cooldown || overrides.mask) {

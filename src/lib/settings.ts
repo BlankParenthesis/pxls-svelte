@@ -23,16 +23,20 @@ export type Settings = {
 	template: {
 		source: string;
 	};
+	input: {
+		scrollSensitivity: number;
+	};
 }
 
 export interface Pointer {
 	type: string,
 	background: string;
-	activate(x: number, y: number): Promise<void>;
+	quickActivate: boolean;
+	activate(position: number | undefined): Promise<void>;
 }
 
 export interface PlacingPointer extends Pointer {
-	type: "place" | "quick-place",
+	type: "place",
 	selected: number;
 }
 

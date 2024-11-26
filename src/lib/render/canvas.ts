@@ -60,6 +60,21 @@ export class ViewBox {
 			bottom: 1,
 		});
 	}
+
+	static fromTransform(transform: Mat3): ViewBox {
+		const inverse = transform.inverse();
+		
+		// gl goes from bottom to top, but we want from top to bottom, so flip the y
+		const bottomLeft = new Vec2(-1, 1).applyMatrix3(inverse);
+		const topRight = new Vec2(1, -1).applyMatrix3(inverse);
+
+		return new ViewBox({
+			bottom: bottomLeft.y,
+			left: bottomLeft.x,
+			top: topRight.y,
+			right: topRight.x,
+		});
+	}
 };
 
 export type RenderParameters = {
@@ -142,24 +157,20 @@ export class Canvas {
 		}
 	}
 
+	getAspect() {
+		return this.program.uniforms.uAspect.value.clone();
+	}
+
 	/** 
 	 * @returns The viewbox relative to the top left of the unit board.
 	 */
 	private visibleArea(): ViewBox {
-		const inverse = new Mat3(...this.program.uniforms.uView.value)
-			.multiply(new Mat3().identity().scale(this.program.uniforms.uAspect.value))
-			.inverse();
-		
-		// gl goes from bottom to top, but we want from top to bottom, so flip the y
-		const bottomLeft = new Vec2(-1, 1).applyMatrix3(inverse);
-		const topRight = new Vec2(1, -1).applyMatrix3(inverse);
+		const aspect = new Mat3().identity()
+			.scale(this.program.uniforms.uAspect.value);
+		const transform = new Mat3(...this.program.uniforms.uView.value)
+			.multiply(aspect);
 
-		return new ViewBox({
-			bottom: bottomLeft.y,
-			left: bottomLeft.x,
-			top: topRight.y,
-			right: topRight.x,
-		});
+		return ViewBox.fromTransform(transform);
 	}
 
 	private detailLevel(visible: ViewBox): number {
@@ -225,19 +236,6 @@ export class Canvas {
 	}
 
 	render(parameters: RenderParameters, overrides: RendererOverrides): ViewBox {
-		// this is redudant with the zooming code now handling this, but I'm
-		// leaving it here for now
-		if (!overrides.zoom) {
-			const scale = new Vec2(parameters.transform[0], parameters.transform[4]);
-			const [minZoomX, minZoomY] = this.shape.sectors().slice(0, 1).size().map(v => v * 2);
-			const correctionX = minZoomX / scale.x;
-			const correctionY = minZoomY / scale.y;
-			const correction = Math.max(correctionX, correctionY);
-			if (correction > 1) {
-				parameters.transform.scale(new Vec2(correction, correction));
-			}
-		}
-
 		this.updateUniforms(this.palette, parameters, overrides);
 
 		type Scene = Mesh<InstancedQuad, Program & Instanceable>;

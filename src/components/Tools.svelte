@@ -101,12 +101,15 @@
 		} else {
 			state.pointer = {
 				type: "lookup",
+				quickActivate: false,
 				background: "transparent",
-				async activate(x: number, y: number) {
-					const shape =$info.shape;
-					const position = shape.indexArrayToPosition(shape.coordinatesToIndexArray(x, y))
-					lookup = board.pixel(position);
-					await lookup;
+				async activate(position) {
+					if (typeof position === "undefined") {
+						console.warn("TODO: placed at invalid location");
+					} else {
+						lookup = board.pixel(position);
+						await lookup;
+					}
 				},
 			}
 		}

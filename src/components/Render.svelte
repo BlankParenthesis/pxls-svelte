@@ -4,6 +4,7 @@
 	import type { Board } from "../lib/board/board";
 	import { Canvas, ViewBox, type RenderParameters } from "../lib/render/canvas";
     import { type RendererOverrides } from "../lib/settings";
+    import { Vec2 } from "ogl";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
@@ -16,8 +17,10 @@
 	export let templateStyle: HTMLImageElement;
 
 	const viewbox = writable(ViewBox.default());
+	const aspectwrite = writable(new Vec2(1, 1));
 
 	export const view = { subscribe: viewbox.subscribe } as Readable<ViewBox>;
+	export const aspect = { subscribe: aspectwrite.subscribe } as Readable<Vec2>;
 
 	export function getElement() {
 		return canvasElement;
@@ -27,6 +30,7 @@
 
 	$: if (canvas) {
 		canvas.setSize(width, height);
+		aspectwrite.set(canvas.getAspect())
 		renderQueued = true;
 	}
 
@@ -62,11 +66,15 @@
 <style>
 	canvas {
 		touch-action: none;
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
 	}
 </style>
-<canvas bind:this="{canvasElement}" />
+<canvas
+	bind:this="{canvasElement}"
+	on:pointerenter
+	on:pointerleave
+	on:pointerdown
+	on:pointerup
+	on:touchstart
+	on:touchend
+	on:wheel
+/>
