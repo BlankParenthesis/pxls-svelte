@@ -1,11 +1,7 @@
 <script lang="ts">
-    import type { AppState, Settings } from "../lib/settings";
 	import Canvas from "./Canvas.svelte";
-	import Ui from "./Ui.svelte";
-	import Stack from "./layout/Stack.svelte";
 	import { Site } from "../lib/site";
     import { collect } from "../lib/util";
-    import { Board } from "../lib/board/board";
     import { BoardInfo } from "../lib/board/info";
     import BoardSelect from "./BoardSelect.svelte";
     import type { Reference } from "../lib/reference";
