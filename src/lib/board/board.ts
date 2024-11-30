@@ -296,6 +296,15 @@ export class Board {
 			extra.overrides = overrides;
 		}
 		
+		const shape = get(this.info).shape;
+		const [sectorIndex, sectorOffset] = shape.positionToSector(position);
+		const sector = await this.colors(sectorIndex);
+		const currentColor = sector[sectorOffset];
+		
+		if (currentColor === color) { 
+			return false;
+		}
+		
 		try {
 			await this.http.post({ color, ...extra }, `pixels/${position}`);
 			return true;
