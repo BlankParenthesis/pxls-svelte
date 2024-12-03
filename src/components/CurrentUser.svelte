@@ -14,7 +14,7 @@
 </style>
 <section class="user">
 	<h3>{user.name}</h3>
-	<div class="flex space top">
+	<div class="flex space align-top">
 		{#if access.has("users.current.roles.get")}
 			<Roles roles={user.roles()} />
 		{/if}

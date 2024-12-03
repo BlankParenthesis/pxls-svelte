@@ -23,7 +23,7 @@
 		margin: 0;
 	}
 </style>
-<div class="flex space middle">
+<div class="flex space align-middle">
 	<h2>Account</h2>
 	<Login {auth} />
 </div>
@@ -31,7 +31,7 @@
 	<h3>Loading User Data</h3>
 {:then user}
 	<CurrentUser {user} {access} />
-	<div class="flex wrap-reverse space top scroll">
+	<div class="flex wrap-reverse space align-top scroll">
 		{#if access.has("users.current.factions.list")}
 			<Factions {user} {site} {access} />
 		{/if}

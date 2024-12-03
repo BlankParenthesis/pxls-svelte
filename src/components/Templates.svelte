@@ -38,7 +38,7 @@
 		<li class="template flex">
 			<img src={template.url} alt="template preview">
 			<div class="grow flex vertical">
-				<div class="flex bottom">
+				<div class="flex align-bottom">
 					<label class="grow">
 						<span class="inline-label">Title</span>
 						<input placeholder="Unnamed Template" class="fullwidth" type="text" bind:value={template.title} />

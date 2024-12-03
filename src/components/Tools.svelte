@@ -159,7 +159,7 @@
 	}
 </style>
 <div class="flex reverse space cursor-transparent">
-	<div class="user-tools flex bottom">
+	<div class="user-tools flex align-bottom">
 		<div class="flex vertical group">
 			{#if lookup}
 				{#if $lookup}
@@ -247,7 +247,7 @@
 		</div>
 	</div>
 	{#if hasAdminTool}
-		<div class="admin-tools flex wrap-reverse bottom">
+		<div class="admin-tools flex wrap-reverse align-bottom">
 			{#if canUseStaffColors}
 				<button
 					class="round tool"

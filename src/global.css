@@ -34,15 +34,15 @@ body > * {
 	justify-content: space-between;
 }
 
-.flex.top {
+.flex.align-top {
 	align-items: start;
 }
 
-.flex.middle {
+.flex.align-middle {
 	align-items: center;
 }
 
-.flex.bottom {
+.flex.align-bottom {
 	align-items: end;
 	align-content: end;
 }

@@ -121,7 +121,7 @@
 			<div class="glass left"></div>
 			<div class="center-center panel flex vertical">
 				{#await $currentUser}
-					<div class="flex space middle">
+					<div class="flex space align-middle">
 						<h2>Account</h2>
 						<p>Loading</p>
 					</div>

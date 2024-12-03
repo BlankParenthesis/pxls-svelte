@@ -16,7 +16,7 @@
 	Loading user info…
 {:then user}
 	<h3>{user.name}</h3>
-	<div class="flex space top">
+	<div class="flex space align-top">
 		{#if access.has("users.roles.get")}
 			<Roles roles={user.roles()} />
 		{/if}
