@@ -35,7 +35,7 @@ export class Board {
 	};
 
 	static async connect(site: Site, http: Requester): Promise<Board> {
-		const extensions = await site.info.extensions;
+		const extensions = site.info.extensions;
 		const access = await get(site.access());
 
 		if (!extensions.has("board_timestamps")) {
