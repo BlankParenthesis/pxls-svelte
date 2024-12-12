@@ -93,8 +93,8 @@
 			scrollSensitivity: 1.15,
 			dragVelocityAccumulation: 200,
 			dragVelocitySensitivity: 0.98,
-			dragVelocityDrag: 0.9,
-			bounceStrength: 1 / 30,
+			dragVelocityDrag: 1 - 1 / 100,
+			bounceStrength: 1 / 5000,
 		}
 	}
 
@@ -589,28 +589,11 @@
 		parameters.transform[7] = Math.max(yMin, Math.min(transform[7], yMax));
 	}
 	
-	function doPhysics(delta: number) {
-		// move into deltatime
-		velocity.multiply(delta);
-		
+	function doPhysics(delta: number) {		
 		const origin = new Vec2(0.5, 0.5)
 			.scale(2)
 			.sub(new Vec2(1, 1))
 			.applyMatrix3(new Mat3(...parameters.transform).inverse());
-		
-		const translateScaleBounceRatio = 2;
-		const scaleVelocityMult = new Vec2(
-			(1 + settings.input.bounceStrength / translateScaleBounceRatio) ** scaleVelocity.x,
-			(1 + settings.input.bounceStrength / translateScaleBounceRatio) ** scaleVelocity.y,
-		);
-		
-		parameters.transform
-			.translate(origin)
-			.scale(scaleVelocityMult)
-			.translate(new Vec2(-1, -1).multiply(origin))
-			.translate(velocity);
-		
-		hardClamp();
 		
 		let transform = new Mat3(...parameters.transform);
 		let transformTranslate = new Vec2(transform[6], transform[7]);
@@ -633,17 +616,20 @@
 		
 		const overXEdge = Math.abs(overtranslateCompensation.x) > 1e-3;
 		const overYEdge = Math.abs(overtranslateCompensation.y) > 1e-3;
-		const movingX = Math.abs(velocity.x) > 1e-3;
-		const movingY = Math.abs(velocity.y) > 1e-3;
+		const movingX = Math.abs(velocity.x) > 1e-6;
+		const movingY = Math.abs(velocity.y) > 1e-6;
 		
+		const edgeDragRatio = settings.input.bounceStrength * 50;
 		if (overXEdge) {
-			drag.x *= 1 - 0.2 * (1 - overtranslateCompensation.x);
+			const scaledCompensationX = (overtranslateCompensation.x / translateMargin.x) ** edgeDragRatio;
+			drag.x *= scaledCompensationX;
 		} else if (!movingX) {
 			velocity.x = 0;
 		}
 		
 		if (overYEdge) {
-			drag.y *= 1 - 0.2 * (1 - overtranslateCompensation.y);
+			const scaledCompensationY = (overtranslateCompensation.y / translateMargin.y) ** edgeDragRatio;
+			drag.y *= scaledCompensationY
 		} else if (!movingY) {
 			velocity.y = 0;
 		}
@@ -663,11 +649,33 @@
 			renderQueued = true;
 		}
 		
-		velocity.sub(bounceForce);
-		velocity.multiply(drag);
+		// apply translate velocity
+		velocity.sub(bounceForce.multiply(delta));
+		// apply drag
+		velocity.multiply(new Vec2(drag.x ** delta, drag.y ** delta));
+		
+		// move into deltatime
+		velocity.multiply(delta);
+		scaleVelocity.multiply(delta);
+		
+		const scaleTranslateBounceRatio = 10;
+		const scaleVelocityMult = new Vec2(
+			(1 + settings.input.bounceStrength * scaleTranslateBounceRatio) ** scaleVelocity.x,
+			(1 + settings.input.bounceStrength * scaleTranslateBounceRatio) ** scaleVelocity.y,
+		);
+	
+		// apply velocities
+		parameters.transform
+			.translate(origin)
+			.scale(scaleVelocityMult)
+			.translate(new Vec2(-1, -1).multiply(origin))
+			.translate(velocity);
 		
 		// undo deltatime move
 		velocity.divide(delta);
+		scaleVelocity.divide(delta);
+		
+		hardClamp();
 	}
 	
 	let renderQueued = false;
