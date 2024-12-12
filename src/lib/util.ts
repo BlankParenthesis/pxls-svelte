@@ -138,4 +138,21 @@ export function debounce<A extends unknown[], R>(
 	};
 }
 
+export function linearRegression(points: Array<[number, number]>) {
+	var sum_x = points.reduce((sum, [x, _]) => sum + x, 0);
+	var sum_y = points.reduce((sum, [_, y]) => sum + y, 0);
+	var sum_xy = points.reduce((sum, [x, y]) => sum + x * y, 0);
+	var sum_xx = points.reduce((sum, [x, _]) => sum + x * x, 0);
+	var sum_yy = points.reduce((sum, [_, y]) => sum + y * y, 0);
+	
+	const divisor = points.length * sum_xx - sum_x * sum_x;
+	
+	const slope = (points.length * sum_xy - sum_x * sum_y) / divisor;
+	const intercept = (sum_y - slope * sum_x) / points.length;
+	let correlation = (points.length * sum_xy - sum_x * sum_y) / Math.sqrt(divisor * (points.length * sum_yy - sum_y * sum_y));
+	correlation = correlation ** 2;
+	
+	return { slope, intercept, correlation };
+}
+
 export type Parser<T> = (context: Requester) => ((data: unknown) => T);

@@ -16,10 +16,8 @@
 	export let width, height;
 	export let templateStyle: HTMLImageElement;
 
-	const viewbox = writable(ViewBox.default());
 	const aspectwrite = writable(new Vec2(1, 1));
 
-	export const view = { subscribe: viewbox.subscribe } as Readable<ViewBox>;
 	export const aspect = { subscribe: aspectwrite.subscribe } as Readable<Vec2>;
 
 	export function getElement() {
@@ -38,20 +36,12 @@
 		renderQueued = true;
 	}
 
-	{
-		async function render(timestamp?: number) {
-			if (canvas && renderQueued) {
-				try {
-					viewbox.set(canvas.render(parameters, overrides));
-				} catch(e) {
-					console.error(e);
-				}
-				renderQueued = false;
-			}
-			requestAnimationFrame(render);
+	export function paint(timestamp?: number) {
+		if (canvas && renderQueued) {
+			return canvas.render(parameters, overrides);
+		} else {
+			return ViewBox.default();
 		}
-
-		render();
 	}
 	
 	const info = board.info;
@@ -60,7 +50,7 @@
 		// TODO: pass and use the info store directly
 		const i = get(info);
 		canvas = new Canvas(board, i.shape, i.palette, canvasElement, templateStyle);
-		canvas.onUpdate(() => renderQueued = true);
+		canvas.onUpdate(() => paint());
 	})
 </script>
 <style>

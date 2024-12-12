@@ -25,6 +25,8 @@ export type Settings = {
 	};
 	input: {
 		scrollSensitivity: number;
+		dragVelocityAccumulation: number;
+		dragVelocitySensitivity: number;
 	};
 }
 

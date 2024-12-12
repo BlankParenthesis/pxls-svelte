@@ -14,6 +14,8 @@
     import Ui from "./Ui.svelte";
     import type { Site } from "../lib/site";
     import templateStyleSource from "../assets/large_template_style.webp";
+    import { onMount } from "svelte";
+    import { linearRegression } from "../lib/util";
 
 	let render: Render;
 
@@ -37,10 +39,9 @@
 	$: width = innerWidth;
 	$: height = innerHeight;
 
-	let viewbox = readable(ViewBox.default());
+	let viewbox = ViewBox.default();
 	let aspect = readable(new Vec2(1, 1));
 	$: if (render) {
-		viewbox = render.view;
 		aspect = render.aspect;
 	}
 	
@@ -90,6 +91,8 @@
 		},
 		input: {
 			scrollSensitivity: 1.15,
+			dragVelocityAccumulation: 200,
+			dragVelocitySensitivity: 0.985,
 		}
 	}
 
@@ -143,7 +146,7 @@
 	function setPointerPosition(point: Vec2) {
 		pointerPosition = point;
 
-		const [boardX, boardY] = $viewbox.into(point.x, point.y);
+		const [boardX, boardY] = viewbox.into(point.x, point.y);
 		if (0 > boardX || boardX > 1 || 0 > boardY || boardY > 1) {
 			reticulePosition = undefined;
 		} else {
@@ -155,6 +158,7 @@
 			const position = shape.indexArrayToPosition(boardIndexArray);
 			reticulePosition = position;
 		}
+		renderQueued = true;
 	}
 
 	/**
@@ -170,6 +174,7 @@
 			const intoArray = shape.coordinatesToIndexArray(newX, newY);
 			reticulePosition = shape.indexArrayToPosition(intoArray);
 		}
+		renderQueued = true;
 	}
 
 	let grabAnchor = undefined as {
@@ -180,13 +185,16 @@
 
 	let lastGrabCenter = new Vec2(0,0);
 	let grabDistance = 0;
+	let grabVectors = [] as Array<{ point: Vec2, time: number }>;
+	let velocity = new Vec2(0, 0);
 
 	function canActivate() {
 		return grabDistance < 10 || state.pointer?.quickActivate;
 	}
 
 	function calculateCenter(points: Array<Vec2>) {
-		return points.reduce((acc, p) => acc.add(p)).divide(points.length);
+		return points.reduce((acc, p) => acc.add(p), new Vec2())
+				.divide(points.length);
 	}
 
 	function calculateSpacing(center: Vec2, points: Array<Vec2>) {
@@ -344,6 +352,16 @@
 
 		return transform;
 	}
+	
+	function trimGrabVectors(now: number) {
+		const vectorThreshold = now - settings.input.dragVelocityAccumulation;
+		const firstValidVector = grabVectors.findIndex(v => v.time > vectorThreshold);
+		if (firstValidVector === -1) {
+			grabVectors = [];
+		} else {
+			grabVectors.splice(0, firstValidVector);
+		}
+	}
 
 	function updateGrab(points: Array<Vec2>) {
 		if (typeof grabAnchor === "undefined") {
@@ -352,6 +370,10 @@
 
 		const center = calculateCenter(points);
 		const spacing = calculateSpacing(center, points);
+		
+		const now = Date.now();
+		trimGrabVectors(now);
+		grabVectors.push({ point: center.clone(), time: now });
 
 		const boardSize = new Vec2(width, height);
 		const screenspaceCenter = center.clone().multiply(boardSize);
@@ -384,13 +406,60 @@
 			.translate(new Vec2(-1, -1).multiply(position));
 
 		parameters.transform = clampView(position, newTransform);
+		renderQueued = true;
+	}
+	
+	/**
+	 * This attempts to compute what the user currently expects the board's 
+	 * velocity is using recent pointer data.
+	 * @returns the apparent velocity the board is being moved with
+	 */
+	function calculateFling(): Vec2 {		
+		const first = grabVectors.shift();
+		const last = grabVectors[grabVectors.length - 1];
+		if (typeof first !== "undefined" && typeof last !== "undefined") {
+			const distanceByTime = grabVectors.map(v => {
+				const distance = v.point.distance(first.point);
+				const time = v.time - first.time;
+				return [time, distance] as [number, number];
+			});
+			
+			// Fit a line to the distance / time data.
+			// A fling drag is close to a straight line (distance increases linearly with time)
+			// A drag + stop has a non-linear shape and therefor a lower correlation.
+			const { slope, intercept, correlation } = linearRegression(distanceByTime);
+			
+			if (correlation > settings.input.dragVelocitySensitivity) {
+				const transformScale = new Vec2(parameters.transform[0], parameters.transform[4]);
+				const difference = last.point.sub(first.point)
+						.normalize()
+						.multiply(slope) // slope is distance / time = velocity
+						.divide(transformScale);
+				return difference;
+			}
+		}
+
+		// Assume no velocity by default
+		return new Vec2(0, 0);
 	}
 
 	/**
 	 * @returns the distance traveled
 	 */
 	function releaseBoard() {
+		const now = Date.now();
+		const last = grabVectors[grabVectors.length - 1];
+		if (typeof last !== "undefined") {
+			// add now to the vectors since we may have held the pointer still
+			// for a bit, which should could as a grab point.
+			grabVectors.push({ point: last.point, time: now })
+		}
+		trimGrabVectors(now);
+		velocity = calculateFling();
+		
+		grabVectors = [];
 		grabAnchor = undefined;
+		renderQueued = true;
 	}
 
 	/**
@@ -422,6 +491,31 @@
 			]);
 		}
 	}
+	
+	function move(delta: number) {
+		parameters.transform.translate(velocity.clone().multiply(delta))
+	}
+	
+	let renderQueued = false;
+	let lastRender: number;
+	function paint(time?: number) {
+		if (typeof time !== "undefined") {
+			if (typeof lastRender !== "undefined") {
+				const delta = time - lastRender;
+				if (typeof grabAnchor === "undefined") {
+					move(delta);
+				}
+			}
+			lastRender = time;
+		}
+		
+		if (render && renderQueued) {
+			viewbox = render.paint();
+		}
+		requestAnimationFrame(paint);
+	}
+	
+	onMount(paint);
 </script>
 <svelte:window bind:innerWidth bind:innerHeight />
 <InputCapture
@@ -513,7 +607,7 @@
 		{#if pointerOnBoard && typeof reticulePosition !== "undefined"}
 			<CanvasSpace
 				shape={$info.shape}
-				viewbox={$viewbox}
+				viewbox={viewbox}
 				boardSize={new Vec2(width, height)}
 				position={reticulePosition}
 			>
