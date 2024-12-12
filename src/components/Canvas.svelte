@@ -210,10 +210,43 @@
 		if (typeof grabAnchor !== "undefined") {
 			releaseBoard();
 		}
-
+		
 		let center = calculateCenter(points)
-		const spacing = calculateSpacing(center, points);
+		let spacing = calculateSpacing(center, points);
+
 		const transform = new Mat3(...parameters.transform);
+		const transformTranslate = new Vec2(transform[6], transform[7]);
+		const transformScale = new Vec2(transform[0], transform[4]);
+		const scale = scaleOverflow(transformScale);
+		const translate = translateOverflow(transformTranslate, transformScale);
+		
+		if (translate.overflow.x < 0) {
+			translate.overflow.x *= $aspect.x;
+		}
+		
+		if (translate.overflow.y < 0) {
+			translate.overflow.y *= $aspect.y;
+		}
+		
+		const translateMargin = new Vec2(1, 1).divide(transformScale)
+		
+		const overtranslateCompensation = new Vec2(
+			clampSmoothingInv(translate.overflow.x, translateMargin.x) / 2,
+			clampSmoothingInv(translate.overflow.y, translateMargin.y) / 2,
+		);
+		
+		const overscaleCompensation = new Vec2(
+			clampSmoothingInv(scale.overflow.x, 2),
+			clampSmoothingInv(scale.overflow.y, 2),
+		);
+		
+		// put camera back in bounds first
+		center.add(translate.overflow.clone().divide(2))
+		spacing *= settings.input.scrollSensitivity ** scale.overflow.x;
+		
+		// then apply the required offset to keep it in the same place
+		center.sub(overtranslateCompensation);
+		spacing /= settings.input.scrollSensitivity ** overscaleCompensation.x;
 
 		grabAnchor = { center, spacing, transform };
 		
@@ -240,9 +273,13 @@
 		}
 	}
 
+	/**
+	 * Returns a number that approaches max as value tends to infinity. This can
+	 * be used to smoothly approach a hard limit rather than suddenly stopping.
+	 */
 	function clampSmoothing(value: number, max: number): number {
-		// we need a formula  f(x) that satisfies these conditions:
-		// - lim x → ∞ = a
+		// we need a formula f(x) that satisfies these conditions:
+		// - lim x → ∞ = a (= max)
 		// - f'(0) = 1
 		// and, ideally:
 		// - f"(x) > 0
@@ -251,46 +288,101 @@
 		return max * value / (Math.abs(value) + max);
 	}
 
-	function clampView(origin: Vec2, transform: Mat3) {
-		// TODO: use viewbox
+	/**
+	 * Computes the inverse of clampSmoothing given max.
+	 */
+	function clampSmoothingInv(smoothed: number, max: number): number {
+		// we have f(x) and a (max), we want x:
+		// f(x) = ax / (x + a)
+		// f(x) * (x + a) = ax
+		// f(x)x + f(x)a = ax
+		// f(x)a = ax - f(x)x
+		// x = (f(x)a)/(a - f(x))
 
-		const transformScale = new Vec2(transform[0], transform[4]);
-
+		return max * smoothed / (max - Math.abs(smoothed));
+	}
+	
+	function scaleOverflow(scale: Vec2) {
 		const scaleMax = new Vec2(boardWidth, boardHeight);
 		const scaleMin = new Vec2(...shape.get(0));
-
+	
 		const scrollLog = Math.log(settings.input.scrollSensitivity);
 		// computes the log in scroll sensitivity base of the value
 		// this allows us to linearize the power scale used for scrolling
 		const l = (v: number) => Math.log(v) / scrollLog;
-
+	
 		const overscale = new Vec2(
-			Math.max(0, l(transformScale.x) - l(scaleMax.x)),
-			Math.max(0, l(transformScale.y) - l(scaleMax.y)),
+			Math.max(0, l(scale.x) - l(scaleMax.x)),
+			Math.max(0, l(scale.y) - l(scaleMax.y)),
 		);
 		const underscale = new Vec2(
-			Math.max(0, l(scaleMin.x) - l(transformScale.x)),
-			Math.max(0, l(scaleMin.y) - l(transformScale.y)),
+			Math.max(0, l(scaleMin.x) - l(scale.x)),
+			Math.max(0, l(scaleMin.y) - l(scale.y)),
 		);
-		const baseScale = new Vec2(
-			Math.max(scaleMin.x, Math.min(transformScale.x, scaleMax.x)),
-			Math.max(scaleMin.y, Math.min(transformScale.y, scaleMax.y)),
+		const base = new Vec2(
+			Math.max(scaleMin.x, Math.min(scale.x, scaleMax.x)),
+			Math.max(scaleMin.y, Math.min(scale.y, scaleMax.y)),
 		);
-
-		const excessScale = new Vec2(
+	
+		const overflow = new Vec2(
 			overscale.x - underscale.x, 
 			overscale.y - underscale.y, 
 		);
+		
+		return { base, overflow };
+	}
+	
+	function translateOverflow(translate: Vec2, scale: Vec2) {
+		let leftEdge = -1;
+		let topEdge = -1;
+		let rightEdge = leftEdge + 2 - scale.x * $aspect.x;
+		let bottomEdge = topEdge + 2 - scale.y * $aspect.y;
+
+		let overleft = Math.max(0, translate.x - leftEdge);
+		let overtop = Math.max(0, translate.y - topEdge);
+		let overright = Math.max(0, rightEdge - translate.x) / $aspect.x;
+		let overbottom = Math.max(0, bottomEdge - translate.y) / $aspect.y;
+
+		// if the viewport is larger than the bounds, prefer to center the camera
+		if (leftEdge < rightEdge) {
+			leftEdge = rightEdge = scale.x * $aspect.x / -2;
+			overleft = overright = 0;
+		}
+
+		if (topEdge < bottomEdge) {
+			topEdge = bottomEdge = scale.y * $aspect.y / -2;
+			overtop = overbottom = 0;
+		}
+
+		const base = new Vec2(
+			Math.max(rightEdge, Math.min(translate.x, leftEdge)),
+			Math.max(bottomEdge, Math.min(translate.y, topEdge)),
+		);
+
+		const overflow = new Vec2(
+			overleft - overright,
+			overtop - overbottom,
+		);
+		
+		return { base, overflow };
+	}
+
+	function clampView(origin: Vec2, transform: Mat3) {
+		// TODO: use viewbox
+		const transformScale = new Vec2(transform[0], transform[4]);
+		const scale = scaleOverflow(transformScale);
+		const baseScale = scale.base;
+		const overScale = scale.overflow;
 
 		const scaleMargin = new Vec2(2, 2);
-
+		
 		const overscaleScaled = new Vec2(
-			settings.input.scrollSensitivity ** clampSmoothing(excessScale.x, scaleMargin.x),
-			settings.input.scrollSensitivity ** clampSmoothing(excessScale.y, scaleMargin.y),
+			settings.input.scrollSensitivity ** clampSmoothing(overScale.x, scaleMargin.x),
+			settings.input.scrollSensitivity ** clampSmoothing(overScale.y, scaleMargin.y),
 		);
 
 		let finalScale;
-		if (excessScale.x < excessScale.y) {
+		if (overScale.x < overScale.y) {
 			const scale = baseScale.x * overscaleScaled.x;
 			finalScale = new Vec2(scale, scale);
 		} else {
@@ -304,40 +396,12 @@
 			.translate(new Vec2(-1, -1).multiply(origin));
 
 		const transformTranslate = new Vec2(transform[6], transform[7]);
-
-		let leftEdge = -1;
-		let topEdge = -1;
-		let rightEdge = leftEdge + 2 - finalScale.x * $aspect.x;
-		let bottomEdge = topEdge + 2 - finalScale.y * $aspect.y;
-
-		let overleft = Math.max(0, transformTranslate.x - leftEdge);
-		let overtop = Math.max(0, transformTranslate.y - topEdge);
-		let overright = Math.max(0, rightEdge - transformTranslate.x) / $aspect.x;
-		let overbottom = Math.max(0, bottomEdge - transformTranslate.y) / $aspect.y;
-
-		// if the viewport is larger than the bounds, prefer to center the camera
-		if (leftEdge < rightEdge) {
-			leftEdge = rightEdge = finalScale.x * $aspect.x / -2;
-			overleft = overright = 0;
-		}
-
-		if (topEdge < bottomEdge) {
-			topEdge = bottomEdge = finalScale.y * $aspect.y / -2;
-			overtop = overbottom = 0;
-		}
-
-		const baseTranslate = new Vec2(
-			Math.max(rightEdge, Math.min(transformTranslate.x, leftEdge)),
-			Math.max(bottomEdge, Math.min(transformTranslate.y, topEdge)),
-		);
-
-		const overTranslate = new Vec2(
-			overleft - overright,
-			overtop - overbottom,
-		);
+		const translate = translateOverflow(transformTranslate, finalScale);
+		const baseTranslate = translate.base;
+		const overTranslate = translate.overflow;
 
 		const translateMargin = new Vec2(1, 1).divide(finalScale);
-
+		
 		const overTranslateScaled = new Vec2(
 			clampSmoothing(overTranslate.x, translateMargin.x),
 			clampSmoothing(overTranslate.y, translateMargin.y),
@@ -493,7 +557,7 @@
 		}
 	}
 	
-	function move(delta: number) {
+	function doPhysics(delta: number) {
 		// move into deltatime
 		velocity.multiply(delta);
 		// apply drag
@@ -510,7 +574,7 @@
 			if (typeof lastRender !== "undefined") {
 				const delta = time - lastRender;
 				if (typeof grabAnchor === "undefined") {
-					move(delta);
+					doPhysics(delta);
 				}
 			}
 			lastRender = time;
