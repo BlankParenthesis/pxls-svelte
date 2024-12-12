@@ -1,6 +1,7 @@
 import globals from "globals";
 import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
+import svelte from "eslint-plugin-svelte";
 
 let rules = {
 	"brace-style": "error",
@@ -20,5 +21,6 @@ export default [
 	{ languageOptions: { globals: globals.browser } },
 	pluginJs.configs.recommended,
 	...tseslint.configs.recommended,
+	...svelte.configs.recommended,
 	{ rules },
 ];
