@@ -589,12 +589,7 @@
 		parameters.transform[7] = Math.max(yMin, Math.min(transform[7], yMax));
 	}
 	
-	function doPhysics(delta: number) {		
-		const origin = new Vec2(0.5, 0.5)
-			.scale(2)
-			.sub(new Vec2(1, 1))
-			.applyMatrix3(new Mat3(...parameters.transform).inverse());
-		
+	function doPhysics(delta: number) {						
 		let transform = new Mat3(...parameters.transform);
 		let transformTranslate = new Vec2(transform[6], transform[7]);
 		let transformScale = new Vec2(transform[0], transform[4]);
@@ -621,18 +616,23 @@
 		
 		const edgeDragRatio = settings.input.bounceStrength * 50;
 		if (overXEdge) {
-			const scaledCompensationX = (overtranslateCompensation.x / translateMargin.x) ** edgeDragRatio;
-			drag.x *= scaledCompensationX;
+			const scaledCompensationX = overtranslateCompensation.x / translateMargin.x;
+			drag.x *= Math.abs(scaledCompensationX) ** edgeDragRatio;
 		} else if (!movingX) {
 			velocity.x = 0;
 		}
 		
 		if (overYEdge) {
-			const scaledCompensationY = (overtranslateCompensation.y / translateMargin.y) ** edgeDragRatio;
-			drag.y *= scaledCompensationY
+			const scaledCompensationY = overtranslateCompensation.y / translateMargin.y;
+			drag.y *= Math.abs(scaledCompensationY) ** edgeDragRatio;
 		} else if (!movingY) {
 			velocity.y = 0;
 		}
+		
+		// apply translate velocity
+		velocity.sub(bounceForce.multiply(delta));
+		// apply drag
+		velocity.multiply(new Vec2(drag.x ** delta, drag.y ** delta));
 		
 		const scaleMargin = new Vec2(2, 2);
 		const overscaleCompensation = new Vec2(
@@ -649,11 +649,6 @@
 			renderQueued = true;
 		}
 		
-		// apply translate velocity
-		velocity.sub(bounceForce.multiply(delta));
-		// apply drag
-		velocity.multiply(new Vec2(drag.x ** delta, drag.y ** delta));
-		
 		// move into deltatime
 		velocity.multiply(delta);
 		scaleVelocity.multiply(delta);
@@ -664,6 +659,11 @@
 			(1 + settings.input.bounceStrength * scaleTranslateBounceRatio) ** scaleVelocity.y,
 		);
 	
+		const origin = new Vec2(0.5, 0.5)
+				.scale(2)
+				.sub(new Vec2(1, 1))
+				.applyMatrix3(new Mat3(...parameters.transform).inverse());
+
 		// apply velocities
 		parameters.transform
 			.translate(origin)
