@@ -92,7 +92,8 @@
 		input: {
 			scrollSensitivity: 1.15,
 			dragVelocityAccumulation: 200,
-			dragVelocitySensitivity: 0.985,
+			dragVelocitySensitivity: 0.98,
+			dragVelocityDrag: 0.95,
 		}
 	}
 
@@ -493,7 +494,13 @@
 	}
 	
 	function move(delta: number) {
-		parameters.transform.translate(velocity.clone().multiply(delta))
+		// move into deltatime
+		velocity.multiply(delta);
+		// apply drag
+		velocity.multiply(settings.input.dragVelocityDrag);
+		parameters.transform.translate(velocity);
+		// undo deltatime move
+		velocity.divide(delta);
 	}
 	
 	let renderQueued = false;
