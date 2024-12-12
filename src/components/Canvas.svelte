@@ -93,7 +93,8 @@
 			scrollSensitivity: 1.15,
 			dragVelocityAccumulation: 200,
 			dragVelocitySensitivity: 0.98,
-			dragVelocityDrag: 0.95,
+			dragVelocityDrag: 0.9,
+			bounceStrength: 1 / 30,
 		}
 	}
 
@@ -188,6 +189,7 @@
 	let grabDistance = 0;
 	let grabVectors = [] as Array<{ point: Vec2, time: number }>;
 	let velocity = new Vec2(0, 0);
+	let scaleVelocity = new Vec2(0, 0);
 
 	function canActivate() {
 		return grabDistance < 10 || state.pointer?.quickActivate;
@@ -228,16 +230,16 @@
 			translate.overflow.y *= $aspect.y;
 		}
 		
-		const translateMargin = new Vec2(1, 1).divide(transformScale)
-		
+		const translateMargin = new Vec2(1, 1);
 		const overtranslateCompensation = new Vec2(
-			clampSmoothingInv(translate.overflow.x, translateMargin.x) / 2,
-			clampSmoothingInv(translate.overflow.y, translateMargin.y) / 2,
+			clampSmoothingInv(translate.overflow.x, translateMargin.x),
+			clampSmoothingInv(translate.overflow.y, translateMargin.y),
 		);
 		
+		const scaleMargin = new Vec2(2, 2);
 		const overscaleCompensation = new Vec2(
-			clampSmoothingInv(scale.overflow.x, 2),
-			clampSmoothingInv(scale.overflow.y, 2),
+			clampSmoothingInv(scale.overflow.x, scaleMargin.x),
+			clampSmoothingInv(scale.overflow.y, scaleMargin.y),
 		);
 		
 		// put camera back in bounds first
@@ -245,7 +247,7 @@
 		spacing *= settings.input.scrollSensitivity ** scale.overflow.x;
 		
 		// then apply the required offset to keep it in the same place
-		center.sub(overtranslateCompensation);
+		center.sub(overtranslateCompensation.divide(2));
 		spacing /= settings.input.scrollSensitivity ** overscaleCompensation.x;
 
 		grabAnchor = { center, spacing, transform };
@@ -298,8 +300,14 @@
 		// f(x)x + f(x)a = ax
 		// f(x)a = ax - f(x)x
 		// x = (f(x)a)/(a - f(x))
-
-		return max * smoothed / (max - Math.abs(smoothed));
+		
+		if (smoothed === max) {
+			// technically this should be Infinity, but this is large enough
+			// and also doesn't mess with stuff too much.
+			return 1e9 * Math.sign(smoothed);
+		} else {
+			return max * smoothed / (max - Math.abs(smoothed));
+		}
 	}
 	
 	function scaleOverflow(scale: Vec2) {
@@ -332,31 +340,39 @@
 		return { base, overflow };
 	}
 	
-	function translateOverflow(translate: Vec2, scale: Vec2) {
+	function translateBounds(scale: Vec2) {
 		let leftEdge = -1;
 		let topEdge = -1;
 		let rightEdge = leftEdge + 2 - scale.x * $aspect.x;
 		let bottomEdge = topEdge + 2 - scale.y * $aspect.y;
+		return {
+			upper: new Vec2(leftEdge, topEdge),
+			lower: new Vec2(rightEdge, bottomEdge),
+		};
+	}
+	
+	function translateOverflow(translate: Vec2, scale: Vec2) {
+		const { upper, lower} = translateBounds(scale);
 
-		let overleft = Math.max(0, translate.x - leftEdge);
-		let overtop = Math.max(0, translate.y - topEdge);
-		let overright = Math.max(0, rightEdge - translate.x) / $aspect.x;
-		let overbottom = Math.max(0, bottomEdge - translate.y) / $aspect.y;
+		let overleft = Math.max(0, translate.x - upper.x);
+		let overtop = Math.max(0, translate.y - upper.y);
+		let overright = Math.max(0, lower.x - translate.x) / $aspect.x;
+		let overbottom = Math.max(0, lower.y - translate.y) / $aspect.y;
 
 		// if the viewport is larger than the bounds, prefer to center the camera
-		if (leftEdge < rightEdge) {
-			leftEdge = rightEdge = scale.x * $aspect.x / -2;
+		if (upper.x < lower.x) {
+			lower.x = upper.x = scale.x * $aspect.x / -2;
 			overleft = overright = 0;
 		}
 
-		if (topEdge < bottomEdge) {
-			topEdge = bottomEdge = scale.y * $aspect.y / -2;
+		if (upper.y < lower.y) {
+			lower.y = upper.y = scale.y * $aspect.y / -2;
 			overtop = overbottom = 0;
 		}
 
 		const base = new Vec2(
-			Math.max(rightEdge, Math.min(translate.x, leftEdge)),
-			Math.max(bottomEdge, Math.min(translate.y, topEdge)),
+			Math.max(lower.x, Math.min(translate.x, upper.x)),
+			Math.max(lower.y, Math.min(translate.y, upper.y)),
 		);
 
 		const overflow = new Vec2(
@@ -400,7 +416,7 @@
 		const baseTranslate = translate.base;
 		const overTranslate = translate.overflow;
 
-		const translateMargin = new Vec2(1, 1).divide(finalScale);
+		const translateMargin = new Vec2(1, 1);
 		
 		const overTranslateScaled = new Vec2(
 			clampSmoothing(overTranslate.x, translateMargin.x),
@@ -557,30 +573,118 @@
 		}
 	}
 	
+	function hardClamp() {
+		let transform = new Mat3(...parameters.transform);
+		let transformScale = new Vec2(transform[0], transform[4]);
+		
+		const bounds = translateBounds(transformScale);
+		const translateMargin = new Vec2(1, 1);
+		
+		const xMin = bounds.lower.x - translateMargin.x + 0.1;
+		const xMax = bounds.upper.x + translateMargin.x - 0.1;
+		const yMin = bounds.lower.y - translateMargin.y + 0.1;
+		const yMax = bounds.upper.y + translateMargin.y - 0.1;
+		
+		parameters.transform[6] = Math.max(xMin, Math.min(transform[6], yMax));
+		parameters.transform[7] = Math.max(yMin, Math.min(transform[7], yMax));
+	}
+	
 	function doPhysics(delta: number) {
 		// move into deltatime
 		velocity.multiply(delta);
-		// apply drag
-		velocity.multiply(settings.input.dragVelocityDrag);
-		parameters.transform.translate(velocity);
+		
+		const origin = new Vec2(0.5, 0.5)
+			.scale(2)
+			.sub(new Vec2(1, 1))
+			.applyMatrix3(new Mat3(...parameters.transform).inverse());
+		
+		const translateScaleBounceRatio = 2;
+		const scaleVelocityMult = new Vec2(
+			(1 + settings.input.bounceStrength / translateScaleBounceRatio) ** scaleVelocity.x,
+			(1 + settings.input.bounceStrength / translateScaleBounceRatio) ** scaleVelocity.y,
+		);
+		
+		parameters.transform
+			.translate(origin)
+			.scale(scaleVelocityMult)
+			.translate(new Vec2(-1, -1).multiply(origin))
+			.translate(velocity);
+		
+		hardClamp();
+		
+		let transform = new Mat3(...parameters.transform);
+		let transformTranslate = new Vec2(transform[6], transform[7]);
+		let transformScale = new Vec2(transform[0], transform[4]);
+		
+		const scale = scaleOverflow(transformScale);
+		const translate = translateOverflow(transformTranslate, transformScale);
+		
+		const translateMargin = new Vec2(1, 1);
+		const overtranslateCompensation = new Vec2(
+			clampSmoothing(translate.overflow.x, translateMargin.x),
+			clampSmoothing(translate.overflow.y, translateMargin.y),
+		);
+		
+		const bounceForce = overtranslateCompensation.clone()
+			.divide(transformScale)
+			.multiply(settings.input.bounceStrength);
+		
+		const drag = new Vec2(1, 1).multiply(settings.input.dragVelocityDrag);
+		
+		const overXEdge = Math.abs(overtranslateCompensation.x) > 1e-3;
+		const overYEdge = Math.abs(overtranslateCompensation.y) > 1e-3;
+		const movingX = Math.abs(velocity.x) > 1e-3;
+		const movingY = Math.abs(velocity.y) > 1e-3;
+		
+		if (overXEdge) {
+			drag.x *= 1 - 0.2 * (1 - overtranslateCompensation.x);
+		} else if (!movingX) {
+			velocity.x = 0;
+		}
+		
+		if (overYEdge) {
+			drag.y *= 1 - 0.2 * (1 - overtranslateCompensation.y);
+		} else if (!movingY) {
+			velocity.y = 0;
+		}
+		
+		const scaleMargin = new Vec2(2, 2);
+		const overscaleCompensation = new Vec2(
+			clampSmoothing(scale.overflow.x, scaleMargin.x),
+			clampSmoothing(scale.overflow.y, scaleMargin.y),
+		);
+		
+		const overScaleX = Math.abs(overscaleCompensation.x) > 1e-3;
+		const overScaleY = Math.abs(overtranslateCompensation.y) > 1e-3;
+		
+		scaleVelocity = new Vec2(0, 0).sub(overscaleCompensation);
+		
+		if (overXEdge || overYEdge || movingX || movingY || overScaleX || overScaleY) {
+			renderQueued = true;
+		}
+		
+		velocity.sub(bounceForce);
+		velocity.multiply(drag);
+		
 		// undo deltatime move
 		velocity.divide(delta);
 	}
 	
 	let renderQueued = false;
 	let lastRender: number;
-	function paint(time?: number) {
-		if (typeof time !== "undefined") {
-			if (typeof lastRender !== "undefined") {
-				const delta = time - lastRender;
-				if (typeof grabAnchor === "undefined") {
-					doPhysics(delta);
-				}
-			}
-			lastRender = time;
-		}
-		
+	function paint(time?: number) {		
 		if (render && renderQueued) {
+			renderQueued = false;
+			
+			if (typeof time !== "undefined") {
+				if (typeof lastRender !== "undefined") {
+					const delta = time - lastRender;
+					if (typeof grabAnchor === "undefined") {
+						doPhysics(delta);
+					}
+				}
+				lastRender = time;
+			}
 			viewbox = render.paint();
 		}
 		requestAnimationFrame(paint);

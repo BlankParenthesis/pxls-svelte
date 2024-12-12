@@ -28,6 +28,7 @@ export type Settings = {
 		dragVelocityAccumulation: number;
 		dragVelocitySensitivity: number;
 		dragVelocityDrag: number;
+		bounceStrength: number;
 	};
 }
 
