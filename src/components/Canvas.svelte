@@ -93,7 +93,7 @@
 			scrollSensitivity: 1.15,
 			dragVelocityAccumulation: 200,
 			dragVelocitySensitivity: 0.98,
-			dragVelocityFriction: 1 - 1 / 100,
+			dragVelocityFriction: 1 - 1 / 250,
 			bounceStrength: 1 / 5000,
 		}
 	}
