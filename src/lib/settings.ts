@@ -27,7 +27,7 @@ export type Settings = {
 		scrollSensitivity: number;
 		dragVelocityAccumulation: number;
 		dragVelocitySensitivity: number;
-		dragVelocityDrag: number;
+		dragVelocityFriction: number;
 		bounceStrength: number;
 	};
 }

@@ -93,7 +93,7 @@
 			scrollSensitivity: 1.15,
 			dragVelocityAccumulation: 200,
 			dragVelocitySensitivity: 0.98,
-			dragVelocityDrag: 1 - 1 / 100,
+			dragVelocityFriction: 1 - 1 / 100,
 			bounceStrength: 1 / 5000,
 		}
 	}
@@ -607,24 +607,24 @@
 			.divide(transformScale)
 			.multiply(settings.input.bounceStrength);
 		
-		const drag = new Vec2(1, 1).multiply(settings.input.dragVelocityDrag);
+		const friction = new Vec2(1, 1).multiply(settings.input.dragVelocityFriction);
 		
 		const overXEdge = Math.abs(overtranslateCompensation.x) > 1e-3;
 		const overYEdge = Math.abs(overtranslateCompensation.y) > 1e-3;
 		const movingX = Math.abs(velocity.x) > 1e-6;
 		const movingY = Math.abs(velocity.y) > 1e-6;
 		
-		const edgeDragRatio = settings.input.bounceStrength * 50;
+		const edgeFrictionRatio = settings.input.bounceStrength * 50;
 		if (overXEdge) {
 			const scaledCompensationX = overtranslateCompensation.x / translateMargin.x;
-			drag.x *= Math.abs(scaledCompensationX) ** edgeDragRatio;
+			friction.x *= Math.abs(scaledCompensationX) ** edgeFrictionRatio;
 		} else if (!movingX) {
 			velocity.x = 0;
 		}
 		
 		if (overYEdge) {
 			const scaledCompensationY = overtranslateCompensation.y / translateMargin.y;
-			drag.y *= Math.abs(scaledCompensationY) ** edgeDragRatio;
+			friction.y *= Math.abs(scaledCompensationY) ** edgeFrictionRatio;
 		} else if (!movingY) {
 			velocity.y = 0;
 		}
@@ -632,7 +632,7 @@
 		// apply translate velocity
 		velocity.sub(bounceForce.multiply(delta));
 		// apply drag
-		velocity.multiply(new Vec2(drag.x ** delta, drag.y ** delta));
+		velocity.multiply(new Vec2(friction.x ** delta, friction.y ** delta));
 		
 		const scaleMargin = new Vec2(2, 2);
 		const overscaleCompensation = new Vec2(
