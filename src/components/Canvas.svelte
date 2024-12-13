@@ -227,23 +227,11 @@
 		const scale = scaleOverflow(transformScale);
 		const translate = translateOverflow(transformTranslate, transformScale);
 		
-		const aspectCorrection = new Vec2(1, 1);
-		
-		if (translate.overflow.x < 0) {
-			aspectCorrection.x = $aspect.x;
-		}
-		
-		if (translate.overflow.y < 0) {
-			aspectCorrection.y = $aspect.y;
-		}
-		
-		translate.overflow.multiply(aspectCorrection);
-		
 		const translateMargin = new Vec2(1, 1);
 		const overtranslateCompensation = new Vec2(
 			clampSmoothingInv(translate.overflow.x, translateMargin.x),
 			clampSmoothingInv(translate.overflow.y, translateMargin.y),
-		).multiply(aspectCorrection);
+		);
 		
 		const scaleMargin = new Vec2(2, 2);
 		const overscaleCompensation = new Vec2(
@@ -365,8 +353,8 @@
 
 		let overleft = Math.max(0, translate.x - upper.x);
 		let overtop = Math.max(0, translate.y - upper.y);
-		let overright = Math.max(0, lower.x - translate.x) / $aspect.x;
-		let overbottom = Math.max(0, lower.y - translate.y) / $aspect.y;
+		let overright = Math.max(0, lower.x - translate.x);
+		let overbottom = Math.max(0, lower.y - translate.y);
 
 		// if the viewport is larger than the bounds, prefer to center the camera
 		if (upper.x < lower.x) {
