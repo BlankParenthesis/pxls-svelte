@@ -24,7 +24,6 @@
 	const cooldown = board.cooldown;
 	const info = board.info;
 	const token = auth.token;
-	const userCount = board.userCount();
 	$: loggedIn = typeof $token === "string";
 
 	const toggle = (panelMode: Panel) => {
@@ -110,7 +109,7 @@
 					{#if panel == Panel.Place}
 						<Cooldown info={$info} cooldown={$cooldown} />
 						{#if access.has("boards.users")}
-							<UserCount count={$userCount} />
+							<UserCount count={board.userCount()} />
 						{/if}
 						<Palette bind:state {board} />
 					{/if}
