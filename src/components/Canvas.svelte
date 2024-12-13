@@ -604,8 +604,13 @@
 		const yMin = bounds.lower.y - translateMargin.y + 0.1;
 		const yMax = bounds.upper.y + translateMargin.y - 0.1;
 		
-		parameters.transform[6] = Math.max(xMin, Math.min(transform[6], yMax));
-		parameters.transform[7] = Math.max(yMin, Math.min(transform[7], yMax));
+		const newX = Math.max(xMin, Math.min(transform[6], yMax));
+		const newY = Math.max(yMin, Math.min(transform[7], yMax));
+		
+		if (parameters.transform[6] !== newX || parameters.transform[7] !== newY) {
+			parameters.transform[6] = newX;
+			parameters.transform[7] = newY;
+		}
 	}
 	
 	function doPhysics(delta: number) {						
