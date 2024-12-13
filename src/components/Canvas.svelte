@@ -372,11 +372,15 @@
 		if (upper.x < lower.x) {
 			const center = (lower.x + upper.x) / 2;
 			lower.x = upper.x = center;
+			overleft /= 2;
+			overright /= 2;
 		}
 
 		if (upper.y < lower.y) {
 			const center = (lower.y + upper.y) / 2;
 			lower.y = upper.y = center;
+			overtop /= 2;
+			overbottom /= 2;
 		}
 
 		const base = new Vec2(
