@@ -227,19 +227,23 @@
 		const scale = scaleOverflow(transformScale);
 		const translate = translateOverflow(transformTranslate, transformScale);
 		
+		const aspectCorrection = new Vec2(1, 1);
+		
 		if (translate.overflow.x < 0) {
-			translate.overflow.x *= $aspect.x;
+			aspectCorrection.x = $aspect.x;
 		}
 		
 		if (translate.overflow.y < 0) {
-			translate.overflow.y *= $aspect.y;
+			aspectCorrection.y = $aspect.y;
 		}
+		
+		translate.overflow.multiply(aspectCorrection);
 		
 		const translateMargin = new Vec2(1, 1);
 		const overtranslateCompensation = new Vec2(
 			clampSmoothingInv(translate.overflow.x, translateMargin.x),
 			clampSmoothingInv(translate.overflow.y, translateMargin.y),
-		);
+		).multiply(aspectCorrection);
 		
 		const scaleMargin = new Vec2(2, 2);
 		const overscaleCompensation = new Vec2(
@@ -420,7 +424,7 @@
 		const translate = translateOverflow(transformTranslate, finalScale);
 		const baseTranslate = translate.base;
 		const overTranslate = translate.overflow;
-
+		
 		const translateMargin = new Vec2(1, 1);
 		
 		const overTranslateScaled = new Vec2(
