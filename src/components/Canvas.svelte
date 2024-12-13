@@ -362,12 +362,10 @@
 		// if the viewport is larger than the bounds, prefer to center the camera
 		if (upper.x < lower.x) {
 			lower.x = upper.x = scale.x * $aspect.x / -2;
-			overleft = overright = 0;
 		}
 
 		if (upper.y < lower.y) {
 			lower.y = upper.y = scale.y * $aspect.y / -2;
-			overtop = overbottom = 0;
 		}
 
 		const base = new Vec2(
