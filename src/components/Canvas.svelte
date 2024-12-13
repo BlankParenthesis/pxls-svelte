@@ -623,9 +623,7 @@
 			clampSmoothing(translate.overflow.y, translateMargin.y),
 		);
 		
-		const bounceForce = overtranslateCompensation.clone()
-			.divide(transformScale)
-			.multiply(settings.input.bounceStrength);
+		const bounceForce = new Vec2(0, 0);
 		
 		const friction = new Vec2(1, 1).multiply(settings.input.dragVelocityFriction);
 		
@@ -638,6 +636,7 @@
 		if (overXEdge) {
 			const scaledCompensationX = overtranslateCompensation.x / translateMargin.x;
 			friction.x *= Math.abs(scaledCompensationX) ** edgeFrictionRatio;
+			bounceForce.x = overtranslateCompensation.x / transformScale.x * settings.input.bounceStrength;
 		} else if (!movingX) {
 			velocity.x = 0;
 		}
@@ -645,6 +644,7 @@
 		if (overYEdge) {
 			const scaledCompensationY = overtranslateCompensation.y / translateMargin.y;
 			friction.y *= Math.abs(scaledCompensationY) ** edgeFrictionRatio;
+			bounceForce.y = overtranslateCompensation.y / transformScale.y * settings.input.bounceStrength;
 		} else if (!movingY) {
 			velocity.y = 0;
 		}
