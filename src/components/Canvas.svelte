@@ -678,6 +678,10 @@
 		hardClamp();
 	}
 	
+	$: if (parameters && overrides) {
+		renderQueued = true;
+	}
+	
 	let renderQueued = false;
 	let lastRender: number;
 	function paint(time?: number) {		

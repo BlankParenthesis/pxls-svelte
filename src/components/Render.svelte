@@ -24,20 +24,13 @@
 		return canvasElement;
 	}
 
-	let renderQueued = false;
-
-	$: if (canvas) {
+	$: if (canvas && width && height) {
 		canvas.setSize(width, height);
 		aspectwrite.set(canvas.getAspect())
-		renderQueued = true;
 	}
-
-	$: if (canvas && parameters && overrides) {
-		renderQueued = true;
-	}
-
-	export function paint(timestamp?: number) {
-		if (canvas && renderQueued) {
+	
+	export function paint() {
+		if (canvas) {
 			return canvas.render(parameters, overrides);
 		} else {
 			return ViewBox.default();
