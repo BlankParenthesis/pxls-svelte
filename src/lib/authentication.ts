@@ -282,6 +282,20 @@ export class Authentication {
 		const bytes = new Uint8Array(sha256);
 		return base64urlsafe(bytes);
 	}
+	
+	private static async challengeParams(challenge: string) {
+		if (crypto.hasOwnProperty("subtle")) {
+			return {
+				"code_challenge_method": "S256",
+				"code_challenge": await Authentication.encodeChallenge(challenge),
+			}
+		} else {
+			return {
+				"code_challenge_method": "plain",
+				"code_challenge": challenge,
+			}
+		}
+	}
 
 	public async generateLoginUrl(): Promise<URL> {
 		const state: StateStorage =  {
@@ -299,11 +313,10 @@ export class Authentication {
 			"response_mode": "fragment",
 			"response_type": "code",
 			"state": state.state,
-			"code_challenge": await Authentication.encodeChallenge(state.challenge),
-			"code_challenge_method": "S256",
 			"client_id": this.config.client_id,
 			"prompt": "consent",
 			"redirect_uri": document.location.origin + document.location.pathname,
+			...await Authentication.challengeParams(state.challenge),
 		};
 		const query = Object.entries(params)
 			.map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
