@@ -548,6 +548,17 @@
 		renderQueued = true;
 	}
 
+	let siTimeout: number | undefined;
+	// Waits just a little bit in case we are scrolling with a touch
+	// device and the rate would make the physics freak out if we
+	// released immediately.
+	function scaleInstantDeferredRealease() {
+		clearTimeout(siTimeout);
+		siTimeout = setTimeout(() => {
+			releaseBoard();
+			siTimeout = undefined;
+		}, 50);
+	}
 	/**
 	 * utility function which simulates grabbing the board such that it will be
 	 * scaled at the current cursor position by the provided amount.
@@ -569,12 +580,15 @@
 				new Vec2(center.x - scale, center.y),
 				new Vec2(center.x + scale, center.y)
 			]);
-			releaseBoard();
+			scaleInstantDeferredRealease()
 		} else {
 			grabAnchor.spacing /= scale;
 			updateGrab([
 				new Vec2(lastGrabCenter.x, lastGrabCenter.y),
 			]);
+			if(typeof siTimeout !== "undefined") {
+				scaleInstantDeferredRealease()
+			}
 		}
 	}
 	
