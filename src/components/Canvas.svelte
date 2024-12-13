@@ -641,7 +641,8 @@
 		const overScaleX = Math.abs(overscaleCompensation.x) > 1e-3;
 		const overScaleY = Math.abs(overtranslateCompensation.y) > 1e-3;
 		
-		scaleVelocity = new Vec2(0, 0).sub(overscaleCompensation);
+		const compensator = Math.min(overscaleCompensation.x, overscaleCompensation.y);
+		scaleVelocity = new Vec2(-compensator, -compensator);
 		
 		if (overXEdge || overYEdge || movingX || movingY || overScaleX || overScaleY) {
 			renderQueued = true;
