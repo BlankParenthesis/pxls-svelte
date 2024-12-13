@@ -42,7 +42,9 @@
 	on:pointermove={e => {
 		if (e.pointerType !== "touch") {
 			if (e.pressure > 0) {
-				ondrag([eventToPoint(e)])
+				if (typeof bounds !== "undefined") {
+					ondrag([eventToPoint(e)])
+				}
 			}
 		}
 	}}
@@ -78,7 +80,9 @@
 	class="capture stack"
 	on:pointermove={e => {
 		const target = document.elementFromPoint(e.pageX, e.pageY);
-		onpoint(eventToPoint(e), target)
+		if (typeof bounds !== "undefined") {
+			onpoint(eventToPoint(e), target)
+		}
 	}}
 	on:pointerleave
 	bind:contentRect={bounds}
