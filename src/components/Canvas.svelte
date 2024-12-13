@@ -21,11 +21,13 @@
 
 	export let site: Site;
 	export let board: Board;
-
+	
+	const info = board.info;
+	let shape = $info.shape;
+	
 	$: overrides = settings.debug.render;
 	let parameters = {
-		// TODO: center on the center of canvas
-		transform: new Mat3().identity().translate(new Vec2(-0.5, -0.5)),
+		transform: new Mat3().identity(),
 		templates: [] as Template[],
 		timestampStart: 0,
 		timestampEnd: 0,
@@ -43,10 +45,13 @@
 	let aspect = readable(new Vec2(1, 1));
 	$: if (render) {
 		aspect = render.aspect;
+		// center camera
+		const scaleMin = Math.min(...shape.get(0));
+		parameters.transform = new Mat3().identity()
+				.scale(new Vec2(scaleMin, scaleMin))
+				.translate($aspect.clone().divide(-2))
 	}
 	
-	const info = board.info;
-	let shape = $info.shape;
 	$: [boardWidth, boardHeight] = shape.size();
 	
 	const templateStyle = new Image();
@@ -361,11 +366,13 @@
 
 		// if the viewport is larger than the bounds, prefer to center the camera
 		if (upper.x < lower.x) {
-			lower.x = upper.x = scale.x * $aspect.x / -2;
+			const center = (lower.x + upper.x) / 2;
+			lower.x = upper.x = center;
 		}
 
 		if (upper.y < lower.y) {
-			lower.y = upper.y = scale.y * $aspect.y / -2;
+			const center = (lower.y + upper.y) / 2;
+			lower.y = upper.y = center;
 		}
 
 		const base = new Vec2(
