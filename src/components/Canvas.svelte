@@ -189,6 +189,26 @@
 		spacing: number,
 		transform: Mat3,
 	} | undefined;
+	
+	const margin = {
+		scale: new Vec2(2, 2),
+		translate: new Vec2(1, 1),
+	};
+	
+	let padding: { scale: Vec2, translate: Vec2 };
+	$: if (shape.get(0).every(d => d === 1)) {
+		// allow canvases which hint at being able to view the entire board at
+		// once some more liberal scale values
+		padding = {
+			scale: new Vec2(2, 2),
+			translate: new Vec2(0.5, 0.5),
+		};
+	} else {
+		padding = {
+			scale: new Vec2(-2, -2),
+			translate: new Vec2(0.5, 0.5),
+		};
+	}
 
 	let lastGrabCenter = new Vec2(0,0);
 	let grabDistance = 0;
@@ -227,16 +247,14 @@
 		const scale = scaleOverflow(transformScale);
 		const translate = translateOverflow(transformTranslate, transformScale);
 		
-		const translateMargin = new Vec2(1, 1);
 		const overtranslateCompensation = new Vec2(
-			clampSmoothingInv(translate.overflow.x, translateMargin.x),
-			clampSmoothingInv(translate.overflow.y, translateMargin.y),
+			clampSmoothingInv(translate.overflow.x, margin.translate.x),
+			clampSmoothingInv(translate.overflow.y, margin.translate.y),
 		);
 		
-		const scaleMargin = new Vec2(2, 2);
 		const overscaleCompensation = new Vec2(
-			clampSmoothingInv(scale.overflow.x, scaleMargin.x),
-			clampSmoothingInv(scale.overflow.y, scaleMargin.y),
+			clampSmoothingInv(scale.overflow.x, margin.scale.x),
+			clampSmoothingInv(scale.overflow.y, margin.scale.y),
 		);
 		
 		// put camera back in bounds first
@@ -308,13 +326,16 @@
 	}
 	
 	function scaleOverflow(scale: Vec2) {
-		const scaleMax = new Vec2(boardWidth, boardHeight);
-		const scaleMin = new Vec2(...shape.get(0));
+		const BASE = 1.5;
+		
+		const scaledPadding = new Vec2(BASE ** padding.scale.x, BASE ** padding.scale.y);
+		const scaleMax = new Vec2(boardWidth, boardHeight).multiply(scaledPadding);
+		const scaleMin = new Vec2(...shape.get(0)).divide(scaledPadding);
 	
-		const scrollLog = Math.log(settings.input.scrollSensitivity);
-		// computes the log in scroll sensitivity base of the value
-		// this allows us to linearize the power scale used for scrolling
-		const l = (v: number) => Math.log(v) / scrollLog;
+		const logbase = Math.log(BASE);
+		// computes log in the base so that each increase by 1 in overflow is a
+		// equal in apparent size
+		const l = (v: number) => Math.log(v) / logbase;
 	
 		const overscale = new Vec2(
 			Math.max(0, l(scale.x) - l(scaleMax.x)),
@@ -343,8 +364,8 @@
 		let rightEdge = leftEdge + 2 - scale.x * $aspect.x;
 		let bottomEdge = topEdge + 2 - scale.y * $aspect.y;
 		return {
-			upper: new Vec2(leftEdge, topEdge),
-			lower: new Vec2(rightEdge, bottomEdge),
+			upper: new Vec2(leftEdge, topEdge).add(padding.translate),
+			lower: new Vec2(rightEdge, bottomEdge).sub(padding.translate),
 		};
 	}
 	
@@ -391,11 +412,9 @@
 		const baseScale = scale.base;
 		const overScale = scale.overflow;
 
-		const scaleMargin = new Vec2(2, 2);
-		
 		const overscaleScaled = new Vec2(
-			settings.input.scrollSensitivity ** clampSmoothing(overScale.x, scaleMargin.x),
-			settings.input.scrollSensitivity ** clampSmoothing(overScale.y, scaleMargin.y),
+			settings.input.scrollSensitivity ** clampSmoothing(overScale.x, margin.scale.x),
+			settings.input.scrollSensitivity ** clampSmoothing(overScale.y, margin.scale.y),
 		);
 
 		let finalScale;
@@ -416,12 +435,10 @@
 		const translate = translateOverflow(transformTranslate, finalScale);
 		const baseTranslate = translate.base;
 		const overTranslate = translate.overflow;
-		
-		const translateMargin = new Vec2(1, 1);
-		
+				
 		const overTranslateScaled = new Vec2(
-			clampSmoothing(overTranslate.x, translateMargin.x),
-			clampSmoothing(overTranslate.y, translateMargin.y),
+			clampSmoothing(overTranslate.x, margin.translate.x),
+			clampSmoothing(overTranslate.y, margin.translate.y),
 		);
 
 		const translateInverse = new Vec2(-1, -1).divide(finalScale)
@@ -593,12 +610,11 @@
 		let transformScale = new Vec2(transform[0], transform[4]);
 		
 		const bounds = translateBounds(transformScale);
-		const translateMargin = new Vec2(1, 1);
 		
-		const xMin = bounds.lower.x - translateMargin.x + 0.1;
-		const xMax = bounds.upper.x + translateMargin.x - 0.1;
-		const yMin = bounds.lower.y - translateMargin.y + 0.1;
-		const yMax = bounds.upper.y + translateMargin.y - 0.1;
+		const xMin = bounds.lower.x - margin.translate.x + 0.1;
+		const xMax = bounds.upper.x + margin.translate.x - 0.1;
+		const yMin = bounds.lower.y - margin.translate.y + 0.1;
+		const yMax = bounds.upper.y + margin.translate.y - 0.1;
 		
 		const newX = Math.max(xMin, Math.min(transform[6], yMax));
 		const newY = Math.max(yMin, Math.min(transform[7], yMax));
@@ -617,10 +633,9 @@
 		const scale = scaleOverflow(transformScale);
 		const translate = translateOverflow(transformTranslate, transformScale);
 		
-		const translateMargin = new Vec2(1, 1);
 		const overtranslateCompensation = new Vec2(
-			clampSmoothing(translate.overflow.x, translateMargin.x),
-			clampSmoothing(translate.overflow.y, translateMargin.y),
+			clampSmoothing(translate.overflow.x, margin.translate.x),
+			clampSmoothing(translate.overflow.y, margin.translate.y),
 		);
 		
 		const bounceForce = new Vec2(0, 0);
@@ -634,7 +649,7 @@
 		
 		const edgeFrictionRatio = settings.input.bounceStrength * 50;
 		if (overXEdge) {
-			const scaledCompensationX = overtranslateCompensation.x / translateMargin.x;
+			const scaledCompensationX = overtranslateCompensation.x / margin.translate.x;
 			friction.x *= Math.abs(scaledCompensationX) ** edgeFrictionRatio;
 			bounceForce.x = overtranslateCompensation.x / transformScale.x * settings.input.bounceStrength;
 		} else if (!movingX) {
@@ -642,7 +657,7 @@
 		}
 		
 		if (overYEdge) {
-			const scaledCompensationY = overtranslateCompensation.y / translateMargin.y;
+			const scaledCompensationY = overtranslateCompensation.y / margin.translate.y;
 			friction.y *= Math.abs(scaledCompensationY) ** edgeFrictionRatio;
 			bounceForce.y = overtranslateCompensation.y / transformScale.y * settings.input.bounceStrength;
 		} else if (!movingY) {
@@ -654,10 +669,9 @@
 		// apply drag
 		velocity.multiply(new Vec2(friction.x ** delta, friction.y ** delta));
 		
-		const scaleMargin = new Vec2(2, 2);
 		const overscaleCompensation = new Vec2(
-			clampSmoothing(scale.overflow.x, scaleMargin.x),
-			clampSmoothing(scale.overflow.y, scaleMargin.y),
+			clampSmoothing(scale.overflow.x, margin.scale.x),
+			clampSmoothing(scale.overflow.y, margin.scale.y),
 		);
 		
 		const overScaleX = Math.abs(overscaleCompensation.x) > 1e-3;
@@ -674,7 +688,7 @@
 		velocity.multiply(delta);
 		scaleVelocity.multiply(delta);
 		
-		const scaleTranslateBounceRatio = 10;
+		const scaleTranslateBounceRatio = 20;
 		const scaleVelocityMult = new Vec2(
 			(1 + settings.input.bounceStrength * scaleTranslateBounceRatio) ** scaleVelocity.x,
 			(1 + settings.input.bounceStrength * scaleTranslateBounceRatio) ** scaleVelocity.y,
