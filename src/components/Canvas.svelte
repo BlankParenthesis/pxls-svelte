@@ -25,6 +25,26 @@
 	const info = board.info;
 	let shape = $info.shape;
 	
+	const margin = {
+		scale: new Vec2(2, 2),
+		translate: new Vec2(1, 1),
+	};
+	
+	let padding: { scale: Vec2, translate: Vec2 };
+	if (shape.get(0).every(d => d === 1)) {
+		// allow canvases which hint at being able to view the entire board at
+		// once some more liberal scale values
+		padding = {
+			scale: new Vec2(0, 0),
+			translate: new Vec2(0.5, 0.5),
+		};
+	} else {
+		padding = {
+			scale: new Vec2(-2, -2),
+			translate: new Vec2(0.5, 0.5),
+		};
+	}
+	
 	$: overrides = settings.debug.render;
 	let parameters = {
 		transform: new Mat3().identity(),
@@ -43,14 +63,25 @@
 
 	let viewbox = ViewBox.default();
 	let aspect = readable(new Vec2(1, 1));
+	let lastAspect: Vec2;
 	$: if (render) {
 		aspect = render.aspect;
-		// center camera
-		const scaleMin = Math.min(...shape.get(0));
-		parameters.transform = new Mat3().identity()
-				.scale(new Vec2(scaleMin, scaleMin))
-				.translate($aspect.clone().divide(-2))
+		
+		aspect.subscribe(value => {
+			if (typeof lastAspect !== "undefined") {
+				// shift transform to be relative to new aspect so camera center 
+				// stays the same
+				parameters.transform[6] *= value.x / lastAspect.x;
+				parameters.transform[7] *= value.y / lastAspect.y;
+			}
+			lastAspect = value;
+		})
 	}
+	
+	// center camera
+	parameters.transform = new Mat3().identity()
+			.scale(scaleBounds().min)
+			.translate($aspect.clone().divide(-2))
 	
 	$: [boardWidth, boardHeight] = shape.size();
 	
@@ -189,26 +220,6 @@
 		spacing: number,
 		transform: Mat3,
 	} | undefined;
-	
-	const margin = {
-		scale: new Vec2(2, 2),
-		translate: new Vec2(1, 1),
-	};
-	
-	let padding: { scale: Vec2, translate: Vec2 };
-	$: if (shape.get(0).every(d => d === 1)) {
-		// allow canvases which hint at being able to view the entire board at
-		// once some more liberal scale values
-		padding = {
-			scale: new Vec2(2, 2),
-			translate: new Vec2(0.5, 0.5),
-		};
-	} else {
-		padding = {
-			scale: new Vec2(-2, -2),
-			translate: new Vec2(0.5, 0.5),
-		};
-	}
 
 	let lastGrabCenter = new Vec2(0,0);
 	let grabDistance = 0;
@@ -325,29 +336,34 @@
 		}
 	}
 	
-	function scaleOverflow(scale: Vec2) {
-		const BASE = 1.5;
-		
-		const scaledPadding = new Vec2(BASE ** padding.scale.x, BASE ** padding.scale.y);
-		const scaleMax = new Vec2(boardWidth, boardHeight).multiply(scaledPadding);
-		const scaleMin = new Vec2(...shape.get(0)).divide(scaledPadding);
+	const SCALE_BASE = 1.5;
 	
-		const logbase = Math.log(BASE);
+	function scaleBounds() {
+		const scaledPadding = new Vec2(SCALE_BASE ** padding.scale.x, SCALE_BASE ** padding.scale.y);
+		return {
+			min: new Vec2(...shape.get(0)).divide(scaledPadding),
+			max: new Vec2(boardWidth, boardHeight),
+		}
+	}
+	
+	function scaleOverflow(scale: Vec2) {
+		const logbase = Math.log(SCALE_BASE);
+		const bounds = scaleBounds();
 		// computes log in the base so that each increase by 1 in overflow is a
 		// equal in apparent size
 		const l = (v: number) => Math.log(v) / logbase;
 	
 		const overscale = new Vec2(
-			Math.max(0, l(scale.x) - l(scaleMax.x)),
-			Math.max(0, l(scale.y) - l(scaleMax.y)),
+			Math.max(0, l(scale.x) - l(bounds.max.x)),
+			Math.max(0, l(scale.y) - l(bounds.max.y)),
 		);
 		const underscale = new Vec2(
-			Math.max(0, l(scaleMin.x) - l(scale.x)),
-			Math.max(0, l(scaleMin.y) - l(scale.y)),
+			Math.max(0, l(bounds.min.x) - l(scale.x)),
+			Math.max(0, l(bounds.min.y) - l(scale.y)),
 		);
 		const base = new Vec2(
-			Math.max(scaleMin.x, Math.min(scale.x, scaleMax.x)),
-			Math.max(scaleMin.y, Math.min(scale.y, scaleMax.y)),
+			Math.max(bounds.min.x, Math.min(scale.x, bounds.max.x)),
+			Math.max(bounds.min.y, Math.min(scale.y, bounds.max.y)),
 		);
 	
 		const overflow = new Vec2(
