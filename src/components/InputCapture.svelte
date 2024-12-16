@@ -43,7 +43,7 @@
 		if (e.pointerType !== "touch") {
 			if (e.pressure > 0) {
 				if (typeof bounds !== "undefined") {
-					ondrag([eventToPoint(e)])
+					ondrag([eventToPoint(e)]);
 				}
 			}
 		}
@@ -56,7 +56,7 @@
 	on:pointercancel={oncancel}
 
 	on:touchmove={e => {
-		ondrag(Array.from(e.touches).map(touchToPoint))
+		ondrag(Array.from(e.touches).map(touchToPoint));
 	}}
 	on:touchend={e => {
 		if (e.touches.length === 0) {
@@ -81,7 +81,7 @@
 	on:pointermove={e => {
 		const target = document.elementFromPoint(e.pageX, e.pageY);
 		if (typeof bounds !== "undefined") {
-			onpoint(eventToPoint(e), target)
+			onpoint(eventToPoint(e), target);
 		}
 	}}
 	on:pointerleave

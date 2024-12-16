@@ -6,6 +6,7 @@
     import Time from "./Time.svelte";
     import LookupUser from "./LookupUser.svelte";
     import { onDestroy } from "svelte";
+    import { get } from "svelte/store";
 
 	export let board: Board;
 	export let state: AppState;
@@ -38,13 +39,13 @@
 		["hour", "hours"],
 		["minute", "minutes"],
 		["second", "seconds"],
-	]
+	];
 	const TIME_INTERVALS_NAMES_RELATIVE = [
 		["day ago", "days ago"],
 		["hour ago", "hours ago"],
 		["minute ago", "minutes ago"],
 		["second ago", "seconds ago"],
-	]
+	];
 	const TIME_INTERVALS = [
 		60 * 60 * 24,
 		60 * 60,
@@ -108,10 +109,10 @@
 						console.warn("TODO: placed at invalid location");
 					} else {
 						lookup = board.pixel(position);
-						await lookup;
+						await get(lookup);
 					}
 				},
-			}
+			};
 		}
 	}
 

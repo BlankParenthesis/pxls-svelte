@@ -11,7 +11,6 @@
     import Account from "./Account.svelte";
     import Tools from "./Tools.svelte";
     import Templates from "./Templates.svelte";
-    import type { Readable } from "svelte/store";
     import UserCount from "./UserCount.svelte";
 
 	export let settings: Settings;
@@ -28,12 +27,12 @@
 
 	const toggle = (panelMode: Panel) => {
 		return () => {
-			if (panel == panelMode) {
+			if (panel === panelMode) {
 				panel = Panel.None;
 			} else {
 				panel = panelMode;
 			}
-		}
+		};
 	};
 
 	enum Panel {
@@ -67,7 +66,7 @@
 				{#if loggedIn && access.has("users.current.get")}
 					<button 
 						class="switcher-button"
-						class:active={panel == Panel.Account}
+						class:active={panel === Panel.Account}
 						on:click={toggle(Panel.Account)}
 					>
 						<div class="icon large">👤</div>
@@ -79,7 +78,7 @@
 				<div></div>
 				<button
 					class="switcher-button"
-					class:active={panel == Panel.Place}
+					class:active={panel === Panel.Place}
 					disabled={!access.has("boards.pixels.post")}
 					on:click={toggle(Panel.Place)}
 				>
@@ -88,7 +87,7 @@
 				</button>
 				<button
 					class="switcher-button"
-					class:active={panel == Panel.Templates}
+					class:active={panel === Panel.Templates}
 					on:click={toggle(Panel.Templates)}
 				>
 					<div class="icon large">📐</div>
@@ -96,7 +95,7 @@
 				</button>
 				<button
 					class="switcher-button"
-					class:active={panel == Panel.Settings}
+					class:active={panel === Panel.Settings}
 					on:click={toggle(Panel.Settings)}
 				>
 					<div class="icon large">🔧</div>
@@ -104,9 +103,9 @@
 				</button>
 			</nav>
 			
-			{#if panel == Panel.Place}
+			{#if panel === Panel.Place}
 				<div class="drawer">
-					{#if panel == Panel.Place}
+					{#if panel === Panel.Place}
 						<Cooldown info={$info} cooldown={$cooldown} />
 						{#if access.has("boards.users")}
 							<UserCount count={board.userCount()} />
@@ -116,7 +115,7 @@
 				</div>
 			{/if}
 		</div>
-		{#if panel == Panel.Account}
+		{#if panel === Panel.Account}
 			<div class="glass left"></div>
 			<div class="center-center panel flex vertical">
 				{#await $currentUser}
@@ -129,17 +128,17 @@
 				{/await}
 			</div>
 			<div class="glass right"></div>
-		{:else if panel == Panel.Place}
+		{:else if panel === Panel.Place}
 			<div class="center-center cursor-transparent end">
 				<Tools {board} {access} bind:state bind:settings />
 			</div>
-		{:else if panel == Panel.Templates}
+		{:else if panel === Panel.Templates}
 			<div class="glass left"></div>
 			<div class="center-center panel">
 				<Templates bind:templates={state.templates} />
 			</div>
 			<div class="glass right"></div>
-		{:else if panel == Panel.Settings}
+		{:else if panel === Panel.Settings}
 			<div class="glass left"></div>
 			<div class="center-center panel">
 				<SettingsPanel bind:settings />

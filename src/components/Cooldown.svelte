@@ -13,7 +13,7 @@
 	export let info: BoardInfo;
 </script>
 <span>Pixels: {cooldown.pixelsAvailable} of {info.maxPixelsAvailable}</span>
-{#if typeof cooldown.nextTimestamp != "undefined"}
+{#if typeof cooldown.nextTimestamp !== "undefined"}
 	<time datetime={new Date(cooldown.nextTimestamp * 1000).toISOString()}>
 		{Math.ceil(cooldown.nextTimestamp - $now / 1000)}s
 	</time>

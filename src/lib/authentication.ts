@@ -189,7 +189,7 @@ export class Authentication {
 								return;
 							}
 							tokenStore.set(newToken);
-						} catch(e) {
+						} catch(_) {
 							tokenStore.reset();
 						}
 					}, wait);
@@ -284,16 +284,16 @@ export class Authentication {
 	}
 	
 	private static async challengeParams(challenge: string) {
-		if (crypto.hasOwnProperty("subtle")) {
+		if (Object.prototype.hasOwnProperty.call(crypto, "subtle")) {
 			return {
 				"code_challenge_method": "S256",
 				"code_challenge": await Authentication.encodeChallenge(challenge),
-			}
+			};
 		} else {
 			return {
 				"code_challenge_method": "plain",
 				"code_challenge": challenge,
-			}
+			};
 		}
 	}
 

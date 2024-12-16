@@ -26,7 +26,7 @@
 
 	$: if (canvas && width && height) {
 		canvas.setSize(width, height);
-		aspectwrite.set(canvas.getAspect())
+		aspectwrite.set(canvas.getAspect());
 	}
 	
 	export function paint() {
@@ -44,7 +44,7 @@
 		const i = get(info);
 		canvas = new Canvas(board, i.shape, i.palette, canvasElement, templateStyle);
 		canvas.onUpdate(() => paint());
-	})
+	});
 </script>
 <style>
 	canvas {

@@ -10,7 +10,7 @@
 	$: pointerDefined = typeof state.pointer !== "undefined";
 	$: placing = state.pointer?.type === "place";
 	$: selectedColor = (pointerDefined && placing)
-		/* @ts-ignore: Validated through the above checks */
+		/* @ts-expect-error: Validated through the above checks */
 		? state.pointer.selected
 		: undefined;
 
@@ -37,8 +37,8 @@
 					} else {
 						await board.place(position, index, state.adminOverrides);
 					}
-				}
-			}
+				},
+			};
 		}
 	}
 
@@ -118,12 +118,12 @@
 				<button
 					on:pointerdown={e => {
 						if (e.pointerType !== "touch") {
-							toggleColor(index)
+							toggleColor(index);
 						}
 					}}
 					on:pointerup={e => {
 						if (e.pointerType !== "touch") {
-							deselectColor()
+							deselectColor();
 						}
 					}}
 					on:touchstart={e => {

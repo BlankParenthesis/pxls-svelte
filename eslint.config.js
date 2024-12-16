@@ -12,15 +12,31 @@ let rules = {
 	"quotes": ["error", "double"],
 	"comma-dangle": ["error", "always-multiline"],
 	"semi": "error",
+	"no-unused-vars": "off",
 	"@typescript-eslint/require-await": "off",
 	"@typescript-eslint/no-unused-expressions": "warn",
-	"@typescript-eslint/no-unused-vars": "warn",
+	"@typescript-eslint/no-unused-vars": ["warn", {
+		"varsIgnorePattern": "^_",
+		"caughtErrorsIgnorePattern": "^_",
+		"destructuredArrayIgnorePattern": "^_",
+	}],
+	"svelte/valid-compile": "warn",
 };
 
 export default [
 	{ languageOptions: { globals: globals.browser } },
 	pluginJs.configs.recommended,
 	...tseslint.configs.recommended,
-	...svelte.configs.recommended,
+	...svelte.configs["flat/recommended"],
 	{ rules },
+	{
+		files: ["**/*.svelte"],
+		languageOptions: {
+			parserOptions: {
+				parser: tseslint.parser,
+				extraFileExtensions: [".svelte"],
+				svelteFeatures: { experimentalGenerics: true },
+			},
+		},
+	},
 ];

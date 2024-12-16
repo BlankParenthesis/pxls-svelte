@@ -75,13 +75,13 @@
 				parameters.transform[7] *= value.y / lastAspect.y;
 			}
 			lastAspect = value;
-		})
+		});
 	}
 	
 	// center camera
 	parameters.transform = new Mat3().identity()
-			.scale(scaleBounds().min)
-			.translate($aspect.clone().divide(-2))
+		.scale(scaleBounds().min)
+		.translate($aspect.clone().divide(-2));
 	
 	$: [boardWidth, boardHeight] = shape.size();
 	
@@ -131,8 +131,8 @@
 			dragVelocitySensitivity: 0.98,
 			dragVelocityFriction: 1 - 1 / 250,
 			bounceStrength: 1 / 5000,
-		}
-	}
+		},
+	};
 
 	let state: AppState = {
 		pointer: undefined,
@@ -142,7 +142,7 @@
 			cooldown: false,
 		},
 		templates: [],
-	}
+	};
 
 	let pointerOnBoard = false;
 	let pointerPosition = undefined as Vec2 | undefined;
@@ -233,7 +233,7 @@
 
 	function calculateCenter(points: Array<Vec2>) {
 		return points.reduce((acc, p) => acc.add(p), new Vec2())
-				.divide(points.length);
+			.divide(points.length);
 	}
 
 	function calculateSpacing(center: Vec2, points: Array<Vec2>) {
@@ -249,7 +249,7 @@
 			releaseBoard();
 		}
 		
-		let center = calculateCenter(points)
+		let center = calculateCenter(points);
 		let spacing = calculateSpacing(center, points);
 
 		const transform = new Mat3(...parameters.transform);
@@ -269,7 +269,7 @@
 		);
 		
 		// put camera back in bounds first
-		center.add(translate.overflow.clone().divide(2))
+		center.add(translate.overflow.clone().divide(2));
 		spacing *= settings.input.scrollSensitivity ** scale.overflow.x;
 		
 		// then apply the required offset to keep it in the same place
@@ -343,7 +343,7 @@
 		return {
 			min: new Vec2(...shape.get(0)).divide(scaledPadding),
 			max: new Vec2(boardWidth, boardHeight),
-		}
+		};
 	}
 	
 	function scaleOverflow(scale: Vec2) {
@@ -458,12 +458,12 @@
 		);
 
 		const translateInverse = new Vec2(-1, -1).divide(finalScale)
-			.multiply(transformTranslate)
+			.multiply(transformTranslate);
 
 		transform
 			.translate(translateInverse)
 			.translate(baseTranslate.divide(finalScale))
-			.translate(overTranslateScaled.divide(finalScale))
+			.translate(overTranslateScaled.divide(finalScale));
 
 		return transform;
 	}
@@ -542,14 +542,14 @@
 			// Fit a line to the distance / time data.
 			// A fling drag is close to a straight line (distance increases linearly with time)
 			// A drag + stop has a non-linear shape and therefor a lower correlation.
-			const { slope, intercept, correlation } = linearRegression(distanceByTime);
+			const { slope, correlation } = linearRegression(distanceByTime);
 			
 			if (correlation > settings.input.dragVelocitySensitivity) {
 				const transformScale = new Vec2(parameters.transform[0], parameters.transform[4]);
 				const difference = last.point.sub(first.point)
-						.normalize()
-						.multiply(slope) // slope is distance / time = velocity
-						.divide(transformScale);
+					.normalize()
+					.multiply(slope) // slope is distance / time = velocity
+					.divide(transformScale);
 				return difference;
 			}
 		}
@@ -567,7 +567,7 @@
 		if (typeof last !== "undefined") {
 			// add now to the vectors since we may have held the pointer still
 			// for a bit, which should could as a grab point.
-			grabVectors.push({ point: last.point, time: now })
+			grabVectors.push({ point: last.point, time: now });
 		}
 		trimGrabVectors(now);
 		velocity = calculateFling();
@@ -603,20 +603,20 @@
 		if (typeof grabAnchor === "undefined") {
 			grabBoard([
 				new Vec2(center.x - 1, center.y),
-				new Vec2(center.x + 1, center.y)
+				new Vec2(center.x + 1, center.y),
 			]);
 			updateGrab([
 				new Vec2(center.x - scale, center.y),
-				new Vec2(center.x + scale, center.y)
+				new Vec2(center.x + scale, center.y),
 			]);
-			scaleInstantDeferredRealease()
+			scaleInstantDeferredRealease();
 		} else {
 			grabAnchor.spacing /= scale;
 			updateGrab([
 				new Vec2(lastGrabCenter.x, lastGrabCenter.y),
 			]);
 			if(typeof siTimeout !== "undefined") {
-				scaleInstantDeferredRealease()
+				scaleInstantDeferredRealease();
 			}
 		}
 	}
@@ -632,7 +632,7 @@
 		const yMin = bounds.lower.y - margin.translate.y + 0.1;
 		const yMax = bounds.upper.y + margin.translate.y - 0.1;
 		
-		const newX = Math.max(xMin, Math.min(transform[6], yMax));
+		const newX = Math.max(xMin, Math.min(transform[6], xMax));
 		const newY = Math.max(yMin, Math.min(transform[7], yMax));
 		
 		if (parameters.transform[6] !== newX || parameters.transform[7] !== newY) {
@@ -711,9 +711,9 @@
 		);
 	
 		const origin = new Vec2(0.5, 0.5)
-				.scale(2)
-				.sub(new Vec2(1, 1))
-				.applyMatrix3(new Mat3(...parameters.transform).inverse());
+			.scale(2)
+			.sub(new Vec2(1, 1))
+			.applyMatrix3(new Mat3(...parameters.transform).inverse());
 
 		// apply velocities
 		parameters.transform
@@ -765,7 +765,7 @@
 	}}
 	oncancel={releaseBoard}
 	ondrop={(p, t) => {
-		if (t == render.getElement()) {
+		if (t === render.getElement()) {
 			if (canActivate()) {
 				setPointerPosition(p);
 				activatePointer();
@@ -803,7 +803,7 @@
 			grabBoard(Array.from(e.touches).map(t => new Vec2(
 				(t.pageX - rect.x) / rect.width,
 				(t.pageY - rect.y) / rect.height,
-			)))
+			)));
 		}}
 		on:touchend={e => {
 			if (e.touches.length === 0) {
