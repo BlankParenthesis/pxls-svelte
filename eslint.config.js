@@ -2,6 +2,7 @@ import globals from "globals";
 import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
 import svelte from "eslint-plugin-svelte";
+// TODO: look into sylistic and also add rules for consistent typscript delimiters
 
 let rules = {
 	"brace-style": "error",
