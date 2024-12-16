@@ -18,7 +18,7 @@ export class Pixel  {
 		access: Readable<Promise<Set<string>>>,
 		info: Readable<BoardInfo>,
 		sub: Parser<Reference<User>>,
-	): Parser<Pixel> {
+	): Parser<Pixel | undefined> {
 		let epoch = 0;
 		info.subscribe(i => epoch = i.createdAt.valueOf());
 		let canLookupUser = false;
@@ -38,6 +38,6 @@ export class Pixel  {
 				parsedUser = parsedReference?.get();
 			}
 			return new Pixel(position, color, modified, parsedUser);
-		}).parse;
+		}).or(z.undefined()).parse;
 	}
 }

@@ -98,7 +98,7 @@ export class Board {
 	public readonly cooldown: Readable<Cooldown>;
 
 	private readonly parsers: {
-		pixel: Parser<Pixel>,
+		pixel: Parser<Pixel | undefined>,
 		userCount: Parser<UserCount>,
 	};
 
@@ -286,6 +286,12 @@ export class Board {
 		if (typeof pixel === "undefined") {
 			throw new Error("assertion error: pixel cache should contain a value");
 		}
+		
+		if (typeof get(pixel) === "undefined") {
+			const parse = this.parsers.pixel(this.http);
+			pixel.set(this.http.get("pixels/" + location).then(parse));
+		}
+		
 		return pixel;
 	}
 	

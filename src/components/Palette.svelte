@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Vec2 } from "ogl";
 	import { Board } from "../lib/board/board";
-    import type { AppState } from "../lib/settings";
+    import { ActivationFinalizer, type AppState } from "../lib/settings";
 
 	export let board: Board;
 	export let state: AppState;
@@ -26,17 +26,31 @@
 			deselectColor();
 		} else {
 			movedDistance = 0;
+			const background = "#" + colorToHex(color.value);
 			state.pointer = {
 				type: "place",
 				quickActivate: true,
 				selected: index,
-				background: "#" + colorToHex(color.value),
-				async activate(position) {
+				background,
+				activate(position) {
+					let task: Promise<void>;
 					if (typeof position === "undefined") {
-						console.warn("TODO: placed at invalid location");
+						task = new Promise((_, err) => err("Invalid Location"));
 					} else {
-						await board.place(position, index, state.adminOverrides);
+						task = board.place(position, index, state.adminOverrides)
+							.then(success => {
+								if (!success) {
+									throw new Error("Placing failed");
+								}
+							});
 					}
+					return {
+						type: "place",
+						background,
+						position,
+						task,
+						finalizer: new ActivationFinalizer(),
+					};
 				},
 			};
 		}

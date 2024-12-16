@@ -2,7 +2,7 @@
     import type { Readable } from "svelte/store";
     import type { Board } from "../lib/board/board";
     import type { Pixel } from "../lib/pixel";
-    import type { AppState, Settings } from "../lib/settings";
+    import { ActivationFinalizer, type AppState, type Settings } from "../lib/settings";
     import Time from "./Time.svelte";
     import LookupUser from "./LookupUser.svelte";
     import { onDestroy } from "svelte";
@@ -104,13 +104,30 @@
 				type: "lookup",
 				quickActivate: false,
 				background: "transparent",
-				async activate(position) {
+				activate(position) {
+					let task: Promise<void>;
 					if (typeof position === "undefined") {
-						console.warn("TODO: placed at invalid location");
+						task = new Promise((_, err) => err("Invalid Location"));
 					} else {
 						lookup = board.pixel(position);
-						await get(lookup);
+						const pixel = get(lookup);
+						if (typeof pixel === "undefined") {
+							throw new Error("Assertion failed: pixel lookup was immediately invalid");
+						}
+						task = pixel.then(pixel => {
+							if (typeof pixel === "undefined") {
+								throw new Error("Placing failed");
+							}
+						});
 					}
+					
+					return {
+						type: "place",
+						background: "transparent",
+						position,
+						task,
+						finalizer: new ActivationFinalizer(),
+					};
 				},
 			};
 		}

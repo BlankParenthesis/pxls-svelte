@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Mat3, Vec2 } from "ogl";
-	import type { AppState, LookupPointer, PlacingPointer, Settings } from "../lib/settings";
+	import type { Activation, AppState, LookupPointer, PlacingPointer, Settings } from "../lib/settings";
 	import type { Board } from "../lib/board/board";
 	import { ViewBox, type RenderParameters } from "../lib/render/canvas";
     import type { Template } from "../lib/render/template";
@@ -11,6 +11,7 @@
     import { readable }  from "svelte/store";
     import Exact from "./layout/Exact.svelte";
     import InputCapture from "./InputCapture.svelte";
+    import Placement from "./Placement.svelte";
     import Ui from "./Ui.svelte";
     import type { Site } from "../lib/site";
     import templateStyleSource from "../assets/large_template_style.webp";
@@ -60,6 +61,7 @@
 	let innerHeight: number;
 	$: width = innerWidth;
 	$: height = innerHeight;
+	$: boardSize = new Vec2(width, height);
 
 	let viewbox = ViewBox.default();
 	let aspect = readable(new Vec2(1, 1));
@@ -155,17 +157,26 @@
 	function unsetPointer() {
 		state.pointer = undefined;
 	}
+	
+	let activationIndex = 0;
+	let activations = new Map<number, Activation>();
 
-	function activatePointer() {
+	async function activatePointer() {
 		if (typeof state.pointer !== "undefined") {
-			return state.pointer.activate(reticulePosition)
-				.then(() => {
-					if (state.pointer?.quickActivate) {
-						unsetPointer();
-					}
+			const index = activationIndex++;
+			const activation = state.pointer.activate(reticulePosition);
+			if (state.pointer?.quickActivate) {
+				unsetPointer();
+			}
+			activations.set(index, activation);
+			activations = activations;
+			activation.task
+				.then(() => activation.finalizer.finalize())
+				.catch(_ => activation.finalizer.error())
+				.finally(() => {
+					activations.delete(index);
+					activations = activations;
 				});
-		} else {
-			return new Promise(r => r(undefined));
 		}
 	}
 
@@ -846,13 +857,30 @@
 			<CanvasSpace
 				shape={$info.shape}
 				viewbox={viewbox}
-				boardSize={new Vec2(width, height)}
+				{boardSize}
 				position={reticulePosition}
 			>
 				<Reticule pointer={state.pointer} />
 			</CanvasSpace>
 		{/if}
 	{/if}
+	{#each activations as [index, activation] (index)}
+		{#if typeof activation.position !== "undefined"}
+			<CanvasSpace
+				shape={$info.shape}
+				viewbox={viewbox}
+				{boardSize}
+				position={activation.position}
+			>
+				{#if activation.type === "place"}
+					<Placement
+						color={activation.background}
+						finalizer={activation.finalizer.poll}
+					/>
+				{/if}
+			</CanvasSpace>
+		{/if}
+	{/each}
 	<Ui {site} {board} bind:state bind:settings />
 	{#if typeof state.pointer !== "undefined"}
 		{#if (!pointerOnBoard || typeof reticulePosition === "undefined")  && typeof pointerPosition !== "undefined"}
