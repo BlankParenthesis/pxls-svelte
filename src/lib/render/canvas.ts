@@ -146,7 +146,6 @@ export class Canvas {
 
 	setSize(newWidth: number, newHeight: number) {
 		if (this.gl.canvas.width !== newWidth || this.gl.canvas.height !== newHeight) {
-			// FIXME: this causes flicker? probably has to recreate view
 			this.renderer.setSize(newWidth, newHeight);
 			const screenScale = ratio(newWidth, newHeight);
 			const boardScale = ratio(...this.shape.size());

@@ -13,7 +13,7 @@
 	export let overrides: RendererOverrides;
 	export let parameters: RenderParameters;
 
-	export let width, height;
+	export let size: Vec2;
 	export let templateStyle: HTMLImageElement;
 
 	const aspectwrite = writable(new Vec2(1, 1));
@@ -23,10 +23,11 @@
 	export function getElement() {
 		return canvasElement;
 	}
-
-	$: if (canvas && width && height) {
-		canvas.setSize(width, height);
+	
+	$: if (canvas && size) {
+		canvas.setSize(size.x, size.y);
 		aspectwrite.set(canvas.getAspect());
+		paint();
 	}
 	
 	export function paint() {

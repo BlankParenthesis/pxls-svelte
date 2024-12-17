@@ -57,11 +57,7 @@
 
 	$: parameters.templates = state.templates;
 
-	let innerWidth: number;
-	let innerHeight: number;
-	$: width = innerWidth;
-	$: height = innerHeight;
-	$: boardSize = new Vec2(width, height);
+	let boardSize = new Vec2(1, 1);
 
 	let viewbox = ViewBox.default();
 	let aspect = readable(new Vec2(1, 1));
@@ -297,18 +293,16 @@
 		}
 	}
 
-	let lastWidth = width;
-	let lastHeight = height;
-	$: if (width && height) {
-		if (lastWidth !== width || lastHeight !== height) {
+	let lastSize = boardSize;
+	$: if (boardSize) {
+		if (!boardSize.equals(lastSize)) {
 			const origin = new Vec2(0.5, 0.5)
 				.scale(2)
 				.sub(new Vec2(1, 1))
 				.applyMatrix3(new Mat3(...parameters.transform).inverse());
 
 			parameters.transform = clampView(origin, parameters.transform);
-			lastWidth = width;
-			lastHeight = height;
+			lastSize = boardSize;
 		}
 	}
 
@@ -501,7 +495,6 @@
 		trimGrabVectors(now);
 		grabVectors.push({ point: center.clone(), time: now });
 
-		const boardSize = new Vec2(width, height);
 		const screenspaceCenter = center.clone().multiply(boardSize);
 		const screenspaceLastGrabCenter = lastGrabCenter.clone().multiply(boardSize);
 		grabDistance += screenspaceCenter.distance(screenspaceLastGrabCenter);
@@ -766,8 +759,10 @@
 	
 	onMount(paint);
 </script>
-<svelte:window bind:innerWidth bind:innerHeight />
 <InputCapture
+	onbounds={(bounds) => {
+		boardSize = new Vec2(bounds.width, bounds.height);
+	}}
 	ongrab={grabBoard}
 	ondrag={updateGrab}
 	onpoint={(p, target) => {
@@ -792,14 +787,13 @@
 		{board}
 		{parameters}
 		{overrides}
-		{width}
-		{height}
+		size={boardSize}
 		{templateStyle}
 		on:pointerenter={() => setPointerOnBoard(true)}
 		on:pointerleave={() => setPointerOnBoard(false)}
 		on:pointerdown={e => {
 			if (e.pointerType !== "touch") {
-				grabBoard([new Vec2(e.offsetX / width, e.offsetY / height)]);
+				grabBoard([new Vec2(e.offsetX, e.offsetY).divide(boardSize)]);
 			}
 		}}
 		on:pointerup={e => {
@@ -850,6 +844,7 @@
 
 			const zoom = settings.input.scrollSensitivity ** delta;
 			scaleInstant(zoom);
+			e.preventDefault();
 		}}
 	/>
 	{#if typeof state.pointer !== "undefined"}
@@ -885,8 +880,8 @@
 	{#if typeof state.pointer !== "undefined"}
 		{#if (!pointerOnBoard || typeof reticulePosition === "undefined")  && typeof pointerPosition !== "undefined"}
 			<Exact
-				x={pointerPosition.x * width - RETICULE_SIZE / 2}
-				y={pointerPosition.y * height - RETICULE_SIZE / 2}
+				x={pointerPosition.x * boardSize.x - RETICULE_SIZE / 2}
+				y={pointerPosition.y * boardSize.y - RETICULE_SIZE / 2}
 				width={RETICULE_SIZE}
 				height={RETICULE_SIZE}
 			>
