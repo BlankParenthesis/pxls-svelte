@@ -645,7 +645,17 @@
 		}
 	}
 	
-	function doPhysics(delta: number) {						
+	function doPhysics(delta: number) {
+		if (delta === 0) {
+			// NOTE: it may seem strange that we get a zero delta, but this 
+			// does happen not infrequently. I imagine this is because a reflow
+			// is triggered during an animation frame ans schedules a new one
+			// immedialty.
+			// One easy way to trigger this is seemingly something like toggling
+			// one of the panel buttons.
+			return;
+		}
+		
 		let transform = new Mat3(...parameters.transform);
 		let transformTranslate = new Vec2(transform[6], transform[7]);
 		let transformScale = new Vec2(transform[0], transform[4]);
