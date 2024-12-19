@@ -10,6 +10,7 @@
 .switcher {
 	gap: 0.25em;
 	padding: 0.25em;
+	touch-action: none;
 }
 
 .switcher-button {
@@ -32,7 +33,7 @@
 .drawer {
 	background: var(--drawer-background);
 	border: var(--drawer-border);
-	padding: 0.5em
+	touch-action: none;
 }
 
 .button {

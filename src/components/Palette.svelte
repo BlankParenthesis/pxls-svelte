@@ -2,6 +2,7 @@
     import { Vec2 } from "ogl";
 	import { Board } from "../lib/board/board";
     import { ActivationFinalizer, type AppState } from "../lib/settings";
+    import { linearRegression } from "../lib/util";
 
 	export let board: Board;
 	export let state: AppState;
@@ -71,8 +72,102 @@
 		return color.toString(16).padStart(8, "0");
 	}
 
+	let scrollRoot: HTMLElement;
+	let initialScrollPoint: {
+		pointer: Vec2,
+		scroll: Vec2,
+	} | undefined;
+	let recentScrollPoints = [] as Array<{
+		point: Vec2,
+		time: number,
+	}>;
+	let scrollVelocity = new Vec2(0, 0);
+	function beginScroll(pointer: Vec2) {
+		const scrollBounds = scrollRoot.getBoundingClientRect();
+		const maxScroll = new Vec2(
+			scrollRoot.scrollWidth - scrollBounds.width,
+			scrollRoot.scrollTop - scrollBounds.height,
+		);
+		const scroll = new Vec2(
+			scrollRoot.scrollLeft,
+			scrollRoot.scrollTop,
+		).divide(maxScroll);
+		initialScrollPoint = { pointer, scroll };
+		recentScrollPoints = [];
+		scrollVelocity.x = scrollVelocity.y = 0;
+	}
+	
+	function trimScrollPoints() {
+		const now = Date.now();
+		const recencyThreshold = now - 200;
+		const firstValidVector = recentScrollPoints.findIndex(v => v.time > recencyThreshold);
+		if (firstValidVector === -1) {
+			recentScrollPoints = [];
+		} else {
+			recentScrollPoints.splice(0, firstValidVector);
+		}
+	}
+	
+	function calculateScrollFling() {
+		const first = recentScrollPoints.shift();
+		const last = recentScrollPoints[recentScrollPoints.length - 1];
+		if (typeof first !== "undefined" && typeof last !== "undefined") {
+			const distanceByTime = recentScrollPoints.map(v => {
+				const distance = v.point.distance(first.point);
+				const time = v.time - first.time;
+				return [time, distance] as [number, number];
+			});
+			
+			// Fit a line to the distance / time data.
+			// A fling drag is close to a straight line (distance increases linearly with time)
+			// A drag + stop has a non-linear shape and therefor a lower correlation.
+			const { slope, correlation } = linearRegression(distanceByTime);
+			
+			if (correlation > 0.96) {
+				const difference = last.point.sub(first.point)
+					.normalize()
+					.multiply(slope); // slope is distance / time = velocity
+				return difference;
+			}
+		}
+
+		// Assume no velocity by default
+		return new Vec2(0, 0);
+	}
+	
+	function doScroll(point: Vec2) {
+		if (typeof scrollRoot !== "undefined" && typeof initialScrollPoint !== "undefined") {
+			const scrollBounds = scrollRoot.getBoundingClientRect();
+			const _containedHorizontal = scrollBounds.x <= point.x && scrollBounds.x + scrollBounds.width >= point.x;
+			const containedVertical = scrollBounds.y <= point.y && scrollBounds.y + scrollBounds.height >= point.y;
+			if (containedVertical) {
+				trimScrollPoints();
+				const time = Date.now();
+				recentScrollPoints.push({ time, point });
+				
+				const initialPoint = initialScrollPoint.pointer.clone();
+				const initialScroll = initialScrollPoint.scroll.clone();
+				const scrollDelta = initialPoint.sub(point);
+				const maxScroll = new Vec2(
+					scrollRoot.scrollWidth - scrollBounds.width,
+					scrollRoot.scrollTop - scrollBounds.height,
+				);
+				const initialScrollPixels = initialScroll.multiply(maxScroll);
+				scrollRoot.scrollLeft = initialScrollPixels.x + scrollDelta.x;
+				scrollRoot.scrollTop = initialScrollPixels.y + scrollDelta.y;
+				
+				if (Math.abs(scrollDelta.x) > 40) {
+					state.pointer = undefined;
+				}
+			} else {
+				stopScroll();
+			}
+		}
+	}
+	
 	function trackPointer(event: PointerEvent) {
 		movedDistance += Math.sqrt(event.movementX ** 2 + event.movementY ** 2);
+		doScroll(new Vec2(event.clientX, event.clientY));
 	}
 
 	let lastTouchPosition: Vec2 | undefined;
@@ -84,20 +179,71 @@
 				movedDistance += position.distance(lastTouchPosition);
 			}
 			lastTouchPosition = position;
+			doScroll(position);
 		} else {
 			movedDistance = Infinity;	
+		}
+	}
+	
+	function stopScroll() {
+		initialScrollPoint = undefined;
+		scrollVelocity = calculateScrollFling();
+		requestAnimationFrame(scrollPhysics);
+	}
+	
+	let lastTime: number | undefined;
+	function scrollPhysics(time: number) {
+		if (typeof lastTime === "undefined") {
+			lastTime = time;
+		}
+		const delta = time - lastTime;
+		
+		if (delta === 0) {
+			requestAnimationFrame(scrollPhysics);
+			return;
+		}
+		
+		if (scrollVelocity.x !== 0 || scrollVelocity.y !== 0) {
+			if (scrollRoot) {
+				scrollRoot.scrollLeft -= scrollVelocity.x * delta;
+				scrollRoot.scrollTop -= scrollVelocity.y * delta;
+			}
+			
+			// drag
+			scrollVelocity.multiply(0.997 ** delta);
+			
+			if (Math.abs(scrollVelocity.x) < 1e-6) {
+				scrollVelocity.x = 0;
+			}
+			
+			if (Math.abs(scrollVelocity.y) < 1e-6) {
+				scrollVelocity.y = 0;
+			}
+			
+			requestAnimationFrame(scrollPhysics);
+			lastTime = time;
+		} else {
+			lastTime = undefined;
 		}
 	}
 </script>
 <style>
 	ul {
 		margin: 0;
-		padding: 0;
+		padding: .75em;
 
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5em;
 		justify-content: center;
+		
+		flex-wrap: nowrap;
+		overflow-x: scroll;
+		justify-content: start;
+		
+		/* try to prevent the browser from scrolling the element while dragging */
+		touch-action: none;
+		user-select: none;
 	}
 
 	li {
@@ -105,8 +251,8 @@
 	}
 
 	.color {
-		width: 3em;
-		height: 3em;
+		width: 2.5em;
+		height: 2.5em;
 		box-sizing: border-box;
 		background-position: 0 0, 0 0, 50% 50%;
 		background-size: auto, 50% 50%, 50% 50%;
@@ -124,8 +270,34 @@
 		border-style: dashed;
 	}
 </style>
-<svelte:window on:pointermove={trackPointer} on:touchmove={trackTouch} />
-<ul>
+<svelte:window
+	on:pointermove={trackPointer}
+	on:pointerup={e => {
+		if (e.pointerType !== "touch") {
+			stopScroll();
+		}
+	}}
+	on:touchmove={trackTouch}
+	on:touchend={e => {
+		if (e.touches.length === 0) {
+			stopScroll();
+		}
+	}}
+/>
+<ul
+	on:pointerdown={e => {
+		if (e.pointerType !== "touch") {
+			beginScroll(new Vec2(e.clientX, e.clientY));
+		}
+	}}
+	on:touchstart={e => {
+		if (e.touches.length === 1) {
+			const touch = e.touches[0];
+			beginScroll(new Vec2(touch.pageX, touch.pageY));
+		}
+	}}
+	bind:this={scrollRoot}
+>
 	{#each $info.palette as [index, color]}
 		{#if !color.system_only || state.adminOverrides.color }
 			<li>

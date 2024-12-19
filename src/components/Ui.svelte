@@ -59,7 +59,7 @@
 		justify-content: end;
 	}
 </style>
-<Grid maxwidth="43em" maxheight="100%">
+<Grid maxwidth="53em" maxheight="100%">
 	{#await $access then access}
 		<div class="bottom-center flex vertical reverse panel">
 			<nav class="grid-5 switcher">
