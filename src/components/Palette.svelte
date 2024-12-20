@@ -57,8 +57,8 @@
 		}
 	}
 
+	const DISTANCE_THRESHOLD = 10;
 	function deselectColor() {
-		const DISTANCE_THRESHOLD = 10;
 		if (movedDistance > DISTANCE_THRESHOLD) {
 			state.pointer = undefined;
 		} else if (state.pointer?.quickActivate) {
@@ -303,6 +303,14 @@
 		{#if !color.system_only || state.adminOverrides.color }
 			<li>
 				<button
+					on:keydown={e => {
+						if ([" ", "Enter"].includes(e.key)) {
+							// A bit of a hack to prevent keyboard deselect from
+							// being blocked by the quick place mechanism
+							movedDistance = DISTANCE_THRESHOLD + 1;
+							toggleColor(index);
+						}
+					}}
 					on:pointerdown={e => {
 						if (e.pointerType !== "touch") {
 							toggleColor(index);
