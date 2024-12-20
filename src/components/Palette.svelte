@@ -297,6 +297,7 @@
 		}
 	}}
 	bind:this={scrollRoot}
+	tabindex="-1"
 >
 	{#each $info.palette as [index, color]}
 		{#if !color.system_only || state.adminOverrides.color }
