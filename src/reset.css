@@ -31,3 +31,10 @@ input, select {
 	padding: 0;
 	cursor: default;
 }
+
+/* styling this is so non standard, it's best not to even attempt */
+input[type="range"] {
+	appearance: auto;
+	/* some browsers behave poorly when swiping vertically */
+	touch-action: none;
+}

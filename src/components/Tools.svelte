@@ -40,6 +40,12 @@
 		["minute", "minutes"],
 		["second", "seconds"],
 	];
+	const TIME_INTERVALS_NAMES_SHORT = [
+		["day", "days"],
+		["hour", "hours"],
+		["min", "mins"],
+		["sec", "secs"],
+	];
 	const TIME_INTERVALS_NAMES_RELATIVE = [
 		["day ago", "days ago"],
 		["hour ago", "hours ago"],
@@ -63,18 +69,18 @@
 		return intervals;
 	}
 
-	function printDuration(duration: number): string {
+	function printDuration(duration: number, names = TIME_INTERVALS_NAMES): string {
 		const intervals = durationToTimeIntervals(duration)
-			.map((duration, i) => ({duration, names: TIME_INTERVALS_NAMES[i]}))
+			.map((duration, i) => ({duration, names: names[i]}))
 			.filter(({ duration }) => duration > 0)
 			.map(({ duration, names }) => `${duration} ${names[Math.min(duration - 1, names.length - 1)]}`);
 
 		return intervals[0] || "instant";
 	}
 
-	function printDurationRelative(duration: number): string {
+	function printDurationRelative(duration: number, names = TIME_INTERVALS_NAMES_RELATIVE): string {
 		const intervals = durationToTimeIntervals(duration)
-			.map((duration, i) => ({duration, names: TIME_INTERVALS_NAMES_RELATIVE[i]}))
+			.map((duration, i) => ({duration, names: names[i]}))
 			.filter(({ duration }) => duration > 0)
 			.map(({ duration, names }) => `${duration} ${names[Math.min(duration - 1, names.length - 1)]}`);
 
@@ -160,63 +166,73 @@
 		text-align: left;
 	}
 
-	.flipped {
-		direction: rtl;
-	}
-
 	.tool {
 		background: var(--tool-button-background);
-		border: 1px solid #222;
-		width: 4em;
-		height: 4em;
+	}
+	
+	.tool:hover {
+		background: var(--tool-button-hover-background);
 	}
 
 	.tool.active {
 		color: var(--tool-button-active-foreground);
 		background: var(--tool-button-active-background);
 	}
+	
+	.tool-group {
+		gap: 0.5em;
+		padding: 0.25em;
+	}
 </style>
 <div class="flex reverse space cursor-transparent">
-	<div class="user-tools flex align-bottom">
-		<div class="flex vertical group">
-			{#if lookup}
-				{#if $lookup}
-					<div class="lookup">
-						{#await $lookup }
-							Loading Pixel…
-						{:then pixel }
-							{#if typeof pixel === "undefined"}
-								Never placed
-							{:else}
-								<div>{$info.shape.indexArrayToCoordinates($info.shape.positionToIndexArray(pixel.position))}</div>
-								<Time time={pixel.modified} />
-
-								{#if typeof pixel.user !== "undefined"}
-									<LookupUser {access} user={pixel.user} />
-								{/if}
-							{/if}
-						{/await}
-					</div>
-				{:else}
-					<div class="lookup">
-						Outdated
-					</div>
-				{/if}
-			{/if}
-			{#if canLookup}
-				<button class="round tool" class:active={state.pointer?.type === "lookup"} on:click={setLookupPointer}>
+	<div class="user-tools tool-group flex align-bottom">
+		{#if canLookup}
+			<div class="flex vertical group reverse">
+				<button class="button tool" class:active={state.pointer?.type === "lookup"} on:click={setLookupPointer}>
 					<div class="icon large">🔍</div>
 					<small>Inspect</small>
 				</button>
-			{/if}
-		</div>
-		<div class="flex vertical group">
+				{#if lookup}
+					{#if $lookup}
+						<div class="lookup">
+							{#await $lookup }
+								Loading Pixel…
+							{:then pixel }
+								{#if typeof pixel === "undefined"}
+									Never placed
+								{:else}
+									<div>{$info.shape.indexArrayToCoordinates($info.shape.positionToIndexArray(pixel.position))}</div>
+									<Time time={pixel.modified} />
+	
+									{#if typeof pixel.user !== "undefined"}
+										<LookupUser {access} user={pixel.user} />
+									{/if}
+								{/if}
+							{/await}
+						</div>
+					{:else}
+						<div class="lookup">
+							Outdated
+						</div>
+					{/if}
+				{/if}
+			</div>
+		{/if}
+		<div class="flex vertical group reverse">
+			<button
+				class="button tool"
+				class:active={settings.heatmap.enabled}
+				on:click={() => settings.heatmap.enabled = !settings.heatmap.enabled}
+			>
+				<div class="icon large">🔥</div>
+				<small>Activity</small>
+			</button>
 			{#if settings.heatmap.enabled}
-				<label>
+				<!-- <label>
 					<span class="inline-label">Offset: {printDurationRelative(-settings.heatmap.position - 1)}</span>
 					<input
 						type="range"
-						class="flipped"
+						class="flipped vertical"
 						bind:value={offset}
 						on:keydown={e => {
 							// minus because we're flipped
@@ -230,11 +246,14 @@
 					/>
 					<datalist id="activity-offset-stops">
 					</datalist>
-				</label>
-				<label>
-					<span class="inline-label">Duration: {printDuration(settings.heatmap.duration)}</span>
+				</label> -->
+				<label class="flex vertical align-middle">
+					<small class="high-contrast">
+						{printDuration(settings.heatmap.duration, TIME_INTERVALS_NAMES_SHORT)}
+					</small>
 					<input
 						type="range"
+						class="vertical flipped"
 						bind:value={duration}
 						on:keydown={e => {
 							const newval = duration + manualStep(e);
@@ -254,35 +273,27 @@
 					</datalist>
 				</label>
 			{/if}
-			<button
-				class="round tool"
-				class:active={settings.heatmap.enabled}
-				on:click={() => settings.heatmap.enabled = !settings.heatmap.enabled}
-			>
-				<div class="icon large">👁️</div>
-				<small>Heatmap</small>
-			</button>
 		</div>
 	</div>
 	{#if hasAdminTool}
-		<div class="admin-tools flex wrap-reverse align-bottom">
+		<div class="admin-tools tool-group flex wrap-reverse align-bottom">
 			{#if canUseStaffColors}
 				<button
-					class="round tool"
+					class="button tool"
 					class:active={state.adminOverrides.color}
 					on:click={() => state.adminOverrides.color = !state.adminOverrides.color}
 				>Enable Admin Colors</button>
 			{/if}
 			{#if canIgnoreCooldown}
 				<button
-					class="round tool"
+					class="button tool"
 					class:active={state.adminOverrides.cooldown}
 					on:click={() => state.adminOverrides.cooldown = !state.adminOverrides.cooldown}
 				>Ignore Cooldown</button>
 			{/if}
 			{#if canIgnoreMask}
 				<button
-					class="round tool"
+					class="button tool"
 					class:active={state.adminOverrides.mask}
 					on:click={() => state.adminOverrides.mask = !state.adminOverrides.mask}
 				>Place Anywhere</button>

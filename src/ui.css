@@ -75,3 +75,37 @@ input[type="text"], input[type="number"] {
 	padding-top: 0.5em;
 	margin-top: 0.75em;
 }
+
+input[type="range"] {
+	margin: 0.25em;
+	width: 10em;
+	height: 1.5em;
+}
+
+input[type="range"].flipped {
+	direction: rtl;
+}
+
+input[type="range"].vertical {
+	writing-mode: vertical-lr;
+	width: 1.5em;
+	height: 10em;
+}
+
+input[type="range"].vertical.flipped {
+	writing-mode: vertical-rl;
+}
+
+
+.high-contrast {
+	color: var(--color-high-contrast);
+	text-shadow:
+		1px 1px 0 var(--color-high-contrast-outline),
+		-1px 1px 0 var(--color-high-contrast-outline),
+		-1px -1px 0 var(--color-high-contrast-outline),
+		1px -1px 0 var(--color-high-contrast-outline),
+		0px 1px 0 var(--color-high-contrast-outline),
+		0px -1px 0 var(--color-high-contrast-outline),
+		-1px 0px 0 var(--color-high-contrast-outline),
+		1px 0px 0 var(--color-high-contrast-outline);
+}
