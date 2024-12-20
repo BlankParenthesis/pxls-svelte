@@ -71,6 +71,21 @@
 	function colorToHex(color: number) {
 		return color.toString(16).padStart(8, "0");
 	}
+	
+	function maxScroll(): Vec2 {
+		const scrollBounds = scrollRoot.getBoundingClientRect();
+		return new Vec2(
+			scrollRoot.scrollWidth - scrollBounds.width,
+			scrollRoot.scrollTop - scrollBounds.height,
+		);
+	}
+	
+	function currentScroll(): Vec2 {
+		return new Vec2(
+			scrollRoot.scrollLeft,
+			scrollRoot.scrollTop,
+		).divide(maxScroll());
+	}
 
 	let scrollRoot: HTMLElement;
 	let initialScrollPoint: {
@@ -83,15 +98,7 @@
 	}>;
 	let scrollVelocity = new Vec2(0, 0);
 	function beginScroll(pointer: Vec2) {
-		const scrollBounds = scrollRoot.getBoundingClientRect();
-		const maxScroll = new Vec2(
-			scrollRoot.scrollWidth - scrollBounds.width,
-			scrollRoot.scrollTop - scrollBounds.height,
-		);
-		const scroll = new Vec2(
-			scrollRoot.scrollLeft,
-			scrollRoot.scrollTop,
-		).divide(maxScroll);
+		const scroll = currentScroll();
 		initialScrollPoint = { pointer, scroll };
 		recentScrollPoints = [];
 		scrollVelocity.x = scrollVelocity.y = 0;
@@ -99,7 +106,7 @@
 	
 	function trimScrollPoints() {
 		const now = Date.now();
-		const recencyThreshold = now - 200;
+		const recencyThreshold = now - 100;
 		const firstValidVector = recentScrollPoints.findIndex(v => v.time > recencyThreshold);
 		if (firstValidVector === -1) {
 			recentScrollPoints = [];
@@ -124,7 +131,7 @@
 			const { slope, correlation } = linearRegression(distanceByTime);
 			
 			if (correlation > 0.96) {
-				const difference = last.point.sub(first.point)
+				const difference = first.point.sub(last.point)
 					.normalize()
 					.multiply(slope); // slope is distance / time = velocity
 				return difference;
@@ -135,6 +142,7 @@
 		return new Vec2(0, 0);
 	}
 	
+	const SCROLL_DESELECT_THRESHOLD = 80;
 	function doScroll(point: Vec2) {
 		if (typeof scrollRoot !== "undefined" && typeof initialScrollPoint !== "undefined") {
 			const scrollBounds = scrollRoot.getBoundingClientRect();
@@ -156,10 +164,11 @@
 				scrollRoot.scrollLeft = initialScrollPixels.x + scrollDelta.x;
 				scrollRoot.scrollTop = initialScrollPixels.y + scrollDelta.y;
 				
-				if (Math.abs(scrollDelta.x) > 40) {
+				if (Math.abs(scrollDelta.x) > SCROLL_DESELECT_THRESHOLD) {
 					state.pointer = undefined;
 				}
 			} else {
+				recentScrollPoints = [];
 				stopScroll();
 			}
 		}
@@ -187,11 +196,13 @@
 	
 	function stopScroll() {
 		initialScrollPoint = undefined;
-		scrollVelocity = calculateScrollFling();
+		scrollVelocity = calculateScrollFling().divide(maxScroll());
+		scrollPosition = currentScroll();
 		requestAnimationFrame(scrollPhysics);
 	}
 	
 	let lastTime: number | undefined;
+	let scrollPosition: Vec2 | undefined;
 	function scrollPhysics(time: number) {
 		if (typeof lastTime === "undefined") {
 			lastTime = time;
@@ -204,13 +215,23 @@
 		}
 		
 		if (scrollVelocity.x !== 0 || scrollVelocity.y !== 0) {
-			if (scrollRoot) {
-				scrollRoot.scrollLeft -= scrollVelocity.x * delta;
-				scrollRoot.scrollTop -= scrollVelocity.y * delta;
+			if (scrollRoot && typeof scrollPosition !== "undefined") {
+				const max = maxScroll();
+				scrollPosition.add(scrollVelocity.clone().multiply(delta))
+				scrollRoot.scrollLeft = scrollPosition.x * max.x;
+				scrollRoot.scrollTop = scrollPosition.y * max.y;
+				
+				if (0 > scrollPosition.x || scrollPosition.x > 1) {
+					scrollVelocity.x = 0;
+				}
+				
+				if (0 > scrollPosition.y || scrollPosition.y > 1) {
+					scrollVelocity.y = 0;
+				}
 			}
 			
 			// drag
-			scrollVelocity.multiply(0.997 ** delta);
+			scrollVelocity.multiply(0.995 ** delta);
 			
 			if (Math.abs(scrollVelocity.x) < 1e-6) {
 				scrollVelocity.x = 0;
@@ -275,12 +296,25 @@
 	on:pointerup={e => {
 		if (e.pointerType !== "touch") {
 			stopScroll();
+			
+			if (state.pointer?.quickActivate) {
+				deselectColor();
+			}
 		}
 	}}
 	on:touchmove={trackTouch}
 	on:touchend={e => {
 		if (e.touches.length === 0) {
 			stopScroll();
+			
+			if (state.pointer?.quickActivate) {
+				// because target is retained for touchend events,
+				// we might be placing. If so, deselecting now would
+				// interrupt the place code as this has higher 
+				// precedence.
+				// Instead, run it the next event loop:
+				setTimeout(deselectColor, 0);
+			}
 		}
 	}}
 />
@@ -316,24 +350,9 @@
 							toggleColor(index);
 						}
 					}}
-					on:pointerup={e => {
-						if (e.pointerType !== "touch") {
-							deselectColor();
-						}
-					}}
 					on:touchstart={e => {
 						if (e.touches.length === 1) {
 							toggleColor(index);
-						}
-					}}
-					on:touchend={e => {
-						if (e.touches.length === 0) {
-							// because target is retained for touchend events,
-							// we might be placing. If so, deselecting now would
-							// interrupt the place code as this has higher 
-							// precedence.
-							// Instead, run it the next event loop:
-							setTimeout(deselectColor, 0);
 						}
 					}}
 					style="--color: #{colorToHex(color.value)}"
