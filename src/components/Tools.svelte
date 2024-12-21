@@ -1,12 +1,10 @@
 <script lang="ts">
-    import type { Readable } from "svelte/store";
-    import type { Board } from "../lib/board/board";
-    import type { Pixel } from "../lib/pixel";
-    import { ActivationFinalizer, type AppState, type Settings } from "../lib/settings";
-    import Time, { durationString, TIME_INTERVALS_NAMES_SHORT } from "./Time.svelte";
-    import LookupUser from "./LookupUser.svelte";
-    import { onDestroy } from "svelte";
-    import { get } from "svelte/store";
+	import type { Board } from "../lib/board/board";
+	import type { AppState, Settings } from "../lib/settings";
+	import { durationStringShort } from "./Time.svelte";
+	import { onDestroy } from "svelte";
+	import { get, writable } from "svelte/store";
+	import { ActivationFinalizer, type LookupData } from "../lib/pointer";
 
 	export let board: Board;
 	export let state: AppState;
@@ -49,6 +47,7 @@
 		}
 	}
 
+	let lastLookupDismisser: () => void | undefined;
 	function setLookupPointer() {
 		if (state.pointer?.type === "lookup") {
 			state.pointer = undefined;
@@ -56,27 +55,32 @@
 			state.pointer = {
 				type: "lookup",
 				quickActivate: false,
-				background: "transparent",
 				activate(position) {
-					let task: Promise<void>;
+					let task: Promise<LookupData>;
 					if (typeof position === "undefined") {
 						task = new Promise((_, err) => err("Invalid Location"));
 					} else {
-						lookup = board.pixel(position);
+						if (typeof lastLookupDismisser !== "undefined") {
+							lastLookupDismisser();
+						}
+						const dismissal = new Promise<void>(r => {
+							lastLookupDismisser = r;
+						});
+						const lookup = board.pixel(position);
 						const pixel = get(lookup);
 						if (typeof pixel === "undefined") {
 							throw new Error("Assertion failed: pixel lookup was immediately invalid");
 						}
-						task = pixel.then(pixel => {
-							if (typeof pixel === "undefined") {
-								throw new Error("Placing failed");
-							}
+						task = pixel.then(() => {
+							return {
+								dismissal,
+								lookup,
+							};
 						});
 					}
 					
 					return {
-						type: "place",
-						background: "transparent",
+						type: "lookup",
 						position,
 						task,
 						finalizer: new ActivationFinalizer(),
@@ -91,12 +95,12 @@
 	let offset = durationToValue(-settings.heatmap.position);
 	$: settings.heatmap.position = -valueToDuration(offset);
 
-	let lookup: Readable<Promise<Pixel | undefined> | undefined> | undefined;
-	let info = board.info;
-
 	onDestroy(() => {
 		if (state.pointer?.type === "lookup") {
 			state.pointer = undefined;
+		}
+		if (typeof lastLookupDismisser !== "undefined") {
+			lastLookupDismisser();
 		}
 	});
 </script>
@@ -139,30 +143,6 @@
 					<div class="icon large">🔍</div>
 					<small>Inspect</small>
 				</button>
-				{#if lookup}
-					{#if $lookup}
-						<div class="lookup">
-							{#await $lookup }
-								Loading Pixel…
-							{:then pixel }
-								{#if typeof pixel === "undefined"}
-									Never placed
-								{:else}
-									<div>{$info.shape.indexArrayToCoordinates($info.shape.positionToIndexArray(pixel.position))}</div>
-									<Time time={pixel.modified} />
-	
-									{#if typeof pixel.user !== "undefined"}
-										<LookupUser {access} user={pixel.user} />
-									{/if}
-								{/if}
-							{/await}
-						</div>
-					{:else}
-						<div class="lookup">
-							Outdated
-						</div>
-					{/if}
-				{/if}
 			</div>
 		{/if}
 		<div class="flex vertical group reverse">
@@ -196,7 +176,7 @@
 				</label> -->
 				<label class="flex vertical align-middle">
 					<small class="high-contrast">
-						{durationString(settings.heatmap.duration, TIME_INTERVALS_NAMES_SHORT)}
+						{durationStringShort(settings.heatmap.duration)}
 					</small>
 					<input
 						type="range"

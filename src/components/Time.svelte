@@ -5,27 +5,35 @@
 	setInterval(() => internalNow.set(Date.now()), 1000);
 	export const now = { subscribe: internalNow.subscribe } as Readable<number>;
 	export enum Mode {
-		Absolute,
+		Date,
+		Duration,
+		DurationShort,
 		Relative,
 	};
 	
-	export const TIME_INTERVALS_NAMES = [
-		["day", "days"],
-		["hour", "hours"],
-		["minute", "minutes"],
-		["second", "seconds"],
+	const TIME_INTERVALS_NAMES = [
+		["{} day", "{} days"],
+		["{} hour", "{} hours"],
+		["{} minute", "{} minutes"],
+		["{} second", "{} seconds"],
 	];
-	export const TIME_INTERVALS_NAMES_SHORT = [
-		["day", "days"],
-		["hour", "hours"],
-		["min", "mins"],
-		["sec", "secs"],
+	const TIME_INTERVALS_NAMES_SHORT = [
+		["{} day", "{} days"],
+		["{} hour", "{} hours"],
+		["{} min", "{} mins"],
+		["{} sec", "{} secs"],
 	];
-	export const TIME_INTERVALS_NAMES_RELATIVE = [
-		["day ago", "days ago"],
-		["hour ago", "hours ago"],
-		["minute ago", "minutes ago"],
-		["second ago", "seconds ago"],
+	const TIME_INTERVALS_NAMES_PAST = [
+		["{} day ago", "{} days ago"],
+		["{} hour ago", "{} hours ago"],
+		["{} minute ago", "{} minutes ago"],
+		["{} second ago", "{} seconds ago"],
+	];
+	const TIME_INTERVALS_NAMES_FUTURE = [
+		["in {} day", "in {} days"],
+		["in {} hour", "in {} hours"],
+		["in {} minute", "in {} minutes"],
+		["in {} second", "in {} seconds"],
 	];
 	const TIME_INTERVALS = [
 		60 * 60 * 24,
@@ -44,34 +52,42 @@
 		return intervals;
 	}
 
-	export function durationString(duration: number, names = TIME_INTERVALS_NAMES): string {
-		const intervals = durationToTimeIntervals(duration)
+	function durationStringsNamed(duration: number, names: Array<Array<string>>): Array<string> {
+		return durationToTimeIntervals(duration)
 			.map((duration, i) => ({duration, names: names[i]}))
 			.filter(({ duration }) => duration > 0)
-			.map(({ duration, names }) => `${duration} ${names[Math.min(duration - 1, names.length - 1)]}`);
-
-		return intervals[0] || "instant";
+			.map(({ duration, names }) => ({ duration, name: names[Math.min(duration - 1, names.length - 1)] }))
+			.map(({ duration, name }) => name.replace("{}", duration.toString()));
+	}
+	
+	export function durationString(duration: number) {
+		return durationStringsNamed(duration, TIME_INTERVALS_NAMES)[0] || "instant";
+	}
+	
+	export function durationStringShort(duration: number) {
+		return durationStringsNamed(duration, TIME_INTERVALS_NAMES_SHORT)[0] ||  "0s";
 	}
 
-	export function durationStringRelative(duration: number, names = TIME_INTERVALS_NAMES_RELATIVE): string {
-		const intervals = durationToTimeIntervals(duration)
-			.map((duration, i) => ({duration, names: names[i]}))
-			.filter(({ duration }) => duration > 0)
-			.map(({ duration, names }) => `${duration} ${names[Math.min(duration - 1, names.length - 1)]}`);
-
-		return intervals[0] || "now";
+	function timedifferenceStringRelative(difference: number): string {
+		const names = difference < 0 ? TIME_INTERVALS_NAMES_PAST : TIME_INTERVALS_NAMES_FUTURE;
+		return durationStringsNamed(Math.abs(difference), names)[0] || "now";
 	}
 </script>
 <script lang="ts">
 	export let time: Date;
-	export let mode: Mode = Mode.Absolute;
+	export let mode: Mode = Mode.Date;
 </script>
 <style>
 </style>
 <time datetime={time.toISOString()}>
-	{#if mode === Mode.Absolute}
+	{#if mode === Mode.Date}
 		{time.toLocaleDateString()}
-	{:else if mode === Mode.Relative}
+	{:else if mode === Mode.Duration}
 		{durationString(Math.ceil((time.valueOf() - $now) / 1000))}
+		{time.toLocaleDateString()}
+	{:else if mode === Mode.DurationShort}
+		{durationStringShort(Math.ceil((time.valueOf() - $now) / 1000))}
+	{:else if mode === Mode.Relative}
+		{timedifferenceStringRelative(Math.ceil((time.valueOf() - $now) / 1000))}
 	{/if}
 </time>

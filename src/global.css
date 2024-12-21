@@ -22,6 +22,10 @@ body > * {
 	pointer-events: initial;
 }
 
+.fully-cursor-transparent {
+	pointer-events: none !important;
+}
+
 .flex {
 	display: flex;
 }

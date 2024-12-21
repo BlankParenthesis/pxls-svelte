@@ -1,9 +1,11 @@
 <script lang="ts">
     import { Vec2 } from "ogl";
 	import { Board } from "../lib/board/board";
-    import { ActivationFinalizer, type AppState } from "../lib/settings";
+    import type { AppState } from "../lib/settings";
+    import { ActivationFinalizer } from "../lib/pointer";
     import { linearRegression } from "../lib/util";
     import { onDestroy } from "svelte";
+    import { Pixel } from "../lib/pixel";
 
 	export let board: Board;
 	export let state: AppState;
@@ -28,27 +30,30 @@
 			deselectColor();
 		} else {
 			movedDistance = 0;
-			const background = "#" + colorToHex(color.value);
+			const colorString = "#" + colorToHex(color.value);
 			state.pointer = {
 				type: "place",
 				quickActivate: true,
 				selected: index,
-				background,
+				color: colorString,
 				activate(position) {
-					let task: Promise<void>;
+					let task: Promise<Pixel>;
 					if (typeof position === "undefined") {
+						// TODO: this doesn't seem to error correctly
 						task = new Promise((_, err) => err("Invalid Location"));
 					} else {
 						task = board.place(position, index, state.adminOverrides)
-							.then(success => {
-								if (!success) {
+							.then(pixel => {
+								if (typeof pixel === "undefined") {
 									throw new Error("Placing failed");
+								} else {
+									return pixel;
 								}
 							});
 					}
 					return {
 						type: "place",
-						background,
+						color: colorString,
 						position,
 						task,
 						finalizer: new ActivationFinalizer(),

@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { Pixel } from "../lib/pixel";
+
 	export let color: string;
-	export let finalizer: Promise<() => void>;
+	export let finalizer: Promise<{ data: Pixel, complete: () => void}>;
 </script>
 <style>
 	.reticule {
@@ -46,7 +48,7 @@
 		class="reticule pending cursor-transparent"
 		style:background="{color}"
 	></div>
-{:then complete}
+{:then { complete }}
 	<div
 		class="reticule complete cursor-transparent"
 		on:animationend={complete}

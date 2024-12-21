@@ -11,7 +11,7 @@ export class Pixel  {
 		readonly position: number,
 		readonly color: number,
 		readonly modified: Date,
-		readonly user?: Readable<Promise<User>>,
+		readonly user?: Readable<Promise<User> | undefined>,
 	) {}
 
 	static parser(
@@ -31,7 +31,7 @@ export class Pixel  {
 		}).transform(({position, color, modified, user}) => {
 			const parse = sub(http);
 			const parsedReference = z.unknown().transform(parse).optional().parse(user);
-			let parsedUser: Readable<Promise<User>> | undefined;
+			let parsedUser: Readable<Promise<User> | undefined> | undefined;
 			if (canLookupUser) {
 				parsedUser = parsedReference?.fetch();
 			} else {

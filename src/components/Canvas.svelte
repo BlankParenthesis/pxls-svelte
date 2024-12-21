@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Mat3, Vec2 } from "ogl";
-	import type { Activation, AppState, LookupPointer, PlacingPointer, Settings } from "../lib/settings";
+	import type { AppState, Settings } from "../lib/settings";
+	import type { Activation, LookupPointer, PlacingPointer } from "../lib/pointer";
 	import type { Board } from "../lib/board/board";
 	import { ViewBox, type RenderParameters } from "../lib/render/canvas";
     import type { Template } from "../lib/render/template";
@@ -12,6 +13,7 @@
     import Exact from "./layout/Exact.svelte";
     import InputCapture from "./InputCapture.svelte";
     import Placement from "./Placement.svelte";
+    import Lookup from "./Lookup.svelte";
     import Ui from "./Ui.svelte";
     import type { Site } from "../lib/site";
     import templateStyleSource from "../assets/large_template_style.webp";
@@ -167,7 +169,7 @@
 			activations.set(index, activation);
 			activations = activations;
 			activation.task
-				.then(() => activation.finalizer.finalize())
+				.then(data => activation.finalizer.finalize(data))
 				.catch(_ => activation.finalizer.error())
 				.finally(() => {
 					activations.delete(index);
@@ -879,9 +881,11 @@
 			>
 				{#if activation.type === "place"}
 					<Placement
-						color={activation.background}
+						color={activation.color}
 						finalizer={activation.finalizer.poll}
 					/>
+				{:else if activation.type === "lookup"}
+					<Lookup finalizer={activation.finalizer.poll} />
 				{/if}
 			</CanvasSpace>
 		{/if}

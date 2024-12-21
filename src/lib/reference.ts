@@ -11,7 +11,7 @@ export class Reference<T> {
 		private readonly view?: T,
 	) {}
 
-	get(): Readable<Promise<T>> | undefined {
+	get(): Readable<Promise<T> | undefined> {
 		if (typeof this.view === "undefined") {
 			return this.cache.get(this.uri);
 		} else {
@@ -19,7 +19,7 @@ export class Reference<T> {
 		}
 	}
 
-	fetch(): Readable<Promise<T>> {
+	fetch(): Readable<Promise<T>| undefined> {
 		if (typeof this.view === "undefined") {
 			return this.cache.fetch(this.uri);
 		} else {

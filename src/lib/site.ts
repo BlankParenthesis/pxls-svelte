@@ -156,8 +156,8 @@ export class Site {
 					case "user-updated": 
 						packet.user.fetch();
 						break;
-					case "user-roles-updated": 
-						get(this.users.fetch(packet.user)).then(u => {
+					case "user-roles-updated":
+						get(this.users.fetch(packet.user))?.then(u => {
 							u.updateRoles();
 							return u;
 						});
@@ -175,9 +175,9 @@ export class Site {
 							get(packet.faction.fetch()),
 							get(this.currentUser()),
 						]).then(([member, faction, currentUser]) => {
-							if (member.user?.uri === currentUser.uri) {
-								faction.initCurrentMember(member);
-								get(currentUser.fetch()).then(u => {
+							if (member?.user?.uri === currentUser.uri) {
+								faction?.initCurrentMember(member);
+								get(currentUser.fetch())?.then(u => {
 									u.updatefactions();
 								});
 							}

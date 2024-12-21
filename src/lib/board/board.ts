@@ -10,6 +10,7 @@ import type { Site } from "../site";
 import { navigationState } from "../../components/Login.svelte";
 import type { Parser } from "../util";
 import { UserCount } from "../usercount";
+import { Pixel as PixelResponse } from "../pixel";
 
 type PlaceResult = boolean; // TODO: a bit more detail would be nice
 
@@ -314,7 +315,7 @@ export class Board {
 		return pixel;
 	}
 	
-	async place(position: number, color: number, overrides: AdminOverrides): Promise<PlaceResult> {
+	async place(position: number, color: number, overrides: AdminOverrides): Promise<PixelResponse | undefined> {
 		const extra = {} as { overrides?: AdminOverrides };
 
 		if (overrides.color || overrides.cooldown || overrides.mask) {
@@ -327,14 +328,15 @@ export class Board {
 		const currentColor = sector[sectorOffset];
 		
 		if (currentColor === color) { 
-			return false;
+			return undefined;
 		}
 		
 		try {
-			await this.http.post({ color, ...extra }, `pixels/${position}`);
-			return true;
+			const request = this.http.post({ color, ...extra }, `pixels/${position}`);
+			const parser = this.parsers.pixel(this.http);
+			return parser((await request).view);
 		} catch(_) {
-			return false;
+			return undefined;
 		}
 	}
 

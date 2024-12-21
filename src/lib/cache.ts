@@ -5,24 +5,29 @@ export class Cache<V, K = string> {
 		private readonly generate: (key: K) => V,
 	) {}
 
-	private readonly map: Map<K, Writable<V>> = new Map();
+	private readonly map: Map<K, Writable<V | undefined>> = new Map();
 
-	get(key: K): Readable<V> | undefined {
-		return this.map.get(key);
+	get(key: K): Readable<V | undefined> {
+		const value = this.map.get(key);
+		if (typeof value === "undefined") {
+			const newValue = writable(undefined);
+			this.map.set(key, newValue);
+			return newValue;
+		}
+		return value;
 	}
 
-	fetch(key: K): Readable<V> {
+	fetch(key: K): Readable<V | undefined> {
 		const value = this.map.get(key);
 		if (typeof value === "undefined") {
 			const newValue = writable(this.generate(key));
 			this.map.set(key, newValue);
 			return newValue;
-		} else {
-			return value;
 		}
+		return value;
 	}
 
-	update(key: K, updatedValue: V): Readable<V> {
+	update(key: K, updatedValue: V): Readable<V | undefined> {
 		const value = this.map.get(key);
 		if (typeof value === "undefined") {
 			const newValue = writable(updatedValue);

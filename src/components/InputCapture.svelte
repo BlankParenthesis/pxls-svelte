@@ -56,7 +56,7 @@
 	.stack > :global(*) {
 		position: absolute;
 		inset: 0;
-		overflow: hidden;
+		overflow: visible;
 	}
 </style>
 <svelte:window 

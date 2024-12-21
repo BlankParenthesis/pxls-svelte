@@ -17,6 +17,8 @@
 		--tool-button-active-background: #47a;
 		--color-high-contrast: #fff;
 		--color-high-contrast-outline: #000;
+		--bubble-color: #fff;
+		--bubble-background: #333;
 	}
 }
 
@@ -39,5 +41,7 @@
 		--tool-button-active-background: #47a;
 		--color-high-contrast: #fff;
 		--color-high-contrast-outline: #000;
+		--bubble-color: #000;
+		--bubble-background: #fff;
 	}
 }
