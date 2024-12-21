@@ -3,6 +3,7 @@
 	import { Board } from "../lib/board/board";
     import { ActivationFinalizer, type AppState } from "../lib/settings";
     import { linearRegression } from "../lib/util";
+    import { onDestroy } from "svelte";
 
 	export let board: Board;
 	export let state: AppState;
@@ -299,6 +300,12 @@
 			lastTime = undefined;
 		}
 	}
+	
+	onDestroy(() => {
+		if (state.pointer?.type === "place") {
+			state.pointer = undefined;
+		}
+	});
 </script>
 <style>
 	ul {
