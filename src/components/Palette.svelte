@@ -306,13 +306,16 @@
 		padding: .75em;
 
 		display: flex;
-		flex-wrap: wrap;
 		gap: 0.5em;
-		justify-content: center;
 		
 		flex-wrap: nowrap;
 		overflow-x: scroll;
 		justify-content: start;
+		/* 
+			Not massively supported, but decent support.
+			We can't just use "center" because this interacts poorly with overflow.
+		*/
+		justify-content: safe center;
 		
 		/* try to prevent the browser from scrolling the element while dragging */
 		touch-action: none;
