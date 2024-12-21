@@ -222,14 +222,13 @@
 	}
 
 	function trackTouch(event: TouchEvent) {
+		if (typeof initialDragPoint === "undefined") {
+			return;
+		}
 		if (event.touches.length === 1) {
 			const touch = event.touches[0];
 			const position = new Vec2(touch.pageX, touch.pageY);
-			if (typeof initialDragPoint === "undefined") {
-				beginDrag(position);
-			} else {
-				track(position);
-			}
+			track(position);
 		} else {
 			cancelDrag();
 		}
@@ -240,6 +239,7 @@
 		scrollVelocity = calculateScrollFling().divide(maxScroll());
 		scrollPosition = currentScroll();
 		requestAnimationFrame(scrollPhysics);
+		recentScrollPoints = [];
 		
 		if (state.pointer?.quickActivate) {
 			// because target is retained for touchend events,
@@ -253,6 +253,7 @@
 	
 	function cancelDrag() {
 		initialDragPoint = undefined;
+		recentScrollPoints = [];
 		
 		if (state.pointer?.quickActivate) {
 			deselectColor();
