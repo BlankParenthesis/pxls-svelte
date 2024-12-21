@@ -61,4 +61,5 @@
 	on:touchstart
 	on:touchend
 	on:wheel
+	on:contextmenu={e => e.preventDefault()}
 />
