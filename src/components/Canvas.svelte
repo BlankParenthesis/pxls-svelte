@@ -128,7 +128,7 @@
 		input: {
 			scrollSensitivity: 1.15,
 			dragVelocityAccumulation: 200,
-			dragVelocitySensitivity: 0.98,
+			dragVelocitySensitivity: 0.96,
 			dragVelocityFriction: 1 - 1 / 250,
 			bounceStrength: 1 / 5000,
 		},
