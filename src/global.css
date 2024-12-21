@@ -16,14 +16,17 @@ body > * {
 
 .cursor-transparent {
 	pointer-events: none;
+	user-select: none;
 }
 
 .cursor-transparent > :not(.cursor-transparent) {
 	pointer-events: initial;
+	user-select: initial;
 }
 
 .fully-cursor-transparent {
 	pointer-events: none !important;
+	user-select: none;
 }
 
 .flex {
@@ -99,7 +102,6 @@ body > * {
 .glass {
 	backdrop-filter: blur(1em);
 }
-
 
 .round {
 	border-radius: 50%;

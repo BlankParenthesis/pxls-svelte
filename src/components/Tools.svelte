@@ -3,7 +3,7 @@
 	import type { AppState, Settings } from "../lib/settings";
 	import { durationStringShort } from "./Time.svelte";
 	import { onDestroy } from "svelte";
-	import { get, writable } from "svelte/store";
+	import { get } from "svelte/store";
 	import { ActivationFinalizer, type LookupData } from "../lib/pointer";
 
 	export let board: Board;
@@ -136,7 +136,7 @@
 	}
 </style>
 <div class="flex reverse space cursor-transparent">
-	<div class="user-tools tool-group flex align-bottom">
+	<div class="user-tools tool-group flex align-bottom cursor-transparent">
 		{#if canLookup}
 			<div class="flex vertical group reverse">
 				<button class="button tool" class:active={state.pointer?.type === "lookup"} on:click={setLookupPointer}>
@@ -145,7 +145,7 @@
 				</button>
 			</div>
 		{/if}
-		<div class="flex vertical group reverse">
+		<div class="flex vertical group reverse cursor-transparent">
 			<button
 				class="button tool"
 				class:active={settings.heatmap.enabled}
@@ -174,8 +174,8 @@
 					<datalist id="activity-offset-stops">
 					</datalist>
 				</label> -->
-				<label class="flex vertical align-middle">
-					<small class="high-contrast">
+				<label class="flex vertical align-middle cursor-transparent">
+					<small class="high-contrast cursor-transparent">
 						{durationStringShort(settings.heatmap.duration)}
 					</small>
 					<input
@@ -203,7 +203,7 @@
 		</div>
 	</div>
 	{#if hasAdminTool}
-		<div class="admin-tools tool-group flex wrap-reverse align-bottom">
+		<div class="admin-tools tool-group flex wrap-reverse align-bottom cursor-transparent">
 			{#if canUseStaffColors}
 				<button
 					class="button tool"
