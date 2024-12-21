@@ -197,7 +197,7 @@
 		if (typeof initialDragPoint === "undefined") {
 			return;
 		}
-		movedDistance = initialDragPoint.point.distance(point);
+		movedDistance = Math.max(initialDragPoint.point.distance(point), movedDistance);
 		switch (dragState) {
 			case DragState.Undetermined:
 				dragState = newStateFromPointerDelta(
