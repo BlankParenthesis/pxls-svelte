@@ -2,7 +2,7 @@
     import type { Readable } from "svelte/store";
     import type { Role } from "../lib/role";
 
-	export let role: Readable<Promise<Role>>;
+	export let role: Readable<Promise<Role> | undefined>;
 </script>
 <style>
 	.role {
@@ -15,6 +15,10 @@
 	{#await $role}
 		Loading Role
 	{:then role}
-		{role.name}
+		{#if typeof role !== "undefined"}
+			{role.name}
+		{:else}
+			Error loading role
+		{/if}
 	{/await}
 </li>

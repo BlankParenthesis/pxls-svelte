@@ -14,8 +14,8 @@ export class Faction {
 		readonly size: number,
 	) {}
 
-	private currentMemberCache?: Readable<Promise<FactionMember | undefined>>;
-	async currentMember(): Promise<Readable<Promise<FactionMember | undefined>>> {
+	private currentMemberCache?: Readable<Promise<FactionMember | undefined> | undefined>;
+	async currentMember(): Promise<Readable<Promise<FactionMember | undefined> | undefined>> {
 		if (typeof this.currentMemberCache === "undefined") {
 			const parse = this.site.parsers.factionMemberReference(this.http);
 			// FIXME: handle 404
@@ -35,8 +35,8 @@ export class Faction {
 		}
 	}
 
-	private membersCache?: Writable<Promise<Array<Readable<Promise<FactionMember>>>>>;
-	members(): Readable<Promise<Array<Readable<Promise<FactionMember>>>>> {
+	private membersCache?: Writable<Promise<Array<Readable<Promise<FactionMember> | undefined>>>>;
+	members(): Readable<Promise<Array<Readable<Promise<FactionMember> | undefined>>>> {
 		if (typeof this.membersCache === "undefined") {
 			this.membersCache = writable(collect(this.fetchMembers()));
 		}
@@ -69,7 +69,7 @@ export class Faction {
 		}
 	}
 
-	async join(): Promise<Readable<Promise<FactionMember>>> {
+	async join(): Promise<Readable<Promise<FactionMember> | undefined>> {
 		const data = {
 			user: await get(this.site.currentUser()),
 			owner: false,

@@ -4,7 +4,7 @@
     import Time from "./Time.svelte";
     import FactionStatus from "./FactionStatus.svelte";
 
-	export let faction: Readable<Promise<Faction>>;
+	export let faction: Readable<Promise<Faction> | undefined>;
 </script>
 <style>
 	h5 {
@@ -16,21 +16,23 @@
 	{#await $faction}
 		Loading Role
 	{:then faction}
-		<div class="flex space">
-			<h5>{faction.name}</h5>
-			{#await faction.currentMember()}
-				<span>Loading Faction Members</span>
-			{:then member}
-				<FactionStatus {faction} {member} />
-			{/await}
-		</div>
-		<div class="flex space gap">
-			<span class="no-shrink">
-				Created <Time time={faction.createdAt} />
-			</span>
-			<span class="no-shrink">
-				{faction.size} Members
-			</span>
-		</div>
+		{#if typeof faction !== "undefined"}
+			<div class="flex space">
+				<h5>{faction.name}</h5>
+				{#await faction.currentMember()}
+					<span>Loading Faction Members</span>
+				{:then member}
+					<FactionStatus {faction} {member} />
+				{/await}
+			</div>
+			<div class="flex space gap">
+				<span class="no-shrink">
+					Created <Time time={faction.createdAt} />
+				</span>
+				<span class="no-shrink">
+					{faction.size} Members
+				</span>
+			</div>
+		{/if}
 	{/await}
 </li>

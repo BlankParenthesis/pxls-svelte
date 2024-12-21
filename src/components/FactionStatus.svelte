@@ -4,7 +4,7 @@
     import type { Faction } from "../lib/faction";
 
 	export let faction: Faction;
-	export let member: Readable<Promise<FactionMember | undefined>>;
+	export let member: Readable<Promise<FactionMember | undefined> | undefined>;
 </script>
 <style>
 </style>

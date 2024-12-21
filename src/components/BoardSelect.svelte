@@ -11,7 +11,9 @@
 {#await $board}
 	<h4>Loading Board Info…</h4>
 {:then board}
-	<h4>{board.name}</h4>
-	<p>Shape: {board.shape}<p/>
-	<button class="button" on:click="{() => dispatch("select", info)}">Connect</button>
+	{#if typeof board !== "undefined"}
+		<h4>{board.name}</h4>
+		<p>Shape: {board.shape}<p/>
+		<button class="button" on:click="{() => dispatch("select", info)}">Connect</button>
+	{/if}
 {/await}

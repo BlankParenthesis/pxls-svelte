@@ -15,8 +15,8 @@ export class User  {
 		readonly createdAt: Date,
 	) {}
 
-	private rolesCache?: Writable<Promise<Array<Readable<Promise<Role>>>>>;
-	roles(): Readable<Promise<Array<Readable<Promise<Role>>>>> {
+	private rolesCache?: Writable<Promise<Array<Readable<Promise<Role> | undefined>>>>;
+	roles(): Readable<Promise<Array<Readable<Promise<Role> | undefined>>>> {
 		if (typeof this.rolesCache === "undefined") {
 			this.rolesCache = writable(collect(this.fetchRoles()));
 		}
@@ -49,8 +49,8 @@ export class User  {
 		}
 	}
 
-	private factionsCache?: Writable<Promise<Array<Readable<Promise<Faction>>>>>;
-	factions(): Readable<Promise<Array<Readable<Promise<Faction>>>>> {
+	private factionsCache?: Writable<Promise<Array<Readable<Promise<Faction> | undefined>>>>;
+	factions(): Readable<Promise<Array<Readable<Promise<Faction> | undefined>>>> {
 		if (typeof this.factionsCache === "undefined") {
 			this.factionsCache = writable(collect(this.fetchFactions()));
 		}
