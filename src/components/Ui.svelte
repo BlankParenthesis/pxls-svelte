@@ -6,12 +6,13 @@
     import type { Board } from "../lib/board/board";
     import type { Site } from "../lib/site";
 	import type { AppState } from "../lib/settings";
-    import Cooldown from "./Cooldown.svelte";
+    import Time, { Mode as TimeMode } from "./Time.svelte";
     import SettingsPanel from "./Settings.svelte";
     import Account from "./Account.svelte";
     import Tools from "./Tools.svelte";
     import Templates from "./Templates.svelte";
-    import UserCount from "./UserCount.svelte";
+    import Pixelstack from "./Pixelstack.svelte";
+    import Ticker, { Mode as TickerMode }from "./Ticker.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
@@ -50,7 +51,7 @@
 <style>
 	.grid-5 {
 		display: grid;
-		grid-template-columns: 3fr 3fr 2fr 3fr 3fr;
+		grid-template-columns: 3fr 3fr minmax(5em, 2fr) 3fr 3fr;
 	}
 
 	.end {
@@ -76,15 +77,36 @@
 					<Login {auth} />
 				{/if}
 				<div></div>
-				<button
-					class="switcher-button"
-					class:active={panel === Panel.Place}
-					disabled={!access.has("boards.pixels.post")}
-					on:click={toggle(Panel.Place)}
-				>
-					<div class="icon large">🎨</div>
-					<small>Palette</small>
-				</button>
+				{#if access.has("boards.pixels.post")} 
+					<button
+						class="switcher-button"
+						class:active={panel === Panel.Place}
+						on:click={toggle(Panel.Place)}
+					>
+						{#if $cooldown.pixelsAvailable > 0}
+							<div class="icon large">🖌️</div>
+							<small>
+								<Pixelstack
+									count={$cooldown.pixelsAvailable}
+									max={$info.maxPixelsAvailable}
+								/>
+							</small>
+						{:else if typeof $cooldown.nextTimestamp !== "undefined"}
+							<div class="icon large"><Ticker mode={TickerMode.Clock}/></div>
+							<small>
+								<Time
+									time={$cooldown.nextTimestamp}
+									mode={TimeMode.Relative}
+								/>
+							</small>
+						{/if}
+					</button>
+				{:else}
+					<button class="switcher-button" disabled={true}>
+						<div class="icon large">🔒</div>
+						<small>Login to Play</small>
+					</button>
+				{/if}
 				<button
 					class="switcher-button"
 					class:active={panel === Panel.Templates}
@@ -105,13 +127,7 @@
 			
 			{#if panel === Panel.Place}
 				<div class="drawer">
-					{#if panel === Panel.Place}
-						<Cooldown info={$info} cooldown={$cooldown} />
-						{#if access.has("boards.users")}
-							<UserCount count={board.userCount()} />
-						{/if}
-						<Palette bind:state {board} />
-					{/if}
+					<Palette bind:state {board} />
 				</div>
 			{/if}
 		</div>

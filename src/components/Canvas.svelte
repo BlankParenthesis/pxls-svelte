@@ -6,7 +6,7 @@
     import type { Template } from "../lib/render/template";
 	import Render from "./Render.svelte";
     import Reticule from "./Reticule.svelte";
-    import { now } from "./Cooldown.svelte";
+    import { now } from "./Time.svelte";
     import CanvasSpace from "./CanvasSpace.svelte";
     import { readable }  from "svelte/store";
     import Exact from "./layout/Exact.svelte";

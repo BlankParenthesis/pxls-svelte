@@ -15,18 +15,23 @@ type PlaceResult = boolean; // TODO: a bit more detail would be nice
 
 const HeaderNumber = z.number().int().min(0);
 
-const Cooldown = z.object({
+const HeaderCooldown = z.object({
 	"pxls-pixels-available": z.string()
 		.transform(s => HeaderNumber.parse(parseInt(s)))
 		.optional(),
 	"pxls-next-available": z.string()
 		.transform(s => HeaderNumber.parse(parseInt(s)))
+		.transform(s => new Date(s * 1000))
 		.optional(),
 }).transform(h => ({
 	pixelsAvailable: h["pxls-pixels-available"],
 	nextTimestamp: h["pxls-next-available"],
 }));
-export type Cooldown = z.infer<typeof Cooldown>;
+export type HeaderCooldown = z.infer<typeof HeaderCooldown>;
+export type Cooldown = {
+	pixelsAvailable: number,
+	nextTimestamp: Date | undefined,
+}
 
 export class Board {
 	private listeners = {
@@ -78,10 +83,22 @@ export class Board {
 		const parser = BoardInfo.parser();
 		const parse = parser(http);
 
-		const { cooldown, info } = await http.getRaw().then(async r => ({
-			cooldown: writable(Cooldown.parse(Object.fromEntries(r.headers.entries()))),
-			info: writable(parse(await r.json())),
-		}));
+		const { cooldown, info } = await http.getRaw().then(async r => {
+			const headerCooldown = HeaderCooldown.parse(Object.fromEntries(r.headers.entries()));
+			if (typeof headerCooldown.pixelsAvailable === "undefined") {
+				console.debug(r);
+			}
+			const cooldown = {
+				pixelsAvailable: typeof headerCooldown.pixelsAvailable === "undefined"
+					? 0
+					: headerCooldown.pixelsAvailable,
+				nextTimestamp: headerCooldown.nextTimestamp,
+			} as Cooldown;
+			return {
+				cooldown: writable(cooldown),
+				info: writable(parse(await r.json())),
+			};
+		});
 
 		if (typeof socket !== "undefined") {
 			socket = await http.socket("events", events);
@@ -131,7 +148,9 @@ export class Board {
 		this.onUpdate(u => this.update(u));
 		this.onPixelsAvailable(p => this.cooldownStore.set({
 			pixelsAvailable: p.count,
-			nextTimestamp: p.next,
+			nextTimestamp: typeof p.next === "undefined"
+				? undefined
+				: new Date(p.next * 1000),
 		}));
 
 		for (const event of missedEvents) {

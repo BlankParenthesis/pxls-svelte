@@ -3,7 +3,7 @@
     import type { Board } from "../lib/board/board";
     import type { Pixel } from "../lib/pixel";
     import { ActivationFinalizer, type AppState, type Settings } from "../lib/settings";
-    import Time from "./Time.svelte";
+    import Time, { durationString, TIME_INTERVALS_NAMES_SHORT } from "./Time.svelte";
     import LookupUser from "./LookupUser.svelte";
     import { onDestroy } from "svelte";
     import { get } from "svelte/store";
@@ -32,59 +32,6 @@
 
 	function durationToValue(duration: number) {
 		return Math.pow((duration - 1) / DURATION_COEFFICIENT, 1 / DURATION_POWER);
-	}
-
-	const TIME_INTERVALS_NAMES = [
-		["day", "days"],
-		["hour", "hours"],
-		["minute", "minutes"],
-		["second", "seconds"],
-	];
-	const TIME_INTERVALS_NAMES_SHORT = [
-		["day", "days"],
-		["hour", "hours"],
-		["min", "mins"],
-		["sec", "secs"],
-	];
-	const TIME_INTERVALS_NAMES_RELATIVE = [
-		["day ago", "days ago"],
-		["hour ago", "hours ago"],
-		["minute ago", "minutes ago"],
-		["second ago", "seconds ago"],
-	];
-	const TIME_INTERVALS = [
-		60 * 60 * 24,
-		60 * 60,
-		60,
-		1,
-	];
-	function durationToTimeIntervals(duration: number) {
-		const intervals = [0, 0, 0, 0] as [number, number, number, number];
-
-		for (let i = 0; i < TIME_INTERVALS.length; i++) {
-			intervals[i] = Math.floor(duration / TIME_INTERVALS[i]);
-			duration -= intervals[i] * TIME_INTERVALS[i];
-		}
-
-		return intervals;
-	}
-
-	function printDuration(duration: number, names = TIME_INTERVALS_NAMES): string {
-		const intervals = durationToTimeIntervals(duration)
-			.map((duration, i) => ({duration, names: names[i]}))
-			.filter(({ duration }) => duration > 0)
-			.map(({ duration, names }) => `${duration} ${names[Math.min(duration - 1, names.length - 1)]}`);
-
-		return intervals[0] || "instant";
-	}
-
-	function printDurationRelative(duration: number, names = TIME_INTERVALS_NAMES_RELATIVE): string {
-		const intervals = durationToTimeIntervals(duration)
-			.map((duration, i) => ({duration, names: names[i]}))
-			.filter(({ duration }) => duration > 0)
-			.map(({ duration, names }) => `${duration} ${names[Math.min(duration - 1, names.length - 1)]}`);
-
-		return intervals[0] || "now";
 	}
 
 	function manualStep(event: KeyboardEvent): number {
@@ -249,7 +196,7 @@
 				</label> -->
 				<label class="flex vertical align-middle">
 					<small class="high-contrast">
-						{printDuration(settings.heatmap.duration, TIME_INTERVALS_NAMES_SHORT)}
+						{durationString(settings.heatmap.duration, TIME_INTERVALS_NAMES_SHORT)}
 					</small>
 					<input
 						type="range"
