@@ -88,8 +88,8 @@
 	}
 
 	let scrollRoot: HTMLElement;
-	let initialScrollPoint: {
-		pointer: Vec2,
+	let initialDragPoint: {
+		point: Vec2,
 		scroll: Vec2,
 	} | undefined;
 	let recentScrollPoints = [] as Array<{
@@ -97,11 +97,12 @@
 		time: number,
 	}>;
 	let scrollVelocity = new Vec2(0, 0);
-	function beginScroll(pointer: Vec2) {
+	function beginDrag(pointer: Vec2) {
 		const scroll = currentScroll();
-		initialScrollPoint = { pointer, scroll };
+		initialDragPoint = { point: pointer, scroll };
 		recentScrollPoints = [];
 		scrollVelocity.x = scrollVelocity.y = 0;
+		dragState = DragState.Undetermined;
 	}
 	
 	function trimScrollPoints() {
@@ -142,63 +143,114 @@
 		return new Vec2(0, 0);
 	}
 	
-	const SCROLL_DESELECT_THRESHOLD = 80;
 	function doScroll(point: Vec2) {
-		if (typeof scrollRoot !== "undefined" && typeof initialScrollPoint !== "undefined") {
-			const scrollBounds = scrollRoot.getBoundingClientRect();
-			const _containedHorizontal = scrollBounds.x <= point.x && scrollBounds.x + scrollBounds.width >= point.x;
-			const containedVertical = scrollBounds.y <= point.y && scrollBounds.y + scrollBounds.height >= point.y;
-			if (containedVertical) {
-				trimScrollPoints();
-				const time = Date.now();
-				recentScrollPoints.push({ time, point });
-				
-				const initialPoint = initialScrollPoint.pointer.clone();
-				const initialScroll = initialScrollPoint.scroll.clone();
-				const scrollDelta = initialPoint.sub(point);
-				const maxScroll = new Vec2(
-					scrollRoot.scrollWidth - scrollBounds.width,
-					scrollRoot.scrollTop - scrollBounds.height,
+		if (typeof scrollRoot !== "undefined" && typeof initialDragPoint !== "undefined") {
+			trimScrollPoints();
+			const time = Date.now();
+			recentScrollPoints.push({ time, point });
+			
+			const initialPoint = initialDragPoint.point.clone();
+			const initialScroll = initialDragPoint.scroll.clone();
+			const scrollDelta = initialPoint.sub(point);
+			const initialScrollPixels = initialScroll.multiply(maxScroll());
+			scrollRoot.scrollLeft = initialScrollPixels.x + scrollDelta.x;
+			scrollRoot.scrollTop = initialScrollPixels.y + scrollDelta.y;
+		}
+	}
+	
+	// how much difference there must be to decide between scrolling and placing.
+	const STATE_DECISION_THRESHOLD = 10;
+	// how much a scrolling action should be preferred to a placing one
+	const SCROLL_TRESHOLD_BIAS = 1 / 3;
+	function newStateFromPointerDelta(delta: Vec2) {
+		// horizontal movement favors scrolling
+		const movementScroll = Math.abs(delta.x);
+		// vertical movement favors placing
+		const movementPlace = Math.abs(delta.y/ SCROLL_TRESHOLD_BIAS);
+		// a measurement of how much scroll movement there is compared to place.
+		// positive values indicate a scroll movement and negative indicate place movement.
+		const ratio = movementScroll - movementPlace; 
+		if (ratio > STATE_DECISION_THRESHOLD) {
+			return DragState.Scroll;
+		} else if (-ratio > STATE_DECISION_THRESHOLD) {
+			return DragState.Place;
+		} else {
+			return DragState.Undetermined;
+		}
+	}
+	
+	enum DragState {
+		Undetermined,
+		Scroll,
+		Place,
+	}
+	
+	let dragState = DragState.Undetermined;
+	
+	function track(point: Vec2) {
+		if (typeof initialDragPoint === "undefined") {
+			return;
+		}
+		movedDistance = initialDragPoint.point.distance(point);
+		switch (dragState) {
+			case DragState.Undetermined:
+				dragState = newStateFromPointerDelta(
+					initialDragPoint.point.clone().sub(point),
 				);
-				const initialScrollPixels = initialScroll.multiply(maxScroll);
-				scrollRoot.scrollLeft = initialScrollPixels.x + scrollDelta.x;
-				scrollRoot.scrollTop = initialScrollPixels.y + scrollDelta.y;
-				
-				if (Math.abs(scrollDelta.x) > SCROLL_DESELECT_THRESHOLD) {
-					state.pointer = undefined;
+				if (dragState === DragState.Scroll) {
+					// force the deselect
+					movedDistance = Infinity;
+					deselectColor();
 				}
-			} else {
-				recentScrollPoints = [];
-				stopScroll();
-			}
+				break;
+			case DragState.Scroll:
+				doScroll(point);
+				break;
+			case DragState.Place:
+				break;
 		}
 	}
 	
 	function trackPointer(event: PointerEvent) {
-		movedDistance += Math.sqrt(event.movementX ** 2 + event.movementY ** 2);
-		doScroll(new Vec2(event.clientX, event.clientY));
+		track(new Vec2(event.clientX, event.clientY));
 	}
 
-	let lastTouchPosition: Vec2 | undefined;
 	function trackTouch(event: TouchEvent) {
 		if (event.touches.length === 1) {
 			const touch = event.touches[0];
 			const position = new Vec2(touch.pageX, touch.pageY);
-			if (typeof lastTouchPosition !== "undefined") {
-				movedDistance += position.distance(lastTouchPosition);
+			if (typeof initialDragPoint === "undefined") {
+				beginDrag(position);
+			} else {
+				track(position);
 			}
-			lastTouchPosition = position;
-			doScroll(position);
 		} else {
-			movedDistance = Infinity;	
+			cancelDrag();
 		}
 	}
 	
-	function stopScroll() {
-		initialScrollPoint = undefined;
+	function stopDrag() {
+		initialDragPoint = undefined;
 		scrollVelocity = calculateScrollFling().divide(maxScroll());
 		scrollPosition = currentScroll();
 		requestAnimationFrame(scrollPhysics);
+		
+		if (state.pointer?.quickActivate) {
+			// because target is retained for touchend events,
+			// we might be placing. If so, deselecting now would
+			// interrupt the place code as this has higher 
+			// precedence.
+			// Instead, run it the next event loop:
+			setTimeout(deselectColor, 0);
+		}
+	}
+	
+	function cancelDrag() {
+		initialDragPoint = undefined;
+		
+		if (state.pointer?.quickActivate) {
+			deselectColor();
+		}
 	}
 	
 	let lastTime: number | undefined;
@@ -217,7 +269,7 @@
 		if (scrollVelocity.x !== 0 || scrollVelocity.y !== 0) {
 			if (scrollRoot && typeof scrollPosition !== "undefined") {
 				const max = maxScroll();
-				scrollPosition.add(scrollVelocity.clone().multiply(delta))
+				scrollPosition.add(scrollVelocity.clone().multiply(delta));
 				scrollRoot.scrollLeft = scrollPosition.x * max.x;
 				scrollRoot.scrollTop = scrollPosition.y * max.y;
 				
@@ -295,39 +347,26 @@
 	on:pointermove={trackPointer}
 	on:pointerup={e => {
 		if (e.pointerType !== "touch") {
-			stopScroll();
-			
-			if (state.pointer?.quickActivate) {
-				deselectColor();
-			}
+			stopDrag();
 		}
 	}}
 	on:touchmove={trackTouch}
 	on:touchend={e => {
 		if (e.touches.length === 0) {
-			stopScroll();
-			
-			if (state.pointer?.quickActivate) {
-				// because target is retained for touchend events,
-				// we might be placing. If so, deselecting now would
-				// interrupt the place code as this has higher 
-				// precedence.
-				// Instead, run it the next event loop:
-				setTimeout(deselectColor, 0);
-			}
+			stopDrag();
 		}
 	}}
 />
 <ul
 	on:pointerdown={e => {
 		if (e.pointerType !== "touch") {
-			beginScroll(new Vec2(e.clientX, e.clientY));
+			beginDrag(new Vec2(e.clientX, e.clientY));
 		}
 	}}
 	on:touchstart={e => {
 		if (e.touches.length === 1) {
 			const touch = e.touches[0];
-			beginScroll(new Vec2(touch.pageX, touch.pageY));
+			beginDrag(new Vec2(touch.clientX, touch.clientY));
 		}
 	}}
 	bind:this={scrollRoot}
@@ -341,7 +380,7 @@
 						if ([" ", "Enter"].includes(e.key)) {
 							// A bit of a hack to prevent keyboard deselect from
 							// being blocked by the quick place mechanism
-							movedDistance = DISTANCE_THRESHOLD + 1;
+							movedDistance = Infinity;
 							toggleColor(index);
 						}
 					}}
