@@ -12,7 +12,7 @@ export class Role {
 		return (http: Requester) => z.object({
 			"name": z.string(),
 			"icon": z.string().optional(),
-		}).transform(({ name, icon}) => {
+		}).transform(({ name, icon }) => {
 			return new Role(name, icon);
 		}).parse;
 	}

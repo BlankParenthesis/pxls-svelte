@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type { Readable } from "svelte/store";
-    import type { User } from "../lib/user";
+	import type { Readable } from "svelte/store";
+	import type { User } from "../lib/user";
 
 	export let user: Readable<Promise<User> | undefined>;
 </script>

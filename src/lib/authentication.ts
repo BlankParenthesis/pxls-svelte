@@ -10,8 +10,8 @@ export const SiteAuthUnverified = z.object({
 });
 export type SiteAuthUnverified = z.infer<typeof SiteAuthUnverified>;
 type SiteAuth = {
-	issuer: string,
-	client_id: string,
+	issuer: string;
+	client_id: string;
 };
 
 const OpenIDConfig = z.object({
@@ -128,18 +128,18 @@ export class Authentication {
 			// this is needed because query would leak secrets to the client host
 			throw new Error("Fragment authentication response not supported");
 		}
-	
+
 		const tokenStore = persistentWritable("token", TokenStorage.parse);
 		const defaultState = { state: "", challenge: "" };
 		const stateStore = persistentWritable("loginstate", StateStorage.parse, defaultState);
-		
+
 		const authentication = new Authentication(
 			config as SiteAuth,
 			openid,
 			tokenStore,
 			stateStore,
 		);
-	
+
 		const login = Authentication.takeReturnedFragment();
 		if (typeof login === "undefined") {
 			const token = get(tokenStore);
@@ -149,7 +149,7 @@ export class Authentication {
 				} else {
 					try {
 						tokenStore.set(await authentication.refreshToken(token.refresh_token));
-					} catch(e) {
+					} catch (e) {
 						console.warn("Unable to use refresh token", e);
 						tokenStore.reset();
 					}
@@ -162,22 +162,22 @@ export class Authentication {
 				tokenStore.set(await authentication.fetchToken(login));
 			}
 		}
-		
+
 		let tokenRefresh: number | undefined;
 		let cancelationNumber = 0;
 
-		tokenStore.subscribe(token => {
+		tokenStore.subscribe((token) => {
 			if (typeof token !== "undefined") {
 				// milliseconds until 30s before token expires
 				const wait = token.expiry - Date.now() - 30000;
-	
+
 				if (wait < 0) {
 					// this shouldn't happen, but it does
 					console.warn("token already expired");
 				}
 
 				clearTimeout(tokenRefresh);
-	
+
 				if (typeof token.refresh_token !== "undefined") {
 					tokenRefresh = setTimeout(async () => {
 						cancelationNumber += 1;
@@ -189,7 +189,7 @@ export class Authentication {
 								return;
 							}
 							tokenStore.set(newToken);
-						} catch(_) {
+						} catch (_) {
 							tokenStore.reset();
 						}
 					}, wait);
@@ -199,7 +199,7 @@ export class Authentication {
 				}
 			}
 		});
-		
+
 		return authentication;
 	}
 
@@ -221,7 +221,7 @@ export class Authentication {
 				"client_id": this.config.client_id,
 				"redirect_uri": document.location.origin + document.location.pathname,
 				...params,
-			}).map(([k ,v]) => `${k}=${encodeURIComponent(v)}`).join("&"),
+			}).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&"),
 		};
 	}
 
@@ -282,7 +282,7 @@ export class Authentication {
 		const bytes = new Uint8Array(sha256);
 		return base64urlsafe(bytes);
 	}
-	
+
 	private static async challengeParams(challenge: string) {
 		if (Object.prototype.hasOwnProperty.call(crypto, "subtle")) {
 			return {
@@ -298,13 +298,13 @@ export class Authentication {
 	}
 
 	public async generateLoginUrl(): Promise<URL> {
-		const state: StateStorage =  {
+		const state: StateStorage = {
 			challenge: randomString(64),
 			state: randomString(),
 		};
 
 		this.stateStore.set(state);
-		
+
 		const location = this.openid.authorization_endpoint;
 		// TODO: if we have an old token, we can pass that as id_token_hint and
 		// set prompt = none to possibly bypass authentication.
@@ -321,7 +321,7 @@ export class Authentication {
 		const query = Object.entries(params)
 			.map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
 			.join("&");
-		
+
 		return new URL(`${location}?${query}`);
 	}
 

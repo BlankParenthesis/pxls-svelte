@@ -68,7 +68,7 @@ export class TemplateProgram extends Program implements Instanceable {
 		});
 
 		styleImage.onload = () => templateStyle.image = styleImage;
-	
+
 		super(gl, {
 			vertex: QUAD_VERTEX_SHADER,
 			fragment: TEMPLATE_FRAGMENT_SHADER,
@@ -76,7 +76,7 @@ export class TemplateProgram extends Program implements Instanceable {
 		});
 
 		this.setBlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.SRC_ALPHA, gl.DST_ALPHA);
-	
+
 		this.uniforms = {
 			uView: { value: new Mat3().identity() },
 			uAspect: { value: new Vec2(0, 0) },

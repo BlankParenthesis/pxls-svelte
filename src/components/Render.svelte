@@ -3,8 +3,8 @@
 	import { get, writable, type Readable } from "svelte/store";
 	import type { Board } from "../lib/board/board";
 	import { Canvas, ViewBox, type RenderParameters } from "../lib/render/canvas";
-    import { type RendererOverrides } from "../lib/settings";
-    import { Vec2 } from "ogl";
+	import { type RendererOverrides } from "../lib/settings";
+	import { Vec2 } from "ogl";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
@@ -23,13 +23,13 @@
 	export function getElement() {
 		return canvasElement;
 	}
-	
+
 	$: if (canvas && size) {
 		canvas.setSize(size.x, size.y);
 		aspectwrite.set(canvas.getAspect());
 		paint();
 	}
-	
+
 	export function paint() {
 		if (canvas) {
 			return canvas.render(parameters, overrides);
@@ -37,7 +37,7 @@
 			return ViewBox.default();
 		}
 	}
-	
+
 	const info = board.info;
 
 	onMount(async () => {

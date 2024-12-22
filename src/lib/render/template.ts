@@ -5,7 +5,7 @@ import { updateAttribute } from "../util";
 
 let mesh: Mesh | undefined;
 let program: ConversionProgram | undefined;
-function scene(gl: OGLRenderingContext): { mesh: Mesh, program: ConversionProgram } {
+function scene(gl: OGLRenderingContext): { mesh: Mesh; program: ConversionProgram } {
 	if (typeof program === "undefined" || program.gl !== gl) {
 		program = new ConversionProgram(gl);
 	}
@@ -27,7 +27,7 @@ export class Template {
 	private processed?: RenderTarget;
 
 	private readonly image: HTMLImageElement;
-	
+
 	private currentWidth: number;
 	private currentHeight: number;
 	private currentConversion: Conversion;
@@ -64,6 +64,7 @@ export class Template {
 			this.image.src = value;
 		}
 	}
+
 	get url(): string {
 		return this.image.src;
 	}
@@ -72,6 +73,7 @@ export class Template {
 		this.currentWidth = value;
 		this.processed = undefined;
 	}
+
 	get width(): number {
 		return this.currentWidth;
 	}
@@ -80,6 +82,7 @@ export class Template {
 		this.currentHeight = value;
 		this.processed = undefined;
 	}
+
 	get height(): number {
 		if (this.currentHeight === 0) {
 			return this.currentWidth / this.image.width * this.image.height;
@@ -92,6 +95,7 @@ export class Template {
 		this.currentConversion = value;
 		this.processed = undefined;
 	}
+
 	get conversion(): Conversion {
 		return this.currentConversion;
 	}
@@ -137,7 +141,7 @@ export class Template {
 
 			renderer.render({ scene: mesh, target: this.processed });
 		}
-			
+
 		return this.processed.texture;
 	}
 }

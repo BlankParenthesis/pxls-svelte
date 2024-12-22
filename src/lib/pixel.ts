@@ -6,7 +6,7 @@ import type { Requester } from "./requester";
 import type { Reference } from "./reference";
 import type { BoardInfo } from "./board/info";
 
-export class Pixel  {
+export class Pixel {
 	constructor(
 		readonly position: number,
 		readonly color: number,
@@ -28,7 +28,7 @@ export class Pixel  {
 			color: z.number().int().min(0),
 			modified: z.number().int().min(0).transform(pixel => new Date(epoch + pixel * 1000)),
 			user: z.unknown(),
-		}).transform(({position, color, modified, user}) => {
+		}).transform(({ position, color, modified, user }) => {
 			const parse = sub(http);
 			const parsedReference = z.unknown().transform(parse).optional().parse(user);
 			let parsedUser: Readable<Promise<User> | undefined> | undefined;

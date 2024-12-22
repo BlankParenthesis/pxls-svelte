@@ -1,8 +1,8 @@
 <script lang="ts">
-    import type { Readable } from "svelte/store";
-    import type { Faction } from "../lib/faction";
-    import Time from "./Time.svelte";
-    import FactionStatus from "./FactionStatus.svelte";
+	import type { Readable } from "svelte/store";
+	import type { Faction } from "../lib/faction";
+	import Time from "./Time.svelte";
+	import FactionStatus from "./FactionStatus.svelte";
 
 	export let faction: Readable<Promise<Faction> | undefined>;
 </script>

@@ -10,7 +10,7 @@
 		DurationShort,
 		Relative,
 	};
-	
+
 	const TIME_INTERVALS_NAMES = [
 		["{} day", "{} days"],
 		["{} hour", "{} hours"],
@@ -54,18 +54,18 @@
 
 	function durationStringsNamed(duration: number, names: Array<Array<string>>): Array<string> {
 		return durationToTimeIntervals(duration)
-			.map((duration, i) => ({duration, names: names[i]}))
+			.map((duration, i) => ({ duration, names: names[i] }))
 			.filter(({ duration }) => duration > 0)
 			.map(({ duration, names }) => ({ duration, name: names[Math.min(duration - 1, names.length - 1)] }))
 			.map(({ duration, name }) => name.replace("{}", duration.toString()));
 	}
-	
+
 	export function durationString(duration: number) {
 		return durationStringsNamed(duration, TIME_INTERVALS_NAMES)[0] || "instant";
 	}
-	
+
 	export function durationStringShort(duration: number) {
-		return durationStringsNamed(duration, TIME_INTERVALS_NAMES_SHORT)[0] ||  "0s";
+		return durationStringsNamed(duration, TIME_INTERVALS_NAMES_SHORT)[0] || "0s";
 	}
 
 	function timedifferenceStringRelative(difference: number): string {

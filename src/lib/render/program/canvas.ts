@@ -79,7 +79,6 @@ export class CanvasProgram extends Program implements Instanceable {
 	declare public readonly uniforms: CanvasUniforms;
 	public readonly maxParallelism: number;
 
-
 	constructor(gl: OGLRenderingContext) {
 		// We want to render 4 tiles at once, each has 2 textures:
 		// - the color indices

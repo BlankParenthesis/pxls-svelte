@@ -1,14 +1,14 @@
 import { z } from "zod";
 
 export const ShapeParser = z.array(z.array(z.number()).length(2)).min(1)
-	.transform(s => {
-		if (s.length === 0) {
+	.transform((shape) => {
+		if (shape.length === 0) {
 			throw new Error("Degenerate board shape");
-		} else if (s.length === 1) {
+		} else if (shape.length === 1) {
 			console.warn("Server gave an invalid shape");
-			return new Shape([[1,1], s[0] as [number, number]]);
+			return new Shape([[1, 1], shape[0] as [number, number]]);
 		} else {
-			return new Shape(s as Array<[number, number]>);
+			return new Shape(shape as Array<[number, number]>);
 		}
 	});
 
@@ -32,17 +32,17 @@ export class MergeInstructions {
 		const width = bytesPer * this.size[0];
 		const height = this.size[1];
 		const buffer = new Uint8Array(width * height);
-		
+
 		const sectorWidth = bytesPer * this.sectorSize[0];
 		const sectorHeight = this.sectorSize[1];
 		const sectorSize = sectorWidth * sectorHeight;
 		const sectorsX = width / sectorWidth;
-		
+
 		const firstSector = this.positions[0];
-		
-		const sectors8 = is8 ?
-			(sectors as Uint8Array[]) :
-			(sectors as Uint32Array[]).map(s => new Uint8Array(s.buffer));
+
+		const sectors8 = is8
+			? (sectors as Uint8Array[])
+			: (sectors as Uint32Array[]).map(s => new Uint8Array(s.buffer));
 
 		for (let position = 0; position < sectors.length; position++) {
 			const relativePosition = this.positions[position] - firstSector;
@@ -50,7 +50,7 @@ export class MergeInstructions {
 			const y = Math.floor(relativePosition / sectorsX);
 			const start = x * sectorWidth + y * sectorSize * sectorsX;
 			const sector = sectors8[relativePosition];
-			
+
 			for (let y = 0; y < sectorHeight; y++) {
 				const sliceStart = y * sectorWidth;
 				buffer.set(
@@ -66,8 +66,6 @@ export class MergeInstructions {
 
 export class Shape {
 	readonly depth;
-	// positionMap[depth][flatPosition] = shapedPosition
-	//private readonly positionMap: number[][];
 
 	constructor(
 		private readonly raw: Array<[number, number]>,
@@ -110,7 +108,7 @@ export class Shape {
 	}
 
 	/**
-	 * @param position absolute pixel position 
+	 * @param position absolute pixel position
 	 * @returns [sector index, sector offset]
 	 */
 	positionToSector(position: number): [number, number] {
@@ -190,7 +188,7 @@ export class Shape {
 				x % subsectionWidth,
 				y % subsectionHeight,
 			);
-						
+
 			return [subPosition].concat(rest);
 		}
 	}

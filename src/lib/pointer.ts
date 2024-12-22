@@ -16,31 +16,31 @@ export class ActivationFinalizer<T> {
 	readonly error: () => Promise<void>;
 	/**
 	 * Awaited on by the activation to obtain signals.
-	 * When finalize is called this will resolve with a function to signal the 
+	 * When finalize is called this will resolve with a function to signal the
 	 * finalization is complete.
-	 * When error is called this will reject with a function to signal the 
+	 * When error is called this will reject with a function to signal the
 	 * finalization is complete.
 	 */
-	readonly poll: Promise<{ data: T, complete: () => void }>;
-	
+	readonly poll: Promise<{ data: T; complete: () => void }>;
+
 	constructor() {
 		let begin: (data: T) => void;
 		let error: () => void;
 		let complete: () => void;
-		
-		const activationToCanvasResponsePromise = new Promise<void>(r => {
+
+		const activationToCanvasResponsePromise = new Promise<void>((r) => {
 			complete = r as () => void;
 		});
-		const canvasToActivationMessagePromise = new Promise<{ data: T, complete: () => void }>((finalize, e) => {
+		const canvasToActivationMessagePromise = new Promise<{ data: T; complete: () => void }>((finalize, e) => {
 			begin = data => finalize({ data, complete });
 			error = () => e(complete);
 		});
-		
+
 		this.finalize = (data: T) => {
 			begin(data);
 			return activationToCanvasResponsePromise;
 		};
-		
+
 		this.error = () => {
 			error();
 			return activationToCanvasResponsePromise;

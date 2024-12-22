@@ -9,13 +9,13 @@
 		box-sizing: border-box;
 		overflow: visible;
 	}
-	
+
 	.place {
 		width: 100%;
 		height: 100%;
 		border: 2px solid #000;
 	}
-	
+
 	.lookup {
 		width: 100%;
 		height: 100%;

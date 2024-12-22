@@ -200,7 +200,7 @@ export class ConversionProgram extends Program {
 			fragment: CONVERSION_FRAGMENT_SHADER,
 			transparent: true,
 		});
-	
+
 		this.uniforms = {
 			uView: { value: new Mat3().identity() },
 			uAspect: { value: new Vec2(1, 1) },

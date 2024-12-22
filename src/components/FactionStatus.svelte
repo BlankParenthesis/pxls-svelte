@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { Readable } from "svelte/store";
-    import { MemberStatus, type FactionMember } from "../lib/factionmember";
-    import type { Faction } from "../lib/faction";
+	import type { Readable } from "svelte/store";
+	import { MemberStatus, type FactionMember } from "../lib/factionmember";
+	import type { Faction } from "../lib/faction";
 
 	export let faction: Faction;
 	export let member: Readable<Promise<FactionMember | undefined> | undefined>;

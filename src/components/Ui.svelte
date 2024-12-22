@@ -12,13 +12,13 @@
     import Tools from "./Tools.svelte";
     import Templates from "./Templates.svelte";
     import Pixelstack from "./Pixelstack.svelte";
-    import Ticker, { Mode as TickerMode }from "./Ticker.svelte";
+    import Ticker, { Mode as TickerMode } from "./Ticker.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
 	export let state: AppState;
 	export let board: Board;
-	
+
 	const access = site.access();
 	const auth = site.auth;
 	const cooldown = board.cooldown;
@@ -65,7 +65,7 @@
 		<div class="bottom-center flex vertical reverse panel">
 			<nav class="grid-5 switcher">
 				{#if loggedIn && access.has("users.current.get")}
-					<button 
+					<button
 						class="switcher-button"
 						class:active={panel === Panel.Account}
 						on:click={toggle(Panel.Account)}
@@ -77,7 +77,7 @@
 					<Login {auth} />
 				{/if}
 				<div></div>
-				{#if access.has("boards.pixels.post")} 
+				{#if access.has("boards.pixels.post")}
 					<button
 						class="switcher-button"
 						class:active={panel === Panel.Place}
@@ -124,7 +124,7 @@
 					<small>Settings</small>
 				</button>
 			</nav>
-			
+
 			{#if panel === Panel.Place}
 				<div class="drawer">
 					<Palette bind:state {board} />

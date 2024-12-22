@@ -60,7 +60,7 @@ class SectorTextures {
 		const height = this.height;
 		const instructions = this.sectorCreationInstructions;
 
-		data.then(data => {
+		data.then((data) => {
 			const size = data[0].BYTES_PER_ELEMENT;
 			texture.image = instructions.merge(data);
 			texture.width = width;
@@ -77,14 +77,14 @@ class SectorTextures {
 	}
 
 	colors(): Texture {
-		if(this.colorsRebuild || this.colorsCached === undefined) {
+		if (this.colorsRebuild || this.colorsCached === undefined) {
 			const instructions = this.sectorCreationInstructions;
 			const sectors = instructions.positions.map(i => this.board.colors(i));
 
 			if (this.colorsCached === undefined) {
 				this.colorsCached = this.newTexture8();
 			}
-			
+
 			this.lazyMerge(this.colorsCached, Promise.all(sectors));
 
 			this.colorsRebuild = false;
@@ -98,7 +98,7 @@ class SectorTextures {
 	}
 
 	timestamps(): Texture {
-		if(this.timestampsRebuild || this.timestampsCached === undefined) {
+		if (this.timestampsRebuild || this.timestampsCached === undefined) {
 			const instructions = this.sectorCreationInstructions;
 			const sectors = instructions.positions.map(i => this.board.timestamps(i));
 
@@ -119,7 +119,7 @@ class SectorTextures {
 	}
 
 	mask(): Texture {
-		if(this.maskRebuild || this.maskCached === undefined) {
+		if (this.maskRebuild || this.maskCached === undefined) {
 			const instructions = this.sectorCreationInstructions;
 			const sectors = instructions.positions.map(i => this.board.mask(i));
 
@@ -140,7 +140,7 @@ class SectorTextures {
 	}
 
 	initial(): Texture | null {
-		if(this.initialRebuild || this.initialCached === undefined) {
+		if (this.initialRebuild || this.initialCached === undefined) {
 			const instructions = this.sectorCreationInstructions;
 			const sectors = instructions.positions.map(i => this.board.initial(i));
 
@@ -172,9 +172,9 @@ export class CanvasTextures {
 			.fill(null)
 			.map((_, i) => i + 1)
 			.filter(i => shape.get(i).every(v => v === 1))
-			.forEach(i => this.cache[i] = this.cache[i -1]);
+			.forEach(i => this.cache[i] = this.cache[i - 1]);
 
-		board.onUpdate(update => {
+		board.onUpdate((update) => {
 			update.data?.colors?.forEach(c => this.updateColors(c));
 			update.data?.timestamps?.forEach(c => this.updateTimestamps(c));
 			update.data?.mask?.forEach(c => this.updateMask(c));
@@ -192,7 +192,7 @@ export class CanvasTextures {
 		if (x < 0 || x >= maxX || y < 0 || y >= maxY) {
 			throw new Error(`No data at ${x}, ${y} for detail level ${detailLevel}`);
 		}
-		
+
 		const sectorPosition = y * maxX + x;
 
 		let sector = this.cache[detailLevel].get(sectorPosition);
@@ -218,7 +218,7 @@ export class CanvasTextures {
 	private *invalidatedTextures(change: Change) {
 		for (const [detailLevel, cached] of this.cache.entries()) {
 			const [width, height] = this.shape.slice(detailLevel).size();
-			const index = Math.floor(change.position / (width * height)); 
+			const index = Math.floor(change.position / (width * height));
 			const textures = cached.get(index);
 			if (textures !== undefined) {
 				yield textures;

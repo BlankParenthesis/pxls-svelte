@@ -7,7 +7,7 @@ type URLValue = string | null;
 
 function setFragmentValue(key: string, value: URLValue) {
 	const values = getFragment();
-	
+
 	if (value === null) {
 		delete values[key];
 	} else {

@@ -1,11 +1,11 @@
 <script lang="ts">
-    import type { Readable } from "svelte/store";
+	import type { Readable } from "svelte/store";
 	import type { Authentication } from "../lib/authentication";
-    import type { User as UserData } from "../lib/user";
+	import type { User as UserData } from "../lib/user";
 	import Login from "./Login.svelte";
 	import CurrentUser from "./CurrentUser.svelte";
-    import Factions from "./Factions.svelte";
-    import type { Site } from "../lib/site";
+	import Factions from "./Factions.svelte";
+	import type { Site } from "../lib/site";
 
 	export let site: Site;
 	export let auth: Authentication;
@@ -17,7 +17,7 @@
 		font-size: medium;
 		margin: 0;
 	}
-	
+
 	h3 {
 		font-size: xx-large;
 		margin: 0;

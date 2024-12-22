@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { LookupData as DataType } from "../lib/pointer";
-    import LookupData from "./LookupData.svelte";
+	import LookupData from "./LookupData.svelte";
 
-	export let finalizer: Promise<{ data: DataType, complete: () => void }>;
+	export let finalizer: Promise<{ data: DataType; complete: () => void }>;
 </script>
 <style>
 	.reticule {
@@ -11,30 +11,30 @@
 		height: 100%;
 		box-sizing: border-box;
 	}
-	
+
 	@keyframes pending {
 		from { border-color: black; }
 		to { border-color: transparent; }
 	}
-	
+
 	.pending {
 		animation: pending 500ms alternate infinite;
 	}
-	
+
 	@keyframes complete {
 		from { opacity: 1.0; }
 		to { opacity: 0.0; }
 	}
-	
+
 	.complete {
 		animation: complete 200ms;
 	}
-	
+
 	@keyframes error {
 		from { opacity: 1.0; }
 		to { opacity: 0.0; }
 	}
-	
+
 	.error {
 		border-color: red;
 		animation: error 500ms;
@@ -55,7 +55,7 @@
 			<LookupData lookup={data.lookup} />
 		</div>
 	{/await}
-{:catch complete} 
+{:catch complete}
 	<div
 		class="reticule error cursor-transparent"
 		on:animationend={complete}

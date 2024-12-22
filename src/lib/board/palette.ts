@@ -27,7 +27,7 @@ export function toTexture(
 		.fill(undefined)
 		.map((_, i) => {
 			const color = palette.get(i);
-			if(color === undefined) {
+			if (color === undefined) {
 				return nextColor;
 			} else {
 				const r = (color.value >> 24) & 0xFF;

@@ -29,12 +29,12 @@ export type SiteInfo = z.infer<typeof SiteInfo>;
 export class Site {
 	static async connect(location: URL): Promise<Site> {
 		const info: SiteInfo = await fetch(resolveURL(location, "info"))
-			.then(r => {
+			.then((r) => {
 				if (r.status === 403) {
 					console.warn("No info access, presuming no extensions");
 					return { extensions: [] };
 				} else {
-					return r.json();	
+					return r.json();
 				}
 			})
 			.then(j => SiteInfo.parse(j));
@@ -149,25 +149,25 @@ export class Site {
 
 		const parseEvent = eventsParser(this.http, this.parsers);
 
-		socket?.addEventListener("message", e => {
+		socket?.addEventListener("message", (e) => {
 			try {
 				const packet = parseEvent(e.data);
 				switch (packet.type) {
-					case "user-updated": 
+					case "user-updated":
 						packet.user.fetch();
 						break;
 					case "user-roles-updated":
-						get(this.users.fetch(packet.user))?.then(u => {
+						get(this.users.fetch(packet.user))?.then((u) => {
 							u.updateRoles();
 							return u;
 						});
 						break;
 					case "faction-created": throw new Error("TODO");
-					case "faction-updated": 
+					case "faction-updated":
 						packet.faction.fetch();
 						break;
 					case "faction-deleted": throw new Error("TODO");
-					case "faction-member-updated": 
+					case "faction-member-updated":
 						// Mark the faction current member if the faction
 						// doesn't have it set.
 						Promise.all([
@@ -177,7 +177,7 @@ export class Site {
 						]).then(([member, faction, currentUser]) => {
 							if (member?.user?.uri === currentUser.uri) {
 								faction?.initCurrentMember(member);
-								get(currentUser.fetch())?.then(u => {
+								get(currentUser.fetch())?.then((u) => {
 									u.updatefactions();
 								});
 							}
@@ -185,7 +185,7 @@ export class Site {
 
 						break;
 				}
-			} catch(e) {
+			} catch (e) {
 				console.error("Failed to parse packet", e);
 			}
 		});
@@ -211,13 +211,13 @@ export class Site {
 		return this.http.get(location).then(parse);
 	});
 
-	readonly factions = new Cache(location => {
+	readonly factions = new Cache((location) => {
 		const http = this.http.subpath(location);
 		const parse = this.parsers.faction(http);
 		return this.http.get(location).then(parse);
 	});
 
-	readonly factionMembers = new Cache(location => {
+	readonly factionMembers = new Cache((location) => {
 		const http = this.http.subpath(location);
 		const parse = this.parsers.factionMember(http);
 		// TODO: default on 404
@@ -229,7 +229,7 @@ export class Site {
 		// TODO: check permissions
 		const parse = this.parsers.factionsPage(this.http);
 		let factions = await this.http.get("factions" + query).then(parse);
-		while(true) {
+		while (true) {
 			for (const reference of factions.items) {
 				yield reference.fetch();
 			}
@@ -267,20 +267,20 @@ export class Site {
 	}
 
 	// TODO: this is not kept in sync with boards' local copies
-	readonly boardInfos = new Cache(location => {
+	readonly boardInfos = new Cache((location) => {
 		const http = this.http.subpath(location);
 		const parse = this.parsers.board(http);
 		return this.http.get(location).then(parse);
 	});
 
-	readonly boards = new CacheOnce(location => {
+	readonly boards = new CacheOnce((location) => {
 		return Board.connect(this, this.http.subpath(location));
 	});
 
 	async *fetchBoards() {
 		const parse = this.parsers.boardsPage(this.http);
 		let boards = await this.http.get("boards").then(parse);
-		while(true) {
+		while (true) {
 			for (const reference of boards.items) {
 				yield reference;
 			}
@@ -291,7 +291,7 @@ export class Site {
 			}
 		}
 	}
-	
+
 	async defaultBoard(): Promise<Reference<BoardInfo>> {
 		const parse = this.parsers.boardReference(this.http);
 		return await this.http.get("boards/default").then(parse);

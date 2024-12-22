@@ -7,7 +7,7 @@ import type { Readable } from "svelte/store";
 import { writable, type Writable } from "svelte/store";
 import { Faction } from "./faction";
 
-export class User  {
+export class User {
 	constructor(
 		private readonly site: Site,
 		private readonly http: Requester,
@@ -37,7 +37,7 @@ export class User  {
 		// TODO: check permissions
 		const parse = this.site.parsers.rolesPage(this.http);
 		let roles = await this.http.get("roles").then(parse);
-		while(true) {
+		while (true) {
 			for (const reference of roles.items) {
 				yield reference.fetch();
 			}
@@ -71,7 +71,7 @@ export class User  {
 		// TODO: check permissions
 		const parse = this.site.parsers.factionsPage(this.http);
 		let factions = await this.http.get("factions").then(parse);
-		while(true) {
+		while (true) {
 			for (const reference of factions.items) {
 				yield reference.fetch();
 			}

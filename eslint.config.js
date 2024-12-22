@@ -1,42 +1,49 @@
 import globals from "globals";
-import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
 import svelte from "eslint-plugin-svelte";
-// TODO: look into sylistic and also add rules for consistent typscript delimiters
+import svelteParser from "svelte-eslint-parser";
+import stylistic from "@stylistic/eslint-plugin";
 
 let rules = {
-	"brace-style": "error",
+	"eqeqeq": "error",
 	"camelcase": "error",
 	"curly": "error",
-	"eqeqeq": "error",
-	"indent": ["error", "tab", { "SwitchCase": 1 }],
-	"quotes": ["error", "double"],
-	"comma-dangle": ["error", "always-multiline"],
-	"semi": "error",
 	"no-unused-vars": "off",
-	"@typescript-eslint/require-await": "off",
+	"svelte/valid-compile": "warn",
+	"svelte/indent": ["error", { "indent": "tab" }],
 	"@typescript-eslint/no-unused-expressions": "warn",
 	"@typescript-eslint/no-unused-vars": ["warn", {
 		"varsIgnorePattern": "^_",
 		"caughtErrorsIgnorePattern": "^_",
 		"destructuredArrayIgnorePattern": "^_",
 	}],
-	"svelte/valid-compile": "warn",
+	"@stylistic/quote-props": ["error", "consistent"],
+	"@stylistic/brace-style": ["error", "1tbs"],
+	"@stylistic/quotes": ["error", "double"],
+	"@stylistic/indent": ["error", "tab", { "SwitchCase": 1 }],
+	"@stylistic/comma-dangle": ["error", "always-multiline"],
+	"@stylistic/semi": ["error", "always"],
+	"@stylistic/no-tabs": "off",
+	"@stylistic/member-delimiter-style": ["error", {
+		"multiline": { "delimiter": "semi", "requireLast": true },
+		"singleline": { "delimiter": "semi", "requireLast": false },
+	}],
 };
 
 export default [
 	{ languageOptions: { globals: globals.browser } },
-	pluginJs.configs.recommended,
 	...tseslint.configs.recommended,
 	...svelte.configs["flat/recommended"],
+	stylistic.configs["recommended-flat"],
 	{ rules },
 	{
 		files: ["**/*.svelte"],
 		languageOptions: {
+			parser: svelteParser,
 			parserOptions: {
-				parser: tseslint.parser,
-				extraFileExtensions: [".svelte"],
-				svelteFeatures: { experimentalGenerics: true },
+				parser: {
+					ts: "@typescript-eslint/parser",
+				},
 			},
 		},
 	},

@@ -57,7 +57,7 @@ export class Faction {
 		const parse = this.site.parsers.factionMembersPage(this.http);
 		// TODO: check permissions
 		let members = await this.http.get("members").then(parse);
-		while(true) {
+		while (true) {
 			for (const reference of members.items) {
 				yield reference.fetch();
 			}
@@ -74,9 +74,9 @@ export class Faction {
 			user: await get(this.site.currentUser()),
 			owner: false,
 		};
-		
+
 		const parse = this.site.parsers.factionMemberReference(this.http);
-		
+
 		return await this.http.post(data, "members")
 			.then(parse)
 			.then(r => r.fetch());

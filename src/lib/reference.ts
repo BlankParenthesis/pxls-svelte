@@ -19,11 +19,11 @@ export class Reference<T> {
 		}
 	}
 
-	fetch(): Readable<Promise<T>| undefined> {
+	fetch(): Readable<Promise<T> | undefined> {
 		if (typeof this.view === "undefined") {
 			return this.cache.fetch(this.uri);
 		} else {
-			// FIXME: if this is reference is held onto, this can be called 
+			// FIXME: if this is reference is held onto, this can be called
 			// later to overwrite new data with old.
 			return this.cache.update(this.uri, Promise.resolve(this.view));
 		}

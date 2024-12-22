@@ -41,9 +41,9 @@ const FactionMemberUpdated = (
 });
 
 export function parser(context: Requester, parsers: {
-	userReference: Parser<Reference<User>>,
-	factionReference: Parser<Reference<Faction>>,
-	factionMemberReference: Parser<Reference<FactionMember>>,
+	userReference: Parser<Reference<User>>;
+	factionReference: Parser<Reference<Faction>>;
+	factionMemberReference: Parser<Reference<FactionMember>>;
 }) {
 	return UserUpdated(parsers.userReference(context))
 		.or(UserRolesUpdated)

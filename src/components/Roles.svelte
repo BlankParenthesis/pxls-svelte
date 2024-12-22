@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { Readable } from "svelte/store";
-    import { Role as RawRole } from "../lib/role";
-    import Role from "./Role.svelte";
+	import type { Readable } from "svelte/store";
+	import { Role as RawRole } from "../lib/role";
+	import Role from "./Role.svelte";
 
 	export let roles: Readable<Promise<Array<Readable<Promise<RawRole> | undefined>>>>;
 </script>

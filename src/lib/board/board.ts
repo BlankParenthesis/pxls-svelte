@@ -12,8 +12,6 @@ import type { Parser } from "../util";
 import { UserCount } from "../usercount";
 import { Pixel as PixelResponse } from "../pixel";
 
-type PlaceResult = boolean; // TODO: a bit more detail would be nice
-
 const HeaderNumber = z.number().int().min(0);
 
 const HeaderCooldown = z.object({
@@ -30,9 +28,9 @@ const HeaderCooldown = z.object({
 }));
 export type HeaderCooldown = z.infer<typeof HeaderCooldown>;
 export type Cooldown = {
-	pixelsAvailable: number,
-	nextTimestamp: Date | undefined,
-}
+	pixelsAvailable: number;
+	nextTimestamp: Date | undefined;
+};
 
 export class Board {
 	private listeners = {
@@ -70,12 +68,12 @@ export class Board {
 		if (extensions.has("board_lifecycle") && access.has("boards.events.info")) {
 			events.push("info");
 		}
-		
+
 		const missedEvents = [] as Array<MessageEvent>;
 		function missEvent(e: MessageEvent) {
 			missedEvents.push(e);
 		}
-		
+
 		let socket;
 		if (events.length > 0) {
 			socket = await http.socket("events", events);
@@ -84,7 +82,7 @@ export class Board {
 		const parser = BoardInfo.parser();
 		const parse = parser(http);
 
-		const { cooldown, info } = await http.getRaw().then(async r => {
+		const { cooldown, info } = await http.getRaw().then(async (r) => {
 			const headerCooldown = HeaderCooldown.parse(Object.fromEntries(r.headers.entries()));
 			if (typeof headerCooldown.pixelsAvailable === "undefined") {
 				console.debug(r);
@@ -107,7 +105,7 @@ export class Board {
 		}
 		return new Board(site, http, socket, info, cooldown, missedEvents);
 	}
-	
+
 	protected readonly colorsCache: DataCache;
 	protected readonly timestampsCache: DataCache32;
 	protected readonly maskCache: DataCache;
@@ -116,22 +114,22 @@ export class Board {
 	public readonly cooldown: Readable<Cooldown>;
 
 	private readonly parsers: {
-		pixel: Parser<Pixel | undefined>,
-		userCount: Parser<UserCount>,
+		pixel: Parser<Pixel | undefined>;
+		userCount: Parser<UserCount>;
 	};
 
 	private processMessage(message: MessageEvent) {
 		try {
 			const packet = Event.parse(JSON.parse(message.data) as unknown);
 			switch (packet.type) {
-				case "board-update": 
+				case "board-update":
 					this.listeners.boardUpdate.forEach(l => l(packet));
 					break;
-				case "pixels-available": 
+				case "pixels-available":
 					this.listeners.pixelsAvailable.forEach(l => l(packet));
 					break;
 			}
-		} catch(e) {
+		} catch (e) {
 			console.error("Failed to parse packet", e);
 		}
 	}
@@ -166,7 +164,7 @@ export class Board {
 				document.location.reload();
 			}
 		});
-		
+
 		this.colorsCache = new DataCache(this.http.subpath("data/colors"));
 		this.timestampsCache = new DataCache32(this.http.subpath("data/timestamps"));
 		this.maskCache = new DataCache(this.http.subpath("data/mask"));
@@ -185,7 +183,7 @@ export class Board {
 	onPixelsAvailable(callback: (packet: PixelsAvailable) => void) {
 		this.listeners.pixelsAvailable.push(callback);
 	}
-	
+
 	async colors(sector: number): Promise<Uint8Array> {
 		return await this.colorsCache.get(get(this.info), sector);
 	}
@@ -206,7 +204,7 @@ export class Board {
 		// NOTE: the "!" here tells typescript to assume this is defined as it
 		// cannot deduce that the next call will set it.
 		let info!: BoardInfo;
-		this.infoStore.update(oldInfo => {
+		this.infoStore.update((oldInfo) => {
 			if (typeof update.info?.name !== "undefined") {
 				oldInfo.name = update.info.name;
 			}
@@ -218,7 +216,7 @@ export class Board {
 			if (typeof update.info?.max_pixels_available !== "undefined") {
 				oldInfo.maxPixelsAvailable = update.info.max_pixels_available;
 			}
-			
+
 			if (typeof update.info?.palette !== "undefined") {
 				oldInfo.palette = update.info.palette;
 			}
@@ -280,7 +278,7 @@ export class Board {
 		}
 
 		const pixelInvalidatingUpdates = colorUpdates.concat(timestampUpdates);
-		const changedPositions = new Set(pixelInvalidatingUpdates.flatMap(change => {
+		const changedPositions = new Set(pixelInvalidatingUpdates.flatMap((change) => {
 			const length = ("values" in change) ? change.values.length : change.length;
 			return new Array(length)
 				.fill(0)
@@ -301,41 +299,41 @@ export class Board {
 			const pixel = this.http.get("pixels/" + location).then(parse);
 			this.pixelCache.set(location, writable(pixel));
 		}
-		
+
 		const pixel = this.pixelCache.get(location);
 		if (typeof pixel === "undefined") {
 			throw new Error("assertion error: pixel cache should contain a value");
 		}
-		
+
 		if (typeof get(pixel) === "undefined") {
 			const parse = this.parsers.pixel(this.http);
 			pixel.set(this.http.get("pixels/" + location).then(parse));
 		}
-		
+
 		return pixel;
 	}
-	
+
 	async place(position: number, color: number, overrides: AdminOverrides): Promise<PixelResponse | undefined> {
 		const extra = {} as { overrides?: AdminOverrides };
 
 		if (overrides.color || overrides.cooldown || overrides.mask) {
 			extra.overrides = overrides;
 		}
-		
+
 		const shape = get(this.info).shape;
 		const [sectorIndex, sectorOffset] = shape.positionToSector(position);
 		const sector = await this.colors(sectorIndex);
 		const currentColor = sector[sectorOffset];
-		
-		if (currentColor === color) { 
+
+		if (currentColor === color) {
 			return undefined;
 		}
-		
+
 		try {
 			const request = this.http.post({ color, ...extra }, `pixels/${position}`);
 			const parser = this.parsers.pixel(this.http);
 			return parser((await request).view);
-		} catch(_) {
+		} catch (_) {
 			return undefined;
 		}
 	}

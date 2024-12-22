@@ -23,11 +23,11 @@
 	.grid > :global(.bottom-left) { grid-area: bottom-left; }
 	.grid > :global(.bottom-center) { grid-area: bottom; }
 	.grid > :global(.bottom-right) { grid-area: bottom-right; }
-	
+
 	.grid > :global(.top) { grid-area: top / top-left / auto / top-right; }
 	.grid > :global(.middle) { grid-area: middle / middle-left / auto / middle-right; }
 	.grid > :global(.bottom) { grid-area: bottom / bottom-left / auto / bottom-right; }
-	
+
 	.grid > :global(.left) { grid-area: top-left / top-left / bottom-left / auto; }
 	.grid > :global(.center) { grid-area: top / top / bottom / auto; }
 	.grid > :global(.right) { grid-area: top-right / top-right / bottom-right / auto; }

@@ -1,11 +1,12 @@
+<!-- this comment is a workaround for https://github.com/sveltejs/eslint-plugin-svelte/pull/970 -->
 <script lang="ts">
-    import { Vec2 } from "ogl";
+	import { Vec2 } from "ogl";
 	import { Board } from "../lib/board/board";
-    import type { AppState } from "../lib/settings";
-    import { ActivationFinalizer } from "../lib/pointer";
-    import { linearRegression } from "../lib/util";
-    import { onDestroy } from "svelte";
-    import { Pixel } from "../lib/pixel";
+	import type { AppState } from "../lib/settings";
+	import { ActivationFinalizer } from "../lib/pointer";
+	import { linearRegression } from "../lib/util";
+	import { onDestroy } from "svelte";
+	import { Pixel } from "../lib/pixel";
 
 	export let board: Board;
 	export let state: AppState;
@@ -25,7 +26,7 @@
 		if (typeof color === "undefined") {
 			throw new Error("invalid color");
 		}
-		
+
 		if (state.pointer?.type === "place" && state.pointer.selected === index) {
 			deselectColor();
 		} else {
@@ -43,7 +44,7 @@
 						task = new Promise((_, err) => err("Invalid Location"));
 					} else {
 						task = board.place(position, index, state.adminOverrides)
-							.then(pixel => {
+							.then((pixel) => {
 								if (typeof pixel === "undefined") {
 									throw new Error("Placing failed");
 								} else {
@@ -77,7 +78,7 @@
 	function colorToHex(color: number) {
 		return color.toString(16).padStart(8, "0");
 	}
-	
+
 	function maxScroll(): Vec2 {
 		const scrollBounds = scrollRoot.getBoundingClientRect();
 		return new Vec2(
@@ -85,7 +86,7 @@
 			scrollRoot.scrollTop - scrollBounds.height,
 		);
 	}
-	
+
 	function currentScroll(): Vec2 {
 		return new Vec2(
 			scrollRoot.scrollLeft,
@@ -95,12 +96,12 @@
 
 	let scrollRoot: HTMLElement;
 	let initialDragPoint: {
-		point: Vec2,
-		scroll: Vec2,
+		point: Vec2;
+		scroll: Vec2;
 	} | undefined;
 	let recentScrollPoints = [] as Array<{
-		point: Vec2,
-		time: number,
+		point: Vec2;
+		time: number;
 	}>;
 	let scrollVelocity = new Vec2(0, 0);
 	function beginDrag(pointer: Vec2) {
@@ -110,7 +111,7 @@
 		scrollVelocity.x = scrollVelocity.y = 0;
 		dragState = DragState.Undetermined;
 	}
-	
+
 	function trimScrollPoints() {
 		const now = Date.now();
 		const recencyThreshold = now - 100;
@@ -121,22 +122,22 @@
 			recentScrollPoints.splice(0, firstValidVector);
 		}
 	}
-	
+
 	function calculateScrollFling() {
 		const first = recentScrollPoints.shift();
 		const last = recentScrollPoints[recentScrollPoints.length - 1];
 		if (typeof first !== "undefined" && typeof last !== "undefined") {
-			const distanceByTime = recentScrollPoints.map(v => {
+			const distanceByTime = recentScrollPoints.map((v) => {
 				const distance = v.point.distance(first.point);
 				const time = v.time - first.time;
 				return [time, distance] as [number, number];
 			});
-			
+
 			// Fit a line to the distance / time data.
 			// A fling drag is close to a straight line (distance increases linearly with time)
 			// A drag + stop has a non-linear shape and therefor a lower correlation.
 			const { slope, correlation } = linearRegression(distanceByTime);
-			
+
 			if (correlation > 0.96) {
 				const difference = first.point.sub(last.point)
 					.normalize()
@@ -148,13 +149,13 @@
 		// Assume no velocity by default
 		return new Vec2(0, 0);
 	}
-	
+
 	function doScroll(point: Vec2) {
 		if (typeof scrollRoot !== "undefined" && typeof initialDragPoint !== "undefined") {
 			trimScrollPoints();
 			const time = Date.now();
 			recentScrollPoints.push({ time, point });
-			
+
 			const initialPoint = initialDragPoint.point.clone();
 			const initialScroll = initialDragPoint.scroll.clone();
 			const scrollDelta = initialPoint.sub(point);
@@ -163,7 +164,7 @@
 			scrollRoot.scrollTop = initialScrollPixels.y + scrollDelta.y;
 		}
 	}
-	
+
 	// how much difference there must be to decide between scrolling and placing.
 	const STATE_DECISION_THRESHOLD = 10;
 	// how much a scrolling action should be preferred to a placing one
@@ -172,10 +173,10 @@
 		// horizontal movement favors scrolling
 		const movementScroll = Math.abs(delta.x);
 		// vertical movement favors placing
-		const movementPlace = Math.abs(delta.y/ SCROLL_TRESHOLD_BIAS);
+		const movementPlace = Math.abs(delta.y / SCROLL_TRESHOLD_BIAS);
 		// a measurement of how much scroll movement there is compared to place.
 		// positive values indicate a scroll movement and negative indicate place movement.
-		const ratio = movementScroll - movementPlace; 
+		const ratio = movementScroll - movementPlace;
 		if (ratio > STATE_DECISION_THRESHOLD) {
 			return DragState.Scroll;
 		} else if (-ratio > STATE_DECISION_THRESHOLD) {
@@ -184,15 +185,15 @@
 			return DragState.Undetermined;
 		}
 	}
-	
+
 	enum DragState {
 		Undetermined,
 		Scroll,
 		Place,
 	}
-	
+
 	let dragState = DragState.Undetermined;
-	
+
 	function track(point: Vec2) {
 		if (typeof initialDragPoint === "undefined") {
 			return;
@@ -216,7 +217,7 @@
 				break;
 		}
 	}
-	
+
 	function trackPointer(event: PointerEvent) {
 		track(new Vec2(event.clientX, event.clientY));
 	}
@@ -233,33 +234,33 @@
 			cancelDrag();
 		}
 	}
-	
+
 	function stopDrag() {
 		initialDragPoint = undefined;
 		scrollVelocity = calculateScrollFling().divide(maxScroll());
 		scrollPosition = currentScroll();
 		requestAnimationFrame(scrollPhysics);
 		recentScrollPoints = [];
-		
+
 		if (state.pointer?.quickActivate) {
 			// because target is retained for touchend events,
 			// we might be placing. If so, deselecting now would
-			// interrupt the place code as this has higher 
+			// interrupt the place code as this has higher
 			// precedence.
 			// Instead, run it the next event loop:
 			setTimeout(deselectColor, 0);
 		}
 	}
-	
+
 	function cancelDrag() {
 		initialDragPoint = undefined;
 		recentScrollPoints = [];
-		
+
 		if (state.pointer?.quickActivate) {
 			deselectColor();
 		}
 	}
-	
+
 	let lastTime: number | undefined;
 	let scrollPosition: Vec2 | undefined;
 	function scrollPhysics(time: number) {
@@ -267,46 +268,46 @@
 			lastTime = time;
 		}
 		const delta = time - lastTime;
-		
+
 		if (delta === 0) {
 			requestAnimationFrame(scrollPhysics);
 			return;
 		}
-		
+
 		if (scrollVelocity.x !== 0 || scrollVelocity.y !== 0) {
 			if (scrollRoot && typeof scrollPosition !== "undefined") {
 				const max = maxScroll();
 				scrollPosition.add(scrollVelocity.clone().multiply(delta));
 				scrollRoot.scrollLeft = scrollPosition.x * max.x;
 				scrollRoot.scrollTop = scrollPosition.y * max.y;
-				
+
 				if (0 > scrollPosition.x || scrollPosition.x > 1) {
 					scrollVelocity.x = 0;
 				}
-				
+
 				if (0 > scrollPosition.y || scrollPosition.y > 1) {
 					scrollVelocity.y = 0;
 				}
 			}
-			
+
 			// drag
 			scrollVelocity.multiply(0.995 ** delta);
-			
+
 			if (Math.abs(scrollVelocity.x) < 1e-6) {
 				scrollVelocity.x = 0;
 			}
-			
+
 			if (Math.abs(scrollVelocity.y) < 1e-6) {
 				scrollVelocity.y = 0;
 			}
-			
+
 			requestAnimationFrame(scrollPhysics);
 			lastTime = time;
 		} else {
 			lastTime = undefined;
 		}
 	}
-	
+
 	onDestroy(() => {
 		if (state.pointer?.type === "place") {
 			state.pointer = undefined;
@@ -320,16 +321,16 @@
 
 		display: flex;
 		gap: 0.5em;
-		
+
 		flex-wrap: nowrap;
 		overflow-x: scroll;
 		justify-content: start;
-		/* 
+		/*
 			Not massively supported, but decent support.
 			We can't just use "center" because this interacts poorly with overflow.
 		*/
 		justify-content: safe center;
-		
+
 		/* try to prevent the browser from scrolling the element while dragging */
 		touch-action: none;
 		user-select: none;
@@ -345,7 +346,7 @@
 		box-sizing: border-box;
 		background-position: 0 0, 0 0, 50% 50%;
 		background-size: auto, 50% 50%, 50% 50%;
-		
+
 		--transparent-dark: #7E7F83;
 		--transparent-light: #C1C1C3;
 
@@ -361,27 +362,27 @@
 </style>
 <svelte:window
 	on:pointermove={trackPointer}
-	on:pointerup={e => {
-		if (e.pointerType !== "touch") {
+	on:pointerup={(event) => {
+		if (event.pointerType !== "touch") {
 			stopDrag();
 		}
 	}}
 	on:touchmove={trackTouch}
-	on:touchend={e => {
-		if (e.touches.length === 0) {
+	on:touchend={(event) => {
+		if (event.touches.length === 0) {
 			stopDrag();
 		}
 	}}
 />
 <ul
-	on:pointerdown={e => {
-		if (e.pointerType !== "touch") {
-			beginDrag(new Vec2(e.clientX, e.clientY));
+	on:pointerdown={(event) => {
+		if (event.pointerType !== "touch") {
+			beginDrag(new Vec2(event.clientX, event.clientY));
 		}
 	}}
-	on:touchstart={e => {
-		if (e.touches.length === 1) {
-			const touch = e.touches[0];
+	on:touchstart={(event) => {
+		if (event.touches.length === 1) {
+			const touch = event.touches[0];
 			beginDrag(new Vec2(touch.clientX, touch.clientY));
 		}
 	}}
@@ -392,21 +393,21 @@
 		{#if !color.system_only || state.adminOverrides.color }
 			<li>
 				<button
-					on:keydown={e => {
-						if ([" ", "Enter"].includes(e.key)) {
+					on:keydown={(event) => {
+						if ([" ", "Enter"].includes(event.key)) {
 							// A bit of a hack to prevent keyboard deselect from
 							// being blocked by the quick place mechanism
 							movedDistance = Infinity;
 							toggleColor(index);
 						}
 					}}
-					on:pointerdown={e => {
-						if (e.pointerType !== "touch") {
+					on:pointerdown={(event) => {
+						if (event.pointerType !== "touch") {
 							toggleColor(index);
 						}
 					}}
-					on:touchstart={e => {
-						if (e.touches.length === 1) {
+					on:touchstart={(event) => {
+						if (event.touches.length === 1) {
 							toggleColor(index);
 						}
 					}}

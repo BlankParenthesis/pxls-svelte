@@ -19,7 +19,7 @@ export function base64urlsafe(bytes: Uint8Array): string {
 export function randomString(length: number = 20): string {
 	const choices = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");
 	return Array(length).fill(null).map(() => {
-		const index = Math.floor(Math.random() * choices.length);;
+		const index = Math.floor(Math.random() * choices.length);
 		return choices[index];
 	}).join("");
 }
@@ -58,7 +58,7 @@ export function setFragment(values: FragmentMap) {
 	const fragment = Object.entries(values)
 		.map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
 		.join("&");
-	
+
 	const currentPath = document.location.origin + document.location.pathname;
 	if (fragment.length === 0) {
 		history.replaceState(null, "", new URL(currentPath));
@@ -73,7 +73,7 @@ export function setFragment(values: FragmentMap) {
  * @param value the value of the key
  * @returns the function which adds the key-value pair to the passed argument
  */
-export function tag<K extends string, V,>(key: K, value: V) {
+export function tag<K extends string, V>(key: K, value: V) {
 	function record<K extends string, V>(key: K, value: V): { [prop in K]: V };
 	function record<K extends string, V>(key: K, value: V) {
 		return { [key]: value };
@@ -81,20 +81,20 @@ export function tag<K extends string, V,>(key: K, value: V) {
 
 	const obj2 = record(key, value);
 
-	return function<T extends { [P in keyof T]: unknown }>(obj: T) { 
-		return {...obj, ...obj2 };
+	return function<T extends { [P in keyof T]: unknown }>(obj: T) {
+		return { ...obj, ...obj2 };
 	};
 }
 
 /**
- * resolves an async generator of items to a single promise resolving to an 
+ * resolves an async generator of items to a single promise resolving to an
  * array of all generated items.
  * @param gen the async generator to collect
  * @returns a promise to an array of all yielded items
  */
 export async function collect<T>(gen: AsyncGenerator<T>): Promise<Array<T>> {
 	const collection = [];
-	for await(const i of gen) {
+	for await (const i of gen) {
 		collection.push(i);
 	}
 	return collection;
@@ -104,8 +104,7 @@ export interface Instanceable {
 	maxParallelism: number;
 }
 
-
-/** 
+/**
  * @returns a vector which normalizes the larger of @width and @height to the other
  */
 export function ratio(width: number, height: number): Vec2 {
@@ -144,14 +143,14 @@ export function linearRegression(points: Array<[number, number]>) {
 	const sumXY = points.reduce((sum, [x, y]) => sum + x * y, 0);
 	const sumXX = points.reduce((sum, [x, _]) => sum + x * x, 0);
 	const sumYY = points.reduce((sum, [_, y]) => sum + y * y, 0);
-	
+
 	const divisor = points.length * sumXX - sumX * sumX;
-	
+
 	const slope = (points.length * sumXY - sumX * sumY) / divisor;
 	const intercept = (sumY - slope * sumX) / points.length;
 	let correlation = (points.length * sumXY - sumX * sumY) / Math.sqrt(divisor * (points.length * sumYY - sumY * sumY));
 	correlation = correlation ** 2;
-	
+
 	return { slope, intercept, correlation };
 }
 

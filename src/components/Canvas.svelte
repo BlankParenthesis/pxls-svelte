@@ -1,39 +1,39 @@
 <script lang="ts">
-    import { Mat3, Vec2 } from "ogl";
+	import { Mat3, Vec2 } from "ogl";
 	import type { AppState, Settings } from "../lib/settings";
 	import type { Activation, LookupPointer, PlacingPointer } from "../lib/pointer";
 	import type { Board } from "../lib/board/board";
 	import { ViewBox, type RenderParameters } from "../lib/render/canvas";
-    import type { Template } from "../lib/render/template";
+	import type { Template } from "../lib/render/template";
 	import Render from "./Render.svelte";
-    import Reticule from "./Reticule.svelte";
-    import { now } from "./Time.svelte";
-    import CanvasSpace from "./CanvasSpace.svelte";
-    import { readable }  from "svelte/store";
-    import Exact from "./layout/Exact.svelte";
-    import InputCapture from "./InputCapture.svelte";
-    import Placement from "./Placement.svelte";
-    import Lookup from "./Lookup.svelte";
-    import Ui from "./Ui.svelte";
-    import type { Site } from "../lib/site";
-    import templateStyleSource from "../assets/large_template_style.webp";
-    import { onMount } from "svelte";
-    import { linearRegression } from "../lib/util";
+	import Reticule from "./Reticule.svelte";
+	import { now } from "./Time.svelte";
+	import CanvasSpace from "./CanvasSpace.svelte";
+	import { readable } from "svelte/store";
+	import Exact from "./layout/Exact.svelte";
+	import InputCapture from "./InputCapture.svelte";
+	import Placement from "./Placement.svelte";
+	import Lookup from "./Lookup.svelte";
+	import Ui from "./Ui.svelte";
+	import type { Site } from "../lib/site";
+	import templateStyleSource from "../assets/large_template_style.webp";
+	import { onMount } from "svelte";
+	import { linearRegression } from "../lib/util";
 
 	let render: Render;
 
 	export let site: Site;
 	export let board: Board;
-	
+
 	const info = board.info;
 	let shape = $info.shape;
-	
+
 	const margin = {
 		scale: new Vec2(2, 2),
 		translate: new Vec2(1, 1),
 	};
-	
-	let padding: { scale: Vec2, translate: Vec2 };
+
+	let padding: { scale: Vec2; translate: Vec2 };
 	if (shape.get(0).every(d => d === 1)) {
 		// allow canvases which hint at being able to view the entire board at
 		// once some more liberal scale values
@@ -47,7 +47,7 @@
 			translate: new Vec2(0.5, 0.5),
 		};
 	}
-	
+
 	$: overrides = settings.debug.render;
 	let parameters = {
 		transform: new Mat3().identity(),
@@ -66,10 +66,10 @@
 	let lastAspect: Vec2;
 	$: if (render) {
 		aspect = render.aspect;
-		
-		aspect.subscribe(value => {
+
+		aspect.subscribe((value) => {
 			if (typeof lastAspect !== "undefined") {
-				// shift transform to be relative to new aspect so camera center 
+				// shift transform to be relative to new aspect so camera center
 				// stays the same
 				parameters.transform[6] *= value.x / lastAspect.x;
 				parameters.transform[7] *= value.y / lastAspect.y;
@@ -77,21 +77,21 @@
 			lastAspect = value;
 		});
 	}
-	
+
 	// center camera
 	parameters.transform = new Mat3().identity()
 		.scale(scaleBounds().min)
 		.translate($aspect.clone().divide(-2));
-	
+
 	$: [boardWidth, boardHeight] = shape.size();
-	
+
 	const templateStyle = new Image();
 	$: templateStyle.src = settings.template.source;
 
 	$: canvasnow = (Math.round($now) - $info.createdAt.valueOf()) / 1000;
 
 	$: if (settings.heatmap.enabled) {
-		if (settings.heatmap.position < 0){
+		if (settings.heatmap.position < 0) {
 			parameters.timestampEnd = canvasnow + settings.heatmap.position + 1;
 			parameters.timestampStart = parameters.timestampEnd - settings.heatmap.duration;
 		} else {
@@ -155,7 +155,7 @@
 	function unsetPointer() {
 		state.pointer = undefined;
 	}
-	
+
 	let activationIndex = 0;
 	let activations = new Map<number, Activation>();
 
@@ -225,14 +225,14 @@
 	}
 
 	let grabAnchor = undefined as {
-		center: Vec2,
-		spacing: number,
-		transform: Mat3,
+		center: Vec2;
+		spacing: number;
+		transform: Mat3;
 	} | undefined;
 
-	let lastGrabCenter = new Vec2(0,0);
+	let lastGrabCenter = new Vec2(0, 0);
 	let grabDistance = 0;
-	let grabVectors = [] as Array<{ point: Vec2, time: number }>;
+	let grabVectors = [] as Array<{ point: Vec2; time: number }>;
 	let velocity = new Vec2(0, 0);
 	let scaleVelocity = new Vec2(0, 0);
 
@@ -257,7 +257,7 @@
 		if (typeof grabAnchor !== "undefined") {
 			releaseBoard();
 		}
-		
+
 		let center = calculateCenter(points);
 		let spacing = calculateSpacing(center, points);
 
@@ -266,27 +266,27 @@
 		const transformScale = new Vec2(transform[0], transform[4]);
 		const scale = scaleOverflow(transformScale);
 		const translate = translateOverflow(transformTranslate, transformScale);
-		
+
 		const overtranslateCompensation = new Vec2(
 			clampSmoothingInv(translate.overflow.x, margin.translate.x),
 			clampSmoothingInv(translate.overflow.y, margin.translate.y),
 		);
-		
+
 		const overscaleCompensation = new Vec2(
 			clampSmoothingInv(scale.overflow.x, margin.scale.x),
 			clampSmoothingInv(scale.overflow.y, margin.scale.y),
 		);
-		
+
 		// put camera back in bounds first
 		center.add(translate.overflow.clone().divide(2));
 		spacing *= settings.input.scrollSensitivity ** scale.overflow.x;
-		
+
 		// then apply the required offset to keep it in the same place
 		center.sub(overtranslateCompensation.divide(2));
 		spacing /= settings.input.scrollSensitivity ** overscaleCompensation.x;
 
 		grabAnchor = { center, spacing, transform };
-		
+
 		lastGrabCenter = center;
 		if (points.length > 1) {
 			grabDistance = Infinity;
@@ -333,7 +333,7 @@
 		// f(x)x + f(x)a = ax
 		// f(x)a = ax - f(x)x
 		// x = (f(x)a)/(a - f(x))
-		
+
 		if (smoothed === max) {
 			// technically this should be Infinity, but this is large enough
 			// and also doesn't mess with stuff too much.
@@ -342,9 +342,9 @@
 			return max * smoothed / (max - Math.abs(smoothed));
 		}
 	}
-	
+
 	const SCALE_BASE = 1.5;
-	
+
 	function scaleBounds() {
 		const scaledPadding = new Vec2(SCALE_BASE ** padding.scale.x, SCALE_BASE ** padding.scale.y);
 		return {
@@ -352,14 +352,14 @@
 			max: new Vec2(boardWidth, boardHeight),
 		};
 	}
-	
+
 	function scaleOverflow(scale: Vec2) {
 		const logbase = Math.log(SCALE_BASE);
 		const bounds = scaleBounds();
 		// computes log in the base so that each increase by 1 in overflow is a
 		// equal in apparent size
 		const l = (v: number) => Math.log(v) / logbase;
-	
+
 		const overscale = new Vec2(
 			Math.max(0, l(scale.x) - l(bounds.max.x)),
 			Math.max(0, l(scale.y) - l(bounds.max.y)),
@@ -372,15 +372,15 @@
 			Math.max(bounds.min.x, Math.min(scale.x, bounds.max.x)),
 			Math.max(bounds.min.y, Math.min(scale.y, bounds.max.y)),
 		);
-	
+
 		const overflow = new Vec2(
-			overscale.x - underscale.x, 
-			overscale.y - underscale.y, 
+			overscale.x - underscale.x,
+			overscale.y - underscale.y,
 		);
-		
+
 		return { base, overflow };
 	}
-	
+
 	function translateBounds(scale: Vec2) {
 		let leftEdge = -1;
 		let topEdge = -1;
@@ -391,9 +391,9 @@
 			lower: new Vec2(rightEdge, bottomEdge).sub(padding.translate),
 		};
 	}
-	
+
 	function translateOverflow(translate: Vec2, scale: Vec2) {
-		const { upper, lower} = translateBounds(scale);
+		const { upper, lower } = translateBounds(scale);
 
 		let overleft = Math.max(0, translate.x - upper.x);
 		let overtop = Math.max(0, translate.y - upper.y);
@@ -424,7 +424,7 @@
 			overleft - overright,
 			overtop - overbottom,
 		);
-		
+
 		return { base, overflow };
 	}
 
@@ -458,7 +458,7 @@
 		const translate = translateOverflow(transformTranslate, finalScale);
 		const baseTranslate = translate.base;
 		const overTranslate = translate.overflow;
-				
+
 		const overTranslateScaled = new Vec2(
 			clampSmoothing(overTranslate.x, margin.translate.x),
 			clampSmoothing(overTranslate.y, margin.translate.y),
@@ -474,7 +474,7 @@
 
 		return transform;
 	}
-	
+
 	function trimGrabVectors(now: number) {
 		const vectorThreshold = now - settings.input.dragVelocityAccumulation;
 		const firstValidVector = grabVectors.findIndex(v => v.time > vectorThreshold);
@@ -492,7 +492,7 @@
 
 		const center = calculateCenter(points);
 		const spacing = calculateSpacing(center, points);
-		
+
 		const now = Date.now();
 		trimGrabVectors(now);
 		grabVectors.push({ point: center.clone(), time: now });
@@ -510,7 +510,7 @@
 			.multiply(2)
 			.divide(currentScale);
 		const scale = spacing / grabAnchor.spacing;
-		
+
 		const newTransform = new Mat3(...grabAnchor.transform).translate(translate);
 
 		// the grab position in gl space
@@ -529,27 +529,27 @@
 		parameters.transform = clampView(position, newTransform);
 		renderQueued = true;
 	}
-	
+
 	/**
-	 * This attempts to compute what the user currently expects the board's 
+	 * This attempts to compute what the user currently expects the board's
 	 * velocity is using recent pointer data.
 	 * @returns the apparent velocity the board is being moved with
 	 */
-	function calculateFling(): Vec2 {		
+	function calculateFling(): Vec2 {
 		const first = grabVectors.shift();
 		const last = grabVectors[grabVectors.length - 1];
 		if (typeof first !== "undefined" && typeof last !== "undefined") {
-			const distanceByTime = grabVectors.map(v => {
+			const distanceByTime = grabVectors.map((v) => {
 				const distance = v.point.distance(first.point);
 				const time = v.time - first.time;
 				return [time, distance] as [number, number];
 			});
-			
+
 			// Fit a line to the distance / time data.
 			// A fling drag is close to a straight line (distance increases linearly with time)
 			// A drag + stop has a non-linear shape and therefor a lower correlation.
 			const { slope, correlation } = linearRegression(distanceByTime);
-			
+
 			if (correlation > settings.input.dragVelocitySensitivity) {
 				const transformScale = new Vec2(parameters.transform[0], parameters.transform[4]);
 				const difference = last.point.sub(first.point)
@@ -577,7 +577,7 @@
 		}
 		trimGrabVectors(now);
 		velocity = calculateFling();
-		
+
 		grabVectors = [];
 		grabAnchor = undefined;
 		renderQueued = true;
@@ -621,35 +621,35 @@
 			updateGrab([
 				new Vec2(lastGrabCenter.x, lastGrabCenter.y),
 			]);
-			if(typeof siTimeout !== "undefined") {
+			if (typeof siTimeout !== "undefined") {
 				scaleInstantDeferredRealease();
 			}
 		}
 	}
-	
+
 	function hardClamp() {
 		let transform = new Mat3(...parameters.transform);
 		let transformScale = new Vec2(transform[0], transform[4]);
-		
+
 		const bounds = translateBounds(transformScale);
-		
+
 		const xMin = bounds.lower.x - margin.translate.x + 0.1;
 		const xMax = bounds.upper.x + margin.translate.x - 0.1;
 		const yMin = bounds.lower.y - margin.translate.y + 0.1;
 		const yMax = bounds.upper.y + margin.translate.y - 0.1;
-		
+
 		const newX = Math.max(xMin, Math.min(transform[6], xMax));
 		const newY = Math.max(yMin, Math.min(transform[7], yMax));
-		
+
 		if (parameters.transform[6] !== newX || parameters.transform[7] !== newY) {
 			parameters.transform[6] = newX;
 			parameters.transform[7] = newY;
 		}
 	}
-	
+
 	function doPhysics(delta: number) {
 		if (delta === 0) {
-			// NOTE: it may seem strange that we get a zero delta, but this 
+			// NOTE: it may seem strange that we get a zero delta, but this
 			// does happen not infrequently. I imagine this is because a reflow
 			// is triggered during an animation frame ans schedules a new one
 			// immedialty.
@@ -657,28 +657,28 @@
 			// one of the panel buttons.
 			return;
 		}
-		
+
 		let transform = new Mat3(...parameters.transform);
 		let transformTranslate = new Vec2(transform[6], transform[7]);
 		let transformScale = new Vec2(transform[0], transform[4]);
-		
+
 		const scale = scaleOverflow(transformScale);
 		const translate = translateOverflow(transformTranslate, transformScale);
-		
+
 		const overtranslateCompensation = new Vec2(
 			clampSmoothing(translate.overflow.x, margin.translate.x),
 			clampSmoothing(translate.overflow.y, margin.translate.y),
 		);
-		
+
 		const bounceForce = new Vec2(0, 0);
-		
+
 		const friction = new Vec2(1, 1).multiply(settings.input.dragVelocityFriction);
-		
+
 		const overXEdge = Math.abs(overtranslateCompensation.x) > 1e-3;
 		const overYEdge = Math.abs(overtranslateCompensation.y) > 1e-3;
 		const movingX = Math.abs(velocity.x) > 1e-6;
 		const movingY = Math.abs(velocity.y) > 1e-6;
-		
+
 		const edgeFrictionRatio = settings.input.bounceStrength * 50;
 		if (overXEdge) {
 			const scaledCompensationX = overtranslateCompensation.x / margin.translate.x;
@@ -687,7 +687,7 @@
 		} else if (!movingX) {
 			velocity.x = 0;
 		}
-		
+
 		if (overYEdge) {
 			const scaledCompensationY = overtranslateCompensation.y / margin.translate.y;
 			friction.y *= Math.abs(scaledCompensationY) ** edgeFrictionRatio;
@@ -695,37 +695,37 @@
 		} else if (!movingY) {
 			velocity.y = 0;
 		}
-		
+
 		// apply translate velocity
 		velocity.sub(bounceForce.multiply(delta));
 		// apply drag
 		velocity.multiply(new Vec2(friction.x ** delta, friction.y ** delta));
-		
+
 		const overscaleCompensation = new Vec2(
 			clampSmoothing(scale.overflow.x, margin.scale.x),
 			clampSmoothing(scale.overflow.y, margin.scale.y),
 		);
-		
+
 		const overScaleX = Math.abs(overscaleCompensation.x) > 1e-3;
 		const overScaleY = Math.abs(overtranslateCompensation.y) > 1e-3;
-		
+
 		const compensator = Math.min(overscaleCompensation.x, overscaleCompensation.y);
 		scaleVelocity = new Vec2(-compensator, -compensator);
-		
+
 		if (overXEdge || overYEdge || movingX || movingY || overScaleX || overScaleY) {
 			renderQueued = true;
 		}
-		
+
 		// move into deltatime
 		velocity.multiply(delta);
 		scaleVelocity.multiply(delta);
-		
+
 		const scaleTranslateBounceRatio = 20;
 		const scaleVelocityMult = new Vec2(
 			(1 + settings.input.bounceStrength * scaleTranslateBounceRatio) ** scaleVelocity.x,
 			(1 + settings.input.bounceStrength * scaleTranslateBounceRatio) ** scaleVelocity.y,
 		);
-	
+
 		const origin = new Vec2(0.5, 0.5)
 			.scale(2)
 			.sub(new Vec2(1, 1))
@@ -737,24 +737,24 @@
 			.scale(scaleVelocityMult)
 			.translate(new Vec2(-1, -1).multiply(origin))
 			.translate(velocity);
-		
+
 		// undo deltatime move
 		velocity.divide(delta);
 		scaleVelocity.divide(delta);
-		
+
 		hardClamp();
 	}
-	
+
 	$: if (parameters && overrides) {
 		renderQueued = true;
 	}
-	
+
 	let renderQueued = false;
 	let lastRender: number;
-	function paint(time?: number) {		
+	function paint(time?: number) {
 		if (render && renderQueued) {
 			renderQueued = false;
-			
+
 			if (typeof time !== "undefined") {
 				if (typeof lastRender !== "undefined") {
 					const delta = time - lastRender;
@@ -768,7 +768,7 @@
 		}
 		requestAnimationFrame(paint);
 	}
-	
+
 	onMount(paint);
 </script>
 <InputCapture
@@ -803,32 +803,32 @@
 		{templateStyle}
 		on:pointerenter={() => setPointerOnBoard(true)}
 		on:pointerleave={() => setPointerOnBoard(false)}
-		on:pointerdown={e => {
-			if (e.pointerType !== "touch") {
-				grabBoard([new Vec2(e.offsetX, e.offsetY).divide(boardSize)]);
+		on:pointerdown={(event) => {
+			if (event.pointerType !== "touch") {
+				grabBoard([new Vec2(event.offsetX, event.offsetY).divide(boardSize)]);
 			}
 		}}
-		on:pointerup={e => {
-			if (e.pointerType !== "touch") {
+		on:pointerup={(event) => {
+			if (event.pointerType !== "touch") {
 				if (canActivate()) {
 					activatePointer();
 				}
 			}
 		}}
-		on:touchstart={e => {
+		on:touchstart={(event) => {
 			const rect = render.getElement().getBoundingClientRect();
-			grabBoard(Array.from(e.touches).map(t => new Vec2(
+			grabBoard(Array.from(event.touches).map(t => new Vec2(
 				(t.pageX - rect.x) / rect.width,
 				(t.pageY - rect.y) / rect.height,
 			)));
 		}}
-		on:touchend={e => {
-			if (e.touches.length === 0) {
+		on:touchend={(event) => {
+			if (event.touches.length === 0) {
 				if (canActivate()) {
 					const rect = render.getElement().getBoundingClientRect();
 					setPointerPosition(new Vec2(
-						(e.changedTouches[0].pageX - rect.x) / rect.width,
-						(e.changedTouches[0].pageY - rect.y) / rect.height,
+						(event.changedTouches[0].pageX - rect.x) / rect.width,
+						(event.changedTouches[0].pageY - rect.y) / rect.height,
 					));
 					activatePointer();
 					// InputCapture should do this anyway, but this is also
@@ -837,10 +837,10 @@
 				}
 			}
 		}}
-		on:wheel={e => {
-			let delta = -e.deltaY;
+		on:wheel={(event) => {
+			let delta = -event.deltaY;
 
-			switch (e.deltaMode) {
+			switch (event.deltaMode) {
 				case WheelEvent.DOM_DELTA_PIXEL:
 					// 53 pixels is the default chrome gives for a wheel scroll.
 					delta /= 53;
@@ -856,7 +856,7 @@
 
 			const zoom = settings.input.scrollSensitivity ** delta;
 			scaleInstant(zoom);
-			e.preventDefault();
+			event.preventDefault();
 		}}
 	/>
 	{#if typeof state.pointer !== "undefined"}
@@ -892,7 +892,7 @@
 	{/each}
 	<Ui {site} {board} bind:state bind:settings />
 	{#if typeof state.pointer !== "undefined"}
-		{#if (!pointerOnBoard || typeof reticulePosition === "undefined")  && typeof pointerPosition !== "undefined"}
+		{#if (!pointerOnBoard || typeof reticulePosition === "undefined") && typeof pointerPosition !== "undefined"}
 			<Exact
 				x={pointerPosition.x * boardSize.x - RETICULE_SIZE / 2}
 				y={pointerPosition.y * boardSize.y - RETICULE_SIZE / 2}

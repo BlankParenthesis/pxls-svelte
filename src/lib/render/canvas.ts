@@ -17,10 +17,10 @@ export class ViewBox {
 	readonly top: number;
 	readonly right: number;
 	constructor(view: {
-		bottom: number,
-		left: number,
-		top: number,
-		right: number,
+		bottom: number;
+		left: number;
+		top: number;
+		right: number;
 	}) {
 		this.bottom = view.bottom;
 		this.left = view.left;
@@ -63,7 +63,7 @@ export class ViewBox {
 
 	static fromTransform(transform: Mat3): ViewBox {
 		const inverse = transform.inverse();
-		
+
 		// gl goes from bottom to top, but we want from top to bottom, so flip the y
 		const bottomLeft = new Vec2(-1, 1).applyMatrix3(inverse);
 		const topRight = new Vec2(1, -1).applyMatrix3(inverse);
@@ -83,7 +83,7 @@ export type RenderParameters = {
 	timestampStart: number;
 	timestampEnd: number;
 	heatmapDim: number;
-}
+};
 
 export class Canvas {
 	private palette: Texture;
@@ -160,7 +160,7 @@ export class Canvas {
 		return this.program.uniforms.uAspect.value.clone();
 	}
 
-	/** 
+	/**
 	 * @returns The viewbox relative to the top left of the unit board.
 	 */
 	private visibleArea(): ViewBox {
@@ -254,7 +254,7 @@ export class Canvas {
 			scene.geometry.attributes.size,
 			Array(scene.program.maxParallelism).fill(new Vec2(width, height)),
 		);
-		
+
 		const sectors = this.visibleSectors(visible, detail);
 		if (typeof overrides.detailLevel === "undefined") {
 			console.assert(sectors.length <= 4, "More than 4 sectors were visible");
@@ -274,7 +274,7 @@ export class Canvas {
 		detail: number,
 	) {
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-		
+
 		const parallelism = scene.program.maxParallelism;
 		const attributes = scene.geometry.attributes;
 		while (sectors.length > 0) {

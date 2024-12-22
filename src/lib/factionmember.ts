@@ -9,13 +9,13 @@ export enum MemberStatus {
 	Applied,
 	Joined,
 	Owned,
-	None
+	None,
 }
 
 export class FactionMember {
 	constructor(
 		private readonly http: Requester,
-		readonly joinIntent: { member: boolean, faction: boolean },
+		readonly joinIntent: { member: boolean; faction: boolean },
 		readonly owner: boolean,
 		readonly user?: Reference<User>,
 	) {}

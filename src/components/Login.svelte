@@ -8,7 +8,7 @@
 	export const navigationState = { navigating: false };
 </script>
 <script lang="ts">
-    import type { Authentication } from "../lib/authentication";
+	import type { Authentication } from "../lib/authentication";
 
 	export let auth: Authentication;
 	const token = auth.token;

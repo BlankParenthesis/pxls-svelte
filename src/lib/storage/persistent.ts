@@ -36,7 +36,7 @@ export function persistentWritable<T>(
 	const stored = JSON.parse(localStorage.getItem(key) as string) as unknown;
 	try {
 		value = parser(stored);
-	} catch(e) {
+	} catch (e) {
 		if (stored !== null) {
 			console.warn("failed to load persistent value:", e);
 		}

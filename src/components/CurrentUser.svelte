@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { User } from "../lib/user";
-    import Roles from "./Roles.svelte";
-    import Time from "./Time.svelte";
+	import type { User } from "../lib/user";
+	import Roles from "./Roles.svelte";
+	import Time from "./Time.svelte";
 
 	export let user: User;
 	export let access: Set<string>;

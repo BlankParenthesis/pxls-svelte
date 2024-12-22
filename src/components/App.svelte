@@ -1,12 +1,12 @@
 <script lang="ts">
 	import Canvas from "./Canvas.svelte";
 	import { Site } from "../lib/site";
-    import { collect } from "../lib/util";
-    import { BoardInfo } from "../lib/board/info";
-    import BoardSelect from "./BoardSelect.svelte";
-    import type { Reference } from "../lib/reference";
-    import Login from "./Login.svelte";
-    import Splash from "./layout/Splash.svelte";
+	import { collect } from "../lib/util";
+	import { BoardInfo } from "../lib/board/info";
+	import BoardSelect from "./BoardSelect.svelte";
+	import type { Reference } from "../lib/reference";
+	import Login from "./Login.svelte";
+	import Splash from "./layout/Splash.svelte";
 
 	const connecting = Site.connect(new URL(import.meta.env.VITE_TARGET_SITE));
 	let select: (board: Reference<BoardInfo>) => void;

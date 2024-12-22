@@ -12,7 +12,7 @@
 		"check": "svelte-check --tsconfig ./tsconfig.json"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.5.0",
+		"@stylistic/eslint-plugin": "^2.12.1",
 		"@sveltejs/vite-plugin-svelte": "^3.0.2",
 		"@tsconfig/svelte": "^5.0.2",
 		"eslint": "^9.5.0",
@@ -20,9 +20,10 @@
 		"globals": "^15.5.0",
 		"svelte": "^4.2.12",
 		"svelte-check": "^3.6.7",
+		"svelte-eslint-parser": "^0.43.0",
 		"tslib": "^2.6.2",
 		"typescript": "^5.2.2",
-		"typescript-eslint": "8.0.0-alpha.30",
+		"typescript-eslint": "^8.18.1",
 		"typescript-svelte-plugin": "^0.3.44",
 		"vite": "^5.2.0",
 		"vite-plugin-singlefile": "^2.0.2"

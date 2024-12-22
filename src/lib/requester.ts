@@ -29,7 +29,7 @@ export class Requester {
 	}
 
 	public get(location?: string): Promise<unknown | undefined> {
-		return this.getRaw(location).then(r => {
+		return this.getRaw(location).then((r) => {
 			if (r.status === 404) {
 				return undefined;
 			} else {
@@ -38,7 +38,7 @@ export class Requester {
 		});
 	}
 
-	public post(data: Record<string, unknown>, location?: string): Promise<{ uri: string, view: unknown }> {
+	public post(data: Record<string, unknown>, location?: string): Promise<{ uri: string; view: unknown }> {
 		const headers = this.headers() as Record<string, string>;
 		headers["content-type"] = "application/json";
 		let url: URL;
@@ -48,7 +48,7 @@ export class Requester {
 			url = resolveURL(this.baseURL, location);
 		}
 		return fetch(url, { method: "post", headers, body: JSON.stringify(data) })
-			.then(async r => {
+			.then(async (r) => {
 				const uri = r.headers.get("location");
 				if (uri === null) {
 					throw new Error("invalid post response (missing location)");
@@ -71,7 +71,7 @@ export class Requester {
 
 	public data(start: number, end: number): Promise<ArrayBuffer> {
 		const range = "bytes=" + start + "-" + end;
-		const headers = { "Range":  range, ...this.headers() };
+		const headers = { "Range": range, ...this.headers() };
 		return fetch(this.baseURL, { headers }).then(r => r.arrayBuffer());
 	}
 
@@ -93,18 +93,18 @@ export class Requester {
 				reject(new Error("Socket closed"));
 			};
 			socket.onerror = () => reject(new Error("Socket error"));
-			
+
 			if (typeof token !== "undefined") {
 				socket.onopen = () => {
-					unsubscribe = this.token.subscribe(token => {
+					unsubscribe = this.token.subscribe((token) => {
 						socket.send(JSON.stringify({
-							"type": "authenticate",
-							"token": token,
+							type: "authenticate",
+							token: token,
 						}));
 					});
 				};
 			}
-			
+
 			function onmessage(message: MessageEvent) {
 				try {
 					const packet = JSON.parse(message.data);

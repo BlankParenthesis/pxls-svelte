@@ -31,7 +31,6 @@ void main() {
 }
 `;
 
-
 export class DebugProgram extends Program implements Instanceable {
 	declare public readonly uniforms: DebugUniforms;
 	public readonly maxParallelism = 4;

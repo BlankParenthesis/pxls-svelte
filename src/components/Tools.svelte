@@ -15,13 +15,13 @@
 	const canUseStaffColors = access.has("boards.pixels.override.color");
 	const canIgnoreMask = access.has("boards.pixels.override.mask");
 	const hasAdminTool = canIgnoreCooldown || canUseStaffColors || canIgnoreMask;
-	
+
 	const canLookup = access.has("boards.pixels.get");
 
 	// https://www.desmos.com/calculator/mlugvy8kwy
-	const DURATION_KNOWN_POINT = 0.25; 
-	const DURATION_KNOWN_POINT_VALUE = 3600; 
-	const DURATION_POWER = 5; 
+	const DURATION_KNOWN_POINT = 0.25;
+	const DURATION_KNOWN_POINT_VALUE = 3600;
+	const DURATION_POWER = 5;
 	const DURATION_COEFFICIENT = (DURATION_KNOWN_POINT_VALUE - 1) / Math.pow(DURATION_KNOWN_POINT, DURATION_POWER);
 
 	function valueToDuration(range: number) {
@@ -63,7 +63,7 @@
 						if (typeof lastLookupDismisser !== "undefined") {
 							lastLookupDismisser();
 						}
-						const dismissal = new Promise<void>(r => {
+						const dismissal = new Promise<void>((r) => {
 							lastLookupDismisser = r;
 						});
 						const lookup = board.pixel(position);
@@ -78,7 +78,7 @@
 							};
 						});
 					}
-					
+
 					return {
 						type: "lookup",
 						position,
@@ -120,7 +120,7 @@
 	.tool {
 		background: var(--tool-button-background);
 	}
-	
+
 	.tool:hover {
 		background: var(--tool-button-hover-background);
 	}
@@ -129,7 +129,7 @@
 		color: var(--tool-button-active-foreground);
 		background: var(--tool-button-active-background);
 	}
-	
+
 	.tool-group {
 		gap: 0.5em;
 		padding: 0.25em;
@@ -182,8 +182,8 @@
 						type="range"
 						class="vertical flipped"
 						bind:value={duration}
-						on:keydown={e => {
-							const newval = duration + manualStep(e);
+						on:keydown={(event) => {
+							const newval = duration + manualStep(event);
 							duration = Math.max(0, Math.min(newval, 1));
 						}}
 						list="activity-duration-stops"
@@ -192,7 +192,7 @@
 						step="any"
 					/>
 					<datalist id="activity-duration-stops">
-						<option value="0"></option> 
+						<option value="0"></option>
 						<option value="{durationToValue(60)}"></option>
 						<option value="{durationToValue(60 * 60)}"></option>
 						<option value="{durationToValue(60 * 60 * 24)}"></option>

@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
-    import type { BoardInfo } from "../lib/board/info";
-    import type { Reference } from "../lib/reference";
+	import { createEventDispatcher } from "svelte";
+	import type { BoardInfo } from "../lib/board/info";
+	import type { Reference } from "../lib/reference";
 
 	export let info: Reference<BoardInfo>;
 	const board = info.fetch();

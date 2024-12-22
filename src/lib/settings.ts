@@ -6,12 +6,12 @@ export type RendererOverrides = {
 	debug: boolean;
 	debugOutline: number;
 	debugOutlineStripe: number;
-	zoom: boolean,
+	zoom: boolean;
 };
 
 export type DebugSettings = {
 	render: RendererOverrides;
-}
+};
 
 export type Settings = {
 	debug: DebugSettings;
@@ -31,7 +31,7 @@ export type Settings = {
 		dragVelocityFriction: number;
 		bounceStrength: number;
 	};
-}
+};
 
 export interface AppState {
 	pointer?: Pointer;
@@ -43,4 +43,4 @@ export type AdminOverrides = {
 	mask: boolean;
 	color: boolean;
 	cooldown: boolean;
-}
+};

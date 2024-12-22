@@ -26,7 +26,7 @@
 		background: var(--bubble-background);
 		box-shadow: 0 2px 5px #00000077;
 	}
-	
+
 	.arrow, .arrow-shadow {
 		position: absolute;
 		bottom: calc(100% + 1em);
@@ -34,7 +34,7 @@
 		transform: translateX(-50%);
 		pointer-events: none;
 	}
-	
+
 	.arrow::after, .arrow-shadow::before {
 		content: "";
 		position: absolute;
@@ -47,14 +47,14 @@
 		border-top-width: 1em;
 		border-color: transparent;
 	}
-	
+
 	/* the shadow */
 	.arrow-shadow::before {
 		top: calc(100% + 2px);
 		border-top-color: #00000077;
 		filter: blur(5px);
 	}
-	
+
 	/* the arrow itself */
 	.arrow::after {
 		top: 100%;
