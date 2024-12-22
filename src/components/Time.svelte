@@ -78,8 +78,11 @@
 	export let mode: Mode = Mode.Date;
 </script>
 <style>
+	time {
+		pointer-events: auto;
+	}
 </style>
-<time datetime={time.toISOString()}>
+<time title={time.toLocaleString()} datetime={time.toISOString()}>
 	{#if mode === Mode.Date}
 		{time.toLocaleDateString()}
 	{:else if mode === Mode.Duration}
