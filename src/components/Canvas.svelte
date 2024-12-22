@@ -169,7 +169,8 @@
 			activations.set(index, activation);
 			activations = activations;
 			activation.task
-				.then(data => activation.finalizer.finalize(data))
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				.then(data => activation.finalizer.finalize(data as any))
 				.catch(_ => activation.finalizer.error())
 				.finally(() => {
 					activations.delete(index);
