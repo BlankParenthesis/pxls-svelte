@@ -66,12 +66,14 @@
 
 	const DISTANCE_THRESHOLD = 10;
 	function deselectColor() {
-		if (movedDistance > DISTANCE_THRESHOLD) {
-			state.pointer = undefined;
-		} else if (state.pointer?.quickActivate) {
-			state.pointer.quickActivate = false;
-		} else {
-			state.pointer = undefined;
+		if (state.pointer?.type === "place") {
+			if (movedDistance > DISTANCE_THRESHOLD) {
+				state.pointer = undefined;
+			} else if (state.pointer?.quickActivate) {
+				state.pointer.quickActivate = false;
+			} else {
+				state.pointer = undefined;
+			}
 		}
 	}
 
@@ -228,7 +230,7 @@
 		}
 		if (event.touches.length === 1) {
 			const touch = event.touches[0];
-			const position = new Vec2(touch.pageX, touch.pageY);
+			const position = new Vec2(touch.clientX, touch.clientY);
 			track(position);
 		} else {
 			cancelDrag();

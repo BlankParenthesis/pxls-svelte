@@ -5,6 +5,7 @@
 	import { onDestroy } from "svelte";
 	import { get } from "svelte/store";
 	import { ActivationFinalizer, type LookupData } from "../lib/pointer";
+	import { Vec2 } from "ogl";
 
 	export let board: Board;
 	export let state: AppState;
@@ -48,13 +49,13 @@
 	}
 
 	let lastLookupDismisser: () => void | undefined;
-	function setLookupPointer() {
+	function toggleInspect() {
 		if (state.pointer?.type === "lookup") {
-			state.pointer = undefined;
+			deselectInspect();
 		} else {
 			state.pointer = {
 				type: "lookup",
-				quickActivate: false,
+				quickActivate: true,
 				activate(position) {
 					let task: Promise<LookupData>;
 					if (typeof position === "undefined") {
@@ -87,6 +88,72 @@
 					};
 				},
 			};
+		}
+	}
+
+	const DISTANCE_THRESHOLD = 10;
+	function deselectInspect() {
+		if (state.pointer?.type === "lookup") {
+			if (movedDistance > DISTANCE_THRESHOLD) {
+				state.pointer = undefined;
+			} else if (state.pointer?.quickActivate) {
+				state.pointer.quickActivate = false;
+			} else {
+				state.pointer = undefined;
+			}
+		}
+	}
+
+	let movedDistance = 0;
+	let initialDragPoint: Vec2 | undefined;
+
+	function beginDrag(point: Vec2) {
+		initialDragPoint = point;
+		movedDistance = 0;
+	}
+
+	function track(point: Vec2) {
+		if (typeof initialDragPoint === "undefined") {
+			return;
+		}
+		movedDistance = Math.max(initialDragPoint.distance(point), movedDistance);
+	}
+
+	function trackPointer(event: PointerEvent) {
+		track(new Vec2(event.clientX, event.clientY));
+	}
+
+	function trackTouch(event: TouchEvent) {
+		if (typeof initialDragPoint === "undefined") {
+			return;
+		}
+		if (event.touches.length === 1) {
+			const touch = event.touches[0];
+			const position = new Vec2(touch.clientX, touch.clientY);
+			track(position);
+		} else {
+			cancelDrag();
+		}
+	}
+
+	function stopDrag() {
+		initialDragPoint = undefined;
+
+		if (state.pointer?.quickActivate) {
+			// because target is retained for touchend events,
+			// we might be placing. If so, deselecting now would
+			// interrupt the place code as this has higher
+			// precedence.
+			// Instead, run it the next event loop:
+			setTimeout(deselectInspect, 0);
+		}
+	}
+
+	function cancelDrag() {
+		initialDragPoint = undefined;
+
+		if (state.pointer?.quickActivate) {
+			deselectInspect();
 		}
 	}
 
@@ -135,11 +202,49 @@
 		padding: 0.25em;
 	}
 </style>
+<svelte:window
+	on:pointermove={trackPointer}
+	on:pointerup={(event) => {
+		if (event.pointerType !== "touch") {
+			stopDrag();
+		}
+	}}
+	on:touchmove={trackTouch}
+	on:touchend={(event) => {
+		if (event.touches.length === 0) {
+			stopDrag();
+		}
+	}}
+/>
 <div class="flex reverse space cursor-transparent">
 	<div class="user-tools tool-group flex align-bottom cursor-transparent">
 		{#if canLookup}
 			<div class="flex vertical group reverse">
-				<button class="button tool" class:active={state.pointer?.type === "lookup"} on:click={setLookupPointer}>
+				<button
+					class="button tool"
+					class:active={state.pointer?.type === "lookup"}
+					on:keydown={(event) => {
+						if ([" ", "Enter"].includes(event.key)) {
+							// A bit of a hack to prevent keyboard deselect from
+							// being blocked by the quick place mechanism
+							movedDistance = Infinity;
+							toggleInspect();
+						}
+					}}
+					on:pointerdown={(event) => {
+						if (event.pointerType !== "touch") {
+							toggleInspect();
+							beginDrag(new Vec2(event.clientX, event.clientY));
+						}
+					}}
+					on:touchstart={(event) => {
+						if (event.touches.length === 1) {
+							toggleInspect();
+							const touch = event.touches[0];
+							beginDrag(new Vec2(touch.clientX, touch.clientY));
+						}
+					}}
+				>
 					<div class="icon large">🔍</div>
 					<small>Inspect</small>
 				</button>
