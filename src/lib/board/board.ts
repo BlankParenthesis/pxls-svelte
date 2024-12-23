@@ -123,7 +123,7 @@ export class Board {
 			const packet = Event.parse(JSON.parse(message.data) as unknown);
 			switch (packet.type) {
 				case "board-update":
-					this.listeners.boardUpdate.forEach(l => l(packet));
+					this.queueUpdate(packet);
 					break;
 				case "pixels-available":
 					this.listeners.pixelsAvailable.forEach(l => l(packet));
@@ -144,7 +144,6 @@ export class Board {
 	) {
 		this.info = { subscribe: infoStore.subscribe };
 		this.cooldown = { subscribe: cooldownStore.subscribe };
-		this.onUpdate(u => this.update(u));
 		this.onPixelsAvailable(p => this.cooldownStore.set({
 			pixelsAvailable: p.count,
 			nextTimestamp: typeof p.next === "undefined"
@@ -198,6 +197,20 @@ export class Board {
 
 	async initial(sector: number): Promise<Uint8Array> {
 		return await this.initialCache.get(get(this.info), sector);
+	}
+
+	private updateQueue = Promise.resolve();
+	private queueUpdate(update: BoardUpdate) {
+		const queue = this.updateQueue
+			.then(() => this.update(update))
+			.then(() => this.listeners.boardUpdate.forEach(f => f(update)))
+			.then(() => {
+				if (queue === this.updateQueue) {
+					// trim promises if no more are queued
+					this.updateQueue = Promise.resolve();
+				}
+			});
+		this.updateQueue = queue;
 	}
 
 	protected async update(update: BoardUpdate) {
