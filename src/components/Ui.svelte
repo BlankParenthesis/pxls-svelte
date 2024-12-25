@@ -51,13 +51,24 @@
 <style>
 	.grid-5 {
 		display: grid;
-		grid-template-columns: 3fr 3fr minmax(5em, 2fr) 3fr 3fr;
+		grid-template-columns: 3fr 3fr minmax(6em, 2fr) 3fr 3fr;
 	}
 
 	.end {
 		display: flex;
 		flex-direction: column;
 		justify-content: end;
+	}
+	
+	.switcher-button {
+		gap: 0.25em;
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.switcher-button > small {
+		display: block;
+		line-height: 1.25em;
 	}
 </style>
 <Grid maxwidth="53em" maxheight="100%">
