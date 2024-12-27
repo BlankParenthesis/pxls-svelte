@@ -147,7 +147,7 @@ const trackpointer = function (node, parameters) {
 				parameters.onRelease?.call(node, newstate);
 			} else if (newstate.farthestDistance === 0) {
 				parameters.onPress?.call(node, newstate);
-			} else if (newstate.axis !== parameters.axisLimit && typeof newstate.axis !== "undefined") {
+			} else if (typeof parameters.axisLimit !== "undefined" && typeof newstate.axis !== "undefined" && newstate.axis !== parameters.axisLimit) {
 				cancelled = true;
 				parameters.onCancel?.call(node);
 			} else {
