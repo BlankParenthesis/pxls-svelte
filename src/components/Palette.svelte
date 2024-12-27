@@ -7,10 +7,17 @@
 	import { linearRegression } from "../lib/util";
 	import { onDestroy } from "svelte";
 	import { Pixel } from "../lib/pixel";
+	import pointertracking, { TrackingAxis } from "../lib/actions/pointertracking";
 
 	export let board: Board;
 	export let state: AppState;
 	const info = board.info; // TODO: listen to the palette directly
+
+	// how much scrolling should be preferred over placing when dragging.
+	// greater than one is higher preference, lower is less.
+	// corresponds to the gradient of mouse movement.
+	const SCROLL_BIAS = 1 / 3;
+	const DISTANCE_THRESHOLD = 10;
 
 	$: pointerDefined = typeof state.pointer !== "undefined";
 	$: placing = state.pointer?.type === "place";
@@ -19,61 +26,61 @@
 		? state.pointer.selected
 		: undefined;
 
-	let movedDistance = 0;
-
 	function toggleColor(index: number) {
+		if (state.pointer?.type === "place" && state.pointer.selected === index) {
+			deselectColor();
+		} else {
+			selectColor(index);
+		}
+	}
+
+	function selectColor(index: number) {
 		const color = $info.palette.get(index);
 		if (typeof color === "undefined") {
 			throw new Error("invalid color");
 		}
 
-		if (state.pointer?.type === "place" && state.pointer.selected === index) {
-			deselectColor();
-		} else {
-			movedDistance = 0;
-			const colorString = "#" + colorToHex(color.value);
-			state.pointer = {
-				type: "place",
-				quickActivate: true,
-				selected: index,
-				color: colorString,
-				activate(position) {
-					let task: Promise<Pixel>;
-					if (typeof position === "undefined") {
-						// TODO: this doesn't seem to error correctly
-						task = new Promise((_, err) => err("Invalid Location"));
-					} else {
-						task = board.place(position, index, state.adminOverrides)
-							.then((pixel) => {
-								if (typeof pixel === "undefined") {
-									throw new Error("Placing failed");
-								} else {
-									return pixel;
-								}
-							});
-					}
-					return {
-						type: "place",
-						color: colorString,
-						position,
-						task,
-						finalizer: new ActivationFinalizer(),
-					};
-				},
-			};
+		const colorString = "#" + colorToHex(color.value);
+		state.pointer = {
+			type: "place",
+			quickActivate: true,
+			selected: index,
+			color: colorString,
+			activate(position) {
+				let task: Promise<Pixel>;
+				if (typeof position === "undefined") {
+					// TODO: this doesn't seem to error correctly
+					task = new Promise((_, err) => err("Invalid Location"));
+				} else {
+					task = board.place(position, index, state.adminOverrides)
+						.then((pixel) => {
+							if (typeof pixel === "undefined") {
+								throw new Error("Placing failed");
+							} else {
+								return pixel;
+							}
+						});
+				}
+				return {
+					type: "place",
+					color: colorString,
+					position,
+					task,
+					finalizer: new ActivationFinalizer(),
+				};
+			},
+		};
+	}
+
+	function hardSelect() {
+		if (state.pointer?.type === "place") {
+			state.pointer.quickActivate = false;
 		}
 	}
 
-	const DISTANCE_THRESHOLD = 10;
 	function deselectColor() {
 		if (state.pointer?.type === "place") {
-			if (movedDistance > DISTANCE_THRESHOLD) {
-				state.pointer = undefined;
-			} else if (state.pointer?.quickActivate) {
-				state.pointer.quickActivate = false;
-			} else {
-				state.pointer = undefined;
-			}
+			state.pointer = undefined;
 		}
 	}
 
@@ -97,22 +104,11 @@
 	}
 
 	let scrollRoot: HTMLElement;
-	let initialDragPoint: {
-		point: Vec2;
-		scroll: Vec2;
-	} | undefined;
+	let initialScroll = new Vec2(0, 0);
 	let recentScrollPoints = [] as Array<{
 		point: Vec2;
 		time: number;
 	}>;
-	let scrollVelocity = new Vec2(0, 0);
-	function beginDrag(pointer: Vec2) {
-		const scroll = currentScroll();
-		initialDragPoint = { point: pointer, scroll };
-		recentScrollPoints = [];
-		scrollVelocity.x = scrollVelocity.y = 0;
-		dragState = DragState.Undetermined;
-	}
 
 	function trimScrollPoints() {
 		const now = Date.now();
@@ -152,119 +148,10 @@
 		return new Vec2(0, 0);
 	}
 
-	function doScroll(point: Vec2) {
-		if (typeof scrollRoot !== "undefined" && typeof initialDragPoint !== "undefined") {
-			trimScrollPoints();
-			const time = Date.now();
-			recentScrollPoints.push({ time, point });
-
-			const initialPoint = initialDragPoint.point.clone();
-			const initialScroll = initialDragPoint.scroll.clone();
-			const scrollDelta = initialPoint.sub(point);
-			const initialScrollPixels = initialScroll.multiply(maxScroll());
-			scrollRoot.scrollLeft = initialScrollPixels.x + scrollDelta.x;
-			scrollRoot.scrollTop = initialScrollPixels.y + scrollDelta.y;
-		}
-	}
-
-	// how much difference there must be to decide between scrolling and placing.
-	const STATE_DECISION_THRESHOLD = 10;
-	// how much a scrolling action should be preferred to a placing one
-	const SCROLL_TRESHOLD_BIAS = 1 / 3;
-	function newStateFromPointerDelta(delta: Vec2) {
-		// horizontal movement favors scrolling
-		const movementScroll = Math.abs(delta.x);
-		// vertical movement favors placing
-		const movementPlace = Math.abs(delta.y / SCROLL_TRESHOLD_BIAS);
-		// a measurement of how much scroll movement there is compared to place.
-		// positive values indicate a scroll movement and negative indicate place movement.
-		const ratio = movementScroll - movementPlace;
-		if (ratio > STATE_DECISION_THRESHOLD) {
-			return DragState.Scroll;
-		} else if (-ratio > STATE_DECISION_THRESHOLD) {
-			return DragState.Place;
-		} else {
-			return DragState.Undetermined;
-		}
-	}
-
-	enum DragState {
-		Undetermined,
-		Scroll,
-		Place,
-	}
-
-	let dragState = DragState.Undetermined;
-
-	function track(point: Vec2) {
-		if (typeof initialDragPoint === "undefined") {
-			return;
-		}
-		movedDistance = Math.max(initialDragPoint.point.distance(point), movedDistance);
-		switch (dragState) {
-			case DragState.Undetermined:
-				dragState = newStateFromPointerDelta(
-					initialDragPoint.point.clone().sub(point),
-				);
-				if (dragState === DragState.Scroll) {
-					// force the deselect
-					movedDistance = Infinity;
-					deselectColor();
-				}
-				break;
-			case DragState.Scroll:
-				doScroll(point);
-				break;
-			case DragState.Place:
-				break;
-		}
-	}
-
-	function trackPointer(event: PointerEvent) {
-		track(new Vec2(event.clientX, event.clientY));
-	}
-
-	function trackTouch(event: TouchEvent) {
-		if (typeof initialDragPoint === "undefined") {
-			return;
-		}
-		if (event.touches.length === 1) {
-			const touch = event.touches[0];
-			const position = new Vec2(touch.clientX, touch.clientY);
-			track(position);
-		} else {
-			cancelDrag();
-		}
-	}
-
-	function stopDrag() {
-		initialDragPoint = undefined;
-		scrollVelocity = calculateScrollFling().divide(maxScroll());
-		scrollPosition = currentScroll();
-		requestAnimationFrame(scrollPhysics);
-		recentScrollPoints = [];
-
-		if (state.pointer?.quickActivate) {
-			// because target is retained for touchend events,
-			// we might be placing. If so, deselecting now would
-			// interrupt the place code as this has higher
-			// precedence.
-			// Instead, run it the next event loop:
-			setTimeout(deselectColor, 0);
-		}
-	}
-
-	function cancelDrag() {
-		initialDragPoint = undefined;
-		recentScrollPoints = [];
-
-		if (state.pointer?.quickActivate) {
-			deselectColor();
-		}
-	}
+	let scrollVelocity = new Vec2(0, 0);
+	let scrollPosition: Vec2 | undefined;
 
 	let lastTime: number | undefined;
-	let scrollPosition: Vec2 | undefined;
 	function scrollPhysics(time: number) {
 		if (typeof lastTime === "undefined") {
 			lastTime = time;
@@ -362,31 +249,32 @@
 		border-style: dashed;
 	}
 </style>
-<svelte:window
-	on:pointermove={trackPointer}
-	on:pointerup={(event) => {
-		if (event.pointerType !== "touch") {
-			stopDrag();
-		}
-	}}
-	on:touchmove={trackTouch}
-	on:touchend={(event) => {
-		if (event.touches.length === 0) {
-			stopDrag();
-		}
-	}}
-/>
 <ul
-	on:pointerdown={(event) => {
-		if (event.pointerType !== "touch") {
-			beginDrag(new Vec2(event.clientX, event.clientY));
-		}
-	}}
-	on:touchstart={(event) => {
-		if (event.touches.length === 1) {
-			const touch = event.touches[0];
-			beginDrag(new Vec2(touch.clientX, touch.clientY));
-		}
+	use:pointertracking={{
+		axisLimit: TrackingAxis.Horizontal,
+		axisBias: SCROLL_BIAS,
+		onPress: () => {
+			initialScroll = currentScroll();
+			scrollVelocity.x = scrollVelocity.y = 0;
+			recentScrollPoints = [];
+		},
+		onMove: ({ axis, delta, point }) => {
+			trimScrollPoints();
+			const time = Date.now();
+			recentScrollPoints.push({ time, point });
+			if (axis === TrackingAxis.Horizontal) {
+				const initialScrollPixels = maxScroll().multiply(initialScroll);
+				scrollRoot.scrollLeft = initialScrollPixels.x - delta.x;
+				scrollRoot.scrollTop = initialScrollPixels.y - delta.y;
+			}
+		},
+		onRelease: ({ axis }) => {
+			if (axis === TrackingAxis.Horizontal) {
+				scrollVelocity = calculateScrollFling().divide(maxScroll());
+				scrollPosition = currentScroll();
+				requestAnimationFrame(scrollPhysics);
+			}
+		},
 	}}
 	bind:this={scrollRoot}
 	tabindex="-1"
@@ -395,27 +283,32 @@
 		{#if !color.system_only || state.adminOverrides.color }
 			<li>
 				<button
+					class="color"
+					class:selected={selectedColor === index}
+					style="--color: #{colorToHex(color.value)}"
 					on:keydown={(event) => {
 						if ([" ", "Enter"].includes(event.key)) {
-							// A bit of a hack to prevent keyboard deselect from
-							// being blocked by the quick place mechanism
-							movedDistance = Infinity;
 							toggleColor(index);
 						}
 					}}
-					on:pointerdown={(event) => {
-						if (event.pointerType !== "touch") {
-							toggleColor(index);
-						}
+					use:pointertracking={{
+						axisLimit: TrackingAxis.Vertical,
+						axisBias: SCROLL_BIAS,
+						onPress: () => toggleColor(index),
+						onRelease: ({ farthestDistance }) => {
+							if (farthestDistance < DISTANCE_THRESHOLD) {
+								hardSelect();
+							} else if (state.pointer?.quickActivate) {
+								// because target is retained for touchend events,
+								// we might be placing. If so, deselecting now would
+								// interrupt the place code as this has higher
+								// precedence.
+								// Instead, run it the next event loop:
+								setTimeout(deselectColor, 0);
+							}
+						},
+						onCancel: () => deselectColor(),
 					}}
-					on:touchstart={(event) => {
-						if (event.touches.length === 1) {
-							toggleColor(index);
-						}
-					}}
-					style="--color: #{colorToHex(color.value)}"
-					class:selected={selectedColor === index}
-					class="color"
 				/>
 			</li>
 		{/if}

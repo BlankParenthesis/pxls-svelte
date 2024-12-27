@@ -5,7 +5,7 @@
 	import { onDestroy } from "svelte";
 	import { get } from "svelte/store";
 	import { ActivationFinalizer, type LookupData } from "../lib/pointer";
-	import { Vec2 } from "ogl";
+	import pointertracking from "../lib/actions/pointertracking";
 
 	export let board: Board;
 	export let state: AppState;
@@ -48,112 +48,63 @@
 		}
 	}
 
+	function selectInspect() {
+		state.pointer = {
+			type: "lookup",
+			quickActivate: true,
+			activate(position) {
+				let task: Promise<LookupData>;
+				if (typeof position === "undefined") {
+					task = new Promise((_, err) => err("Invalid Location"));
+				} else {
+					if (typeof lastLookupDismisser !== "undefined") {
+						lastLookupDismisser();
+					}
+					const dismissal = new Promise<void>((r) => {
+						lastLookupDismisser = r;
+					});
+					const lookup = board.pixel(position);
+					const pixel = get(lookup);
+					if (typeof pixel === "undefined") {
+						throw new Error("Assertion failed: pixel lookup was immediately invalid");
+					}
+					task = pixel.then(() => {
+						return {
+							dismissal,
+							lookup,
+						};
+					});
+				}
+
+				return {
+					type: "lookup",
+					position,
+					task,
+					finalizer: new ActivationFinalizer(),
+				};
+			},
+		};
+	}
+
+	function hardSelect() {
+		if (state.pointer?.type === "lookup") {
+			state.pointer.quickActivate = false;
+		}
+	}
+
 	let lastLookupDismisser: () => void | undefined;
 	function toggleInspect() {
 		if (state.pointer?.type === "lookup") {
 			deselectInspect();
 		} else {
-			state.pointer = {
-				type: "lookup",
-				quickActivate: true,
-				activate(position) {
-					let task: Promise<LookupData>;
-					if (typeof position === "undefined") {
-						task = new Promise((_, err) => err("Invalid Location"));
-					} else {
-						if (typeof lastLookupDismisser !== "undefined") {
-							lastLookupDismisser();
-						}
-						const dismissal = new Promise<void>((r) => {
-							lastLookupDismisser = r;
-						});
-						const lookup = board.pixel(position);
-						const pixel = get(lookup);
-						if (typeof pixel === "undefined") {
-							throw new Error("Assertion failed: pixel lookup was immediately invalid");
-						}
-						task = pixel.then(() => {
-							return {
-								dismissal,
-								lookup,
-							};
-						});
-					}
-
-					return {
-						type: "lookup",
-						position,
-						task,
-						finalizer: new ActivationFinalizer(),
-					};
-				},
-			};
+			selectInspect();
 		}
 	}
 
 	const DISTANCE_THRESHOLD = 10;
 	function deselectInspect() {
 		if (state.pointer?.type === "lookup") {
-			if (movedDistance > DISTANCE_THRESHOLD) {
-				state.pointer = undefined;
-			} else if (state.pointer?.quickActivate) {
-				state.pointer.quickActivate = false;
-			} else {
-				state.pointer = undefined;
-			}
-		}
-	}
-
-	let movedDistance = 0;
-	let initialDragPoint: Vec2 | undefined;
-
-	function beginDrag(point: Vec2) {
-		initialDragPoint = point;
-		movedDistance = 0;
-	}
-
-	function track(point: Vec2) {
-		if (typeof initialDragPoint === "undefined") {
-			return;
-		}
-		movedDistance = Math.max(initialDragPoint.distance(point), movedDistance);
-	}
-
-	function trackPointer(event: PointerEvent) {
-		track(new Vec2(event.clientX, event.clientY));
-	}
-
-	function trackTouch(event: TouchEvent) {
-		if (typeof initialDragPoint === "undefined") {
-			return;
-		}
-		if (event.touches.length === 1) {
-			const touch = event.touches[0];
-			const position = new Vec2(touch.clientX, touch.clientY);
-			track(position);
-		} else {
-			cancelDrag();
-		}
-	}
-
-	function stopDrag() {
-		initialDragPoint = undefined;
-
-		if (state.pointer?.quickActivate) {
-			// because target is retained for touchend events,
-			// we might be placing. If so, deselecting now would
-			// interrupt the place code as this has higher
-			// precedence.
-			// Instead, run it the next event loop:
-			setTimeout(deselectInspect, 0);
-		}
-	}
-
-	function cancelDrag() {
-		initialDragPoint = undefined;
-
-		if (state.pointer?.quickActivate) {
-			deselectInspect();
+			state.pointer = undefined;
 		}
 	}
 
@@ -202,20 +153,6 @@
 		padding: 0.25em;
 	}
 </style>
-<svelte:window
-	on:pointermove={trackPointer}
-	on:pointerup={(event) => {
-		if (event.pointerType !== "touch") {
-			stopDrag();
-		}
-	}}
-	on:touchmove={trackTouch}
-	on:touchend={(event) => {
-		if (event.touches.length === 0) {
-			stopDrag();
-		}
-	}}
-/>
 <div class="flex reverse space cursor-transparent">
 	<div class="user-tools tool-group flex align-bottom cursor-transparent">
 		{#if canLookup}
@@ -225,24 +162,24 @@
 					class:active={state.pointer?.type === "lookup"}
 					on:keydown={(event) => {
 						if ([" ", "Enter"].includes(event.key)) {
-							// A bit of a hack to prevent keyboard deselect from
-							// being blocked by the quick place mechanism
-							movedDistance = Infinity;
 							toggleInspect();
 						}
 					}}
-					on:pointerdown={(event) => {
-						if (event.pointerType !== "touch") {
-							toggleInspect();
-							beginDrag(new Vec2(event.clientX, event.clientY));
-						}
-					}}
-					on:touchstart={(event) => {
-						if (event.touches.length === 1) {
-							toggleInspect();
-							const touch = event.touches[0];
-							beginDrag(new Vec2(touch.clientX, touch.clientY));
-						}
+					use:pointertracking={{
+						onPress: () => toggleInspect(),
+						onRelease: ({ farthestDistance }) => {
+							if (farthestDistance < DISTANCE_THRESHOLD) {
+								hardSelect();
+							} else if (state.pointer?.quickActivate) {
+								// because target is retained for touchend events,
+								// we might be placing. If so, deselecting now would
+								// interrupt the place code as this has higher
+								// precedence.
+								// Instead, run it the next event loop:
+								setTimeout(deselectInspect, 0);
+							}
+						},
+						onCancel: () => deselectInspect(),
 					}}
 				>
 					<div class="icon large">🔍</div>
