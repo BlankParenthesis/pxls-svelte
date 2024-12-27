@@ -122,15 +122,19 @@ export interface PointerTrackingParameters {
 }
 
 const trackpointer = function (node, parameters) {
-	let axisFunction: AxisLockFunction = () => undefined;
-	switch (parameters.axisLimit) {
-		case TrackingAxis.Horizontal:
-			axisFunction = delta => decideAxis(delta, parameters.axisBias);
-			break;
-		case TrackingAxis.Vertical:
-			axisFunction = delta => decideAxis(delta, parameters.axisBias);
-			break;
+	let bias = 1;
+	if (typeof parameters.axisBias !== "undefined") {
+		switch (parameters.axisLimit) {
+			case TrackingAxis.Horizontal:
+				bias = parameters.axisBias;
+				break;
+			case TrackingAxis.Vertical:
+				bias = 1 / parameters.axisBias;
+				break;
+		}
 	}
+
+	const axisFunction: AxisLockFunction = delta => decideAxis(delta, bias);
 
 	let cancelled = false;
 	function begin(position: Vec2) {

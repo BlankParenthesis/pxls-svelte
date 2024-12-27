@@ -293,7 +293,7 @@
 					}}
 					use:pointertracking={{
 						axisLimit: TrackingAxis.Vertical,
-						axisBias: SCROLL_BIAS,
+						axisBias: 1 / SCROLL_BIAS,
 						onPress: () => toggleColor(index),
 						onRelease: ({ farthestDistance }) => {
 							if (farthestDistance < DISTANCE_THRESHOLD) {
