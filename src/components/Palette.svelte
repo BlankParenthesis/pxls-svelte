@@ -4,7 +4,7 @@
 	import { Board } from "../lib/board/board";
 	import type { AppState } from "../lib/settings";
 	import { ActivationFinalizer } from "../lib/pointer";
-	import { linearRegression } from "../lib/util";
+	import { DRAG_DISTANCE_THRESHOLD, linearRegression } from "../lib/util";
 	import { onDestroy } from "svelte";
 	import { Pixel } from "../lib/pixel";
 	import pointertracking, { TrackingAxis } from "../lib/actions/pointertracking";
@@ -17,7 +17,6 @@
 	// greater than one is higher preference, lower is less.
 	// corresponds to the gradient of mouse movement.
 	const SCROLL_BIAS = 1 / 3;
-	const DISTANCE_THRESHOLD = 10;
 
 	$: pointerDefined = typeof state.pointer !== "undefined";
 	$: placing = state.pointer?.type === "place";
@@ -296,7 +295,7 @@
 						axisBias: 1 / SCROLL_BIAS,
 						onPress: () => toggleColor(index),
 						onRelease: ({ farthestDistance }) => {
-							if (farthestDistance < DISTANCE_THRESHOLD) {
+							if (farthestDistance < DRAG_DISTANCE_THRESHOLD) {
 								hardSelect();
 							} else if (state.pointer?.quickActivate) {
 								// because target is retained for touchend events,

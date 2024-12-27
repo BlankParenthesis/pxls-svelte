@@ -155,3 +155,5 @@ export function linearRegression(points: Array<[number, number]>) {
 }
 
 export type Parser<T> = (context: Requester) => ((data: unknown) => T);
+
+export const DRAG_DISTANCE_THRESHOLD = 10;

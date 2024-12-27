@@ -6,6 +6,7 @@
 	import { get } from "svelte/store";
 	import { ActivationFinalizer, type LookupData } from "../lib/pointer";
 	import pointertracking from "../lib/actions/pointertracking";
+	import { DRAG_DISTANCE_THRESHOLD } from "../lib/util";
 
 	export let board: Board;
 	export let state: AppState;
@@ -101,7 +102,6 @@
 		}
 	}
 
-	const DISTANCE_THRESHOLD = 10;
 	function deselectInspect() {
 		if (state.pointer?.type === "lookup") {
 			state.pointer = undefined;
@@ -168,7 +168,7 @@
 					use:pointertracking={{
 						onPress: () => toggleInspect(),
 						onRelease: ({ farthestDistance }) => {
-							if (farthestDistance < DISTANCE_THRESHOLD) {
+							if (farthestDistance < DRAG_DISTANCE_THRESHOLD) {
 								hardSelect();
 							} else if (state.pointer?.quickActivate) {
 								// because target is retained for touchend events,
