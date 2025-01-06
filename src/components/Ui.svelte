@@ -1,18 +1,20 @@
+<!-- eslint fix comment -->
 <script lang="ts">
 	import Grid from "./layout/Grid.svelte";
 	import Login from "./Login.svelte";
 	import Palette from "./Palette.svelte";
-    import type { Settings } from "../lib/settings";
-    import type { Board } from "../lib/board/board";
-    import type { Site } from "../lib/site";
+	import type { Settings } from "../lib/settings";
+	import type { Board } from "../lib/board/board";
+	import type { Site } from "../lib/site";
 	import type { AppState } from "../lib/settings";
-    import Time, { Mode as TimeMode } from "./Time.svelte";
-    import SettingsPanel from "./Settings.svelte";
-    import Account from "./Account.svelte";
-    import Tools from "./Tools.svelte";
-    import Templates from "./Templates.svelte";
-    import Pixelstack from "./Pixelstack.svelte";
-    import Ticker, { Mode as TickerMode } from "./Ticker.svelte";
+	import Time, { Mode as TimeMode } from "./Time.svelte";
+	import SettingsPanel from "./Settings.svelte";
+	import Account from "./Account.svelte";
+	import Tools from "./Tools.svelte";
+	import Templates from "./Templates.svelte";
+	import Pixelstack from "./Pixelstack.svelte";
+	import FactionsPanel from "./FactionsPanel.svelte";
+	import Ticker, { Mode as TickerMode } from "./Ticker.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
@@ -40,6 +42,7 @@
 		None,
 		Place,
 		Account,
+		Factions,
 		Templates,
 		Settings,
 	}
@@ -59,13 +62,13 @@
 		flex-direction: column;
 		justify-content: end;
 	}
-	
+
 	.switcher-button {
 		gap: 0.25em;
 		display: flex;
 		flex-direction: column;
 	}
-	
+
 	.switcher-button > small {
 		display: block;
 		line-height: 1.25em;
@@ -87,7 +90,18 @@
 				{:else}
 					<Login {auth} />
 				{/if}
-				<div></div>
+				{#if access.has("users.current.factions.list")}
+					<button
+						class="switcher-button"
+						class:active={panel === Panel.Factions}
+						on:click={toggle(Panel.Factions)}
+					>
+						<div class="icon large">👥</div>
+						<small>Factions</small>
+					</button>
+				{:else}
+					<div></div>
+				{/if}
 				{#if access.has("boards.pixels.post")}
 					<button
 						class="switcher-button"
@@ -152,6 +166,19 @@
 					</div>
 				{:then user}
 					<Account {access} {auth} {site} user={user.fetch()}/>
+				{/await}
+			</div>
+			<div class="glass right"></div>
+		{:else if panel === Panel.Factions}
+			<div class="glass left"></div>
+			<div class="center-center panel flex vertical">
+				{#await $currentUser}
+					<div class="flex space align-middle">
+						<h2>Factions</h2>
+						<p>Loading</p>
+					</div>
+				{:then user}
+					<FactionsPanel {access} {site} user={user.fetch()}/>
 				{/await}
 			</div>
 			<div class="glass right"></div>

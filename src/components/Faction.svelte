@@ -5,6 +5,7 @@
 	import FactionStatus from "./FactionStatus.svelte";
 
 	export let faction: Readable<Promise<Faction> | undefined>;
+	export let access: Set<string>;
 </script>
 <style>
 	h5 {
@@ -14,16 +15,18 @@
 </style>
 <li class="faction">
 	{#await $faction}
-		Loading Role
+		Loading Faction
 	{:then faction}
 		{#if typeof faction !== "undefined"}
 			<div class="flex space">
 				<h5>{faction.name}</h5>
-				{#await faction.currentMember()}
-					<span>Loading Faction Members</span>
-				{:then member}
-					<FactionStatus {faction} {member} />
-				{/await}
+				{#if access.has("factions.members.get")}
+					{#await faction.currentMember()}
+						<span>Loading Faction Members</span>
+					{:then member}
+						<FactionStatus {faction} {member} {access} />
+					{/await}
+				{/if}
 			</div>
 			<div class="flex space gap">
 				<span class="no-shrink">

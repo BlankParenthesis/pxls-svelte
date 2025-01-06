@@ -4,7 +4,6 @@
 	import type { User as UserData } from "../lib/user";
 	import Login from "./Login.svelte";
 	import CurrentUser from "./CurrentUser.svelte";
-	import Factions from "./Factions.svelte";
 	import type { Site } from "../lib/site";
 
 	export let site: Site;
@@ -34,11 +33,6 @@
 		Unexpected missing user data
 	{:else}
 		<CurrentUser {user} {access} />
-		<div class="flex wrap-reverse space align-top scroll">
-			{#if access.has("users.current.factions.list")}
-				<Factions {user} {site} {access} />
-			{/if}
-			<!-- TODO: stats -->
-		</div>
+		<!-- TODO: stats -->
 	{/if}
 {/await}

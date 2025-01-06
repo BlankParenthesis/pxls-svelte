@@ -5,6 +5,7 @@
 
 	export let faction: Faction;
 	export let member: Readable<Promise<FactionMember | undefined> | undefined>;
+	export let access: Set<string>;
 </script>
 <style>
 </style>
@@ -13,7 +14,9 @@
 		Loading Faction Membership
 	{:then member}
 		{#if typeof member === "undefined" || member.status === MemberStatus.None}
-			<button on:click="{() => faction.join()}">Join</button>
+			{#if access.has("factions.members.post")}
+				<button on:click="{() => faction.join()}">Join</button>
+			{/if}
 		{:else if member.status === MemberStatus.Owned}
 			<span>Owner</span>
 		{:else if member.status === MemberStatus.Applied}
@@ -21,7 +24,9 @@
 		{:else if member.status === MemberStatus.Invited}
 			<button>Accept Invite</button>
 		{:else if member.status === MemberStatus.Joined}
-			<button on:click="{() => member.leave()}">Leave</button>
+			{#if access.has("factions.members.delete")}
+				<button on:click="{() => member.leave()}">Leave</button>
+			{/if}
 		{/if}
 	{/await}
 </span>
