@@ -53,10 +53,18 @@ export class FactionMember {
 			}),
 			"owner": z.boolean(),
 			"user": z.unknown(),
-		}).transform(({ join_intent, owner, user }) => {
+		}).transform(({ join_intent, owner, user }, context) => {
 			const parse = sub(http);
-			const parsed = z.unknown().transform(parse).optional().parse(user);
-			return new FactionMember(http, join_intent, owner, parsed);
-		}).parse;
+			const { success, data, error } = z.unknown().pipe(parse).optional().safeParse(user);
+
+			if (success) {
+				return new FactionMember(http, join_intent, owner, data);
+			} else {
+				for (const issue of error.errors) {
+					context.addIssue(issue);
+				}
+				return z.NEVER;
+			}
+		});
 	}
 }

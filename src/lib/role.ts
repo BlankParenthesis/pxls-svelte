@@ -14,6 +14,6 @@ export class Role {
 			"icon": z.string().optional(),
 		}).transform(({ name, icon }) => {
 			return new Role(name, icon);
-		}).parse;
+		});
 	}
 }

@@ -35,7 +35,7 @@ export class User {
 
 	async *fetchRoles() {
 		// TODO: check permissions
-		const parse = this.site.parsers.rolesPage(this.http);
+		const parse = this.site.parsers.rolesPage(this.http).parse;
 		let roles = await this.http.get("roles").then(parse);
 		while (true) {
 			for (const reference of roles.items) {
@@ -69,7 +69,7 @@ export class User {
 
 	async *fetchFactions() {
 		// TODO: check permissions
-		const parse = this.site.parsers.factionsPage(this.http);
+		const parse = this.site.parsers.factionsPage(this.http).parse;
 		let factions = await this.http.get("factions").then(parse);
 		while (true) {
 			for (const reference of factions.items) {
@@ -90,6 +90,6 @@ export class User {
 			"created_at": z.number().int().min(0).transform(unix => new Date(unix * 1000)),
 		}).transform(({ name, created_at }) => {
 			return new User(site, http, name, created_at);
-		}).parse;
+		});
 	}
 }

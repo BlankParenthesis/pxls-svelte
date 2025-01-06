@@ -24,7 +24,7 @@ export class BoardInfo {
 			palette: Palette,
 		}).transform(({ name, created_at, shape, max_pixels_available, palette }) => {
 			return new BoardInfo(name, created_at, shape, max_pixels_available, palette);
-		}).parse;
+		});
 	}
 	/* eslint-enable camelcase */
 }

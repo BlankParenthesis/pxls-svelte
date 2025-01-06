@@ -151,7 +151,7 @@ export class Site {
 
 		socket?.addEventListener("message", (e) => {
 			try {
-				const packet = parseEvent(e.data);
+				const packet = parseEvent(JSON.parse(e.data) as unknown);
 				switch (packet.type) {
 					case "user-updated":
 						packet.user.fetch();
@@ -201,25 +201,25 @@ export class Site {
 
 	readonly users = new Cache((location: string) => {
 		const http = this.http.subpath(location);
-		const parse = this.parsers.user(http);
+		const parse = this.parsers.user(http).parse;
 		return this.http.get(location).then(parse);
 	});
 
 	readonly roles = new Cache((location: string) => {
 		const http = this.http.subpath(location);
-		const parse = this.parsers.role(http);
+		const parse = this.parsers.role(http).parse;
 		return this.http.get(location).then(parse);
 	});
 
 	readonly factions = new Cache((location) => {
 		const http = this.http.subpath(location);
-		const parse = this.parsers.faction(http);
+		const parse = this.parsers.faction(http).parse;
 		return this.http.get(location).then(parse);
 	});
 
 	readonly factionMembers = new Cache((location) => {
 		const http = this.http.subpath(location);
-		const parse = this.parsers.factionMember(http);
+		const parse = this.parsers.factionMember(http).parse;
 		// TODO: default on 404
 		return this.http.get(location).then(parse);
 	});
@@ -227,7 +227,7 @@ export class Site {
 	async *searchFactions(name: string) {
 		const query = "?name=" + encodeURIComponent("*" + name + "*");
 		// TODO: check permissions
-		const parse = this.parsers.factionsPage(this.http);
+		const parse = this.parsers.factionsPage(this.http).parse;
 		let factions = await this.http.get("factions" + query).then(parse);
 		while (true) {
 			for (const reference of factions.items) {
@@ -245,7 +245,7 @@ export class Site {
 	private currentUserCache?: Writable<Promise<Reference<User>>>;
 	currentUser(): Readable<Promise<Reference<User>>> {
 		if (typeof this.currentUserCache === "undefined") {
-			const parse = this.parsers.userReference(this.http);
+			const parse = this.parsers.userReference(this.http).parse;
 			// TODO: handle 404
 			const reference = this.http.get("users/current").then(parse);
 			this.currentUserCache = writable(reference);
@@ -269,7 +269,7 @@ export class Site {
 	// TODO: this is not kept in sync with boards' local copies
 	readonly boardInfos = new Cache((location) => {
 		const http = this.http.subpath(location);
-		const parse = this.parsers.board(http);
+		const parse = this.parsers.board(http).parse;
 		return this.http.get(location).then(parse);
 	});
 
@@ -278,7 +278,7 @@ export class Site {
 	});
 
 	async *fetchBoards() {
-		const parse = this.parsers.boardsPage(this.http);
+		const parse = this.parsers.boardsPage(this.http).parse;
 		let boards = await this.http.get("boards").then(parse);
 		while (true) {
 			for (const reference of boards.items) {
@@ -293,7 +293,7 @@ export class Site {
 	}
 
 	async defaultBoard(): Promise<Reference<BoardInfo>> {
-		const parse = this.parsers.boardReference(this.http);
+		const parse = this.parsers.boardReference(this.http).parse;
 		return await this.http.get("boards/default").then(parse);
 	}
 }

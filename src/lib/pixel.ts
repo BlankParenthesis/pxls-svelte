@@ -28,16 +28,22 @@ export class Pixel {
 			color: z.number().int().min(0),
 			modified: z.number().int().min(0).transform(pixel => new Date(epoch + pixel * 1000)),
 			user: z.unknown(),
-		}).transform(({ position, color, modified, user }) => {
-			const parse = sub(http);
-			const parsedReference = z.unknown().transform(parse).optional().parse(user);
-			let parsedUser: Readable<Promise<User> | undefined> | undefined;
-			if (canLookupUser) {
-				parsedUser = parsedReference?.fetch();
+		}).transform(({ position, color, modified, user }, context) => {
+			const { success, data, error } = sub(http).optional().safeParse(user);
+			if (success) {
+				let parsedUser: Readable<Promise<User> | undefined> | undefined;
+				if (canLookupUser) {
+					parsedUser = data?.fetch();
+				} else {
+					parsedUser = data?.get();
+				}
+				return new Pixel(position, color, modified, parsedUser);
 			} else {
-				parsedUser = parsedReference?.get();
+				for (const issue of error.errors) {
+					context.addIssue(issue);
+				}
+				return z.NEVER;
 			}
-			return new Pixel(position, color, modified, parsedUser);
-		}).or(z.undefined()).parse;
+		}).or(z.undefined());
 	}
 }

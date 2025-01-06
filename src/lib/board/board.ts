@@ -80,7 +80,7 @@ export class Board {
 			socket.addEventListener("message", missEvent);
 		}
 		const parser = BoardInfo.parser();
-		const parse = parser(http);
+		const parse = parser(http).parse;
 
 		const { cooldown, info } = await http.getRaw().then(async (r) => {
 			const headerCooldown = HeaderCooldown.parse(Object.fromEntries(r.headers.entries()));
@@ -308,7 +308,7 @@ export class Board {
 	private pixelCache: Map<number, Writable<Promise<Pixel | undefined> | undefined>> = new Map();
 	pixel(location: number): Readable<Promise<Pixel | undefined> | undefined> {
 		if (!this.pixelCache.has(location)) {
-			const parse = this.parsers.pixel(this.http);
+			const parse = this.parsers.pixel(this.http).parse;
 			const pixel = this.http.get("pixels/" + location).then(parse);
 			this.pixelCache.set(location, writable(pixel));
 		}
@@ -319,7 +319,7 @@ export class Board {
 		}
 
 		if (typeof get(pixel) === "undefined") {
-			const parse = this.parsers.pixel(this.http);
+			const parse = this.parsers.pixel(this.http).parse;
 			pixel.set(this.http.get("pixels/" + location).then(parse));
 		}
 
@@ -344,8 +344,8 @@ export class Board {
 
 		try {
 			const request = this.http.post({ color, ...extra }, `pixels/${position}`);
-			const parser = this.parsers.pixel(this.http);
-			return parser((await request).view);
+			const parse = this.parsers.pixel(this.http).parse;
+			return parse((await request).view);
 		} catch (_) {
 			return undefined;
 		}
@@ -354,7 +354,7 @@ export class Board {
 	private userCountCache?: Writable<Promise<UserCount>>;
 	userCount(): Readable<Promise<UserCount>> {
 		if (typeof this.userCountCache === "undefined") {
-			const parse = this.parsers.userCount(this.http);
+			const parse = this.parsers.userCount(this.http).parse;
 			const userCount = this.http.get("users").then(parse);
 			this.userCountCache = writable(userCount);
 

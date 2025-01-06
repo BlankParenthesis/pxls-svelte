@@ -17,11 +17,15 @@ export class Faction {
 	private currentMemberCache?: Readable<Promise<FactionMember | undefined> | undefined>;
 	async currentMember(): Promise<Readable<Promise<FactionMember | undefined> | undefined>> {
 		if (typeof this.currentMemberCache === "undefined") {
-			const parse = this.site.parsers.factionMemberReference(this.http);
-			// FIXME: handle 404
+			const parse = this.site.parsers.factionMemberReference(this.http).parse;
 			const reference = await this.http.get("members/current")
-				.then(parse)
-				.then(r => r.fetch());
+				.then((data) => {
+					if (typeof data === "undefined") {
+						return writable(Promise.resolve(undefined));
+					} else {
+						return parse(data).fetch();
+					}
+				});
 
 			this.currentMemberCache = reference;
 		}
@@ -54,7 +58,7 @@ export class Faction {
 	}
 
 	async *fetchMembers() {
-		const parse = this.site.parsers.factionMembersPage(this.http);
+		const parse = this.site.parsers.factionMembersPage(this.http).parse;
 		// TODO: check permissions
 		let members = await this.http.get("members").then(parse);
 		while (true) {
@@ -71,11 +75,11 @@ export class Faction {
 
 	async join(): Promise<Readable<Promise<FactionMember> | undefined>> {
 		const data = {
-			user: await get(this.site.currentUser()),
+			user: (await get(this.site.currentUser())).uri,
 			owner: false,
 		};
 
-		const parse = this.site.parsers.factionMemberReference(this.http);
+		const parse = this.site.parsers.factionMemberReference(this.http).parse;
 
 		return await this.http.post(data, "members")
 			.then(parse)
@@ -90,6 +94,6 @@ export class Faction {
 			size: z.number(),
 		}).transform(({ name, created_at, size }) => {
 			return new Faction(site, http, name, created_at, size);
-		}).parse;
+		});
 	}
 }

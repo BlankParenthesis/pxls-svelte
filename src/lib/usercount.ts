@@ -15,6 +15,6 @@ export class UserCount {
 			"idle_timeout": z.number().int().min(0),
 		}).transform(({ active, idle_timeout }) => {
 			return new UserCount(active, idle_timeout);
-		}).parse;
+		});
 	}
 }

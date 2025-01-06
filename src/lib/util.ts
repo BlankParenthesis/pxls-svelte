@@ -1,3 +1,4 @@
+import type { ZodType, ZodTypeDef } from "zod";
 import { Vec2, type Attribute } from "ogl";
 import type { Requester } from "./requester";
 
@@ -154,6 +155,6 @@ export function linearRegression(points: Array<[number, number]>) {
 	return { slope, intercept, correlation };
 }
 
-export type Parser<T> = (context: Requester) => ((data: unknown) => T);
+export type Parser<T> = (context: Requester) => ZodType<T, ZodTypeDef, unknown>;
 
 export const DRAG_DISTANCE_THRESHOLD = 10;

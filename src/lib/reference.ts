@@ -36,11 +36,18 @@ export class Reference<T> {
 		return (http: Requester) => z.object({
 			uri: z.string(),
 			view: z.unknown().transform(v => v ?? undefined),
-		}).transform(({ uri, view }) => {
+		}).transform(({ uri, view }, context) => {
 			const subHttp = http.subpath(uri);
 			const parse = sub(subHttp);
-			const parsed = z.unknown().transform(parse).optional().parse(view);
-			return new Reference(cache, uri, parsed);
-		}).parse;
+			const { success, data, error } = z.unknown().pipe(parse).optional().safeParse(view);
+			if (success) {
+				return new Reference(cache, uri, data);
+			} else {
+				for (const issue of error.errors) {
+					context.addIssue(issue);
+				}
+				return z.NEVER;
+			}
+		});
 	}
 }

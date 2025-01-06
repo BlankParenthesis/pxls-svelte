@@ -14,9 +14,16 @@ export class Page<T> {
 			items: z.array(z.unknown()),
 			next: z.string().nullable().optional(),
 			previous: z.string().nullable().optional(),
-		}).transform(({ items, next, previous }) => {
-			const parse = sub(http);
-			return new Page(items.map(parse), next, previous);
-		}).parse;
+		}).transform(({ items, next, previous }, context) => {
+			const { success, data, error } = sub(http).array().safeParse(items);
+			if (success) {
+				return new Page(data, next, previous);
+			} else {
+				for (const issue of error.errors) {
+					context.addIssue(issue);
+				}
+				return z.NEVER;
+			}
+		});
 	}
 }

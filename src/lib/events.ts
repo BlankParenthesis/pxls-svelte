@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, type ZodType, type ZodTypeDef } from "zod";
 import type { Reference } from "./reference";
 import type { User } from "./user";
 import type { Faction } from "./faction";
@@ -6,9 +6,9 @@ import type { FactionMember } from "./factionmember";
 import type { Requester } from "./requester";
 import type { Parser } from "./util";
 
-const UserUpdated = (sub: (data: unknown) => Reference<User>) => z.object({
+const UserUpdated = (sub: ZodType<Reference<User>, ZodTypeDef, unknown>) => z.object({
 	type: z.literal("user-updated"),
-	user: z.unknown().transform(sub),
+	user: z.unknown().pipe(sub),
 });
 
 const UserRolesUpdated = z.object({
@@ -16,14 +16,14 @@ const UserRolesUpdated = z.object({
 	user: z.string(),
 });
 
-const FactionCreated = (sub: (data: unknown) => Reference<Faction>) => z.object({
+const FactionCreated = (sub: ZodType<Reference<Faction>, ZodTypeDef, unknown>) => z.object({
 	type: z.literal("faction-created"),
-	faction: z.unknown().transform(sub),
+	faction: z.unknown().pipe(sub),
 });
 
-const FactionUpdated = (sub: (data: unknown) => Reference<Faction>) => z.object({
+const FactionUpdated = (sub: ZodType<Reference<Faction>, ZodTypeDef, unknown>) => z.object({
 	type: z.literal("faction-updated"),
-	faction: z.unknown().transform(sub),
+	faction: z.unknown().pipe(sub),
 });
 
 const FactionDeleted = z.object({
@@ -32,12 +32,12 @@ const FactionDeleted = z.object({
 });
 
 const FactionMemberUpdated = (
-	factionParser: (data: unknown) => Reference<Faction>,
-	memberParser: (data: unknown) => Reference<FactionMember>,
+	factionParser: ZodType<Reference<Faction>, ZodTypeDef, unknown>,
+	memberParser: ZodType<Reference<FactionMember>, ZodTypeDef, unknown>,
 ) => z.object({
 	type: z.literal("faction-member-updated"),
-	faction: z.unknown().transform(factionParser),
-	member: z.unknown().transform(memberParser),
+	faction: z.unknown().pipe(factionParser),
+	member: z.unknown().pipe(memberParser),
 });
 
 export function parser(context: Requester, parsers: {
