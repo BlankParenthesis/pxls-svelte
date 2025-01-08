@@ -158,7 +158,7 @@
 		</div>
 		{#if panel === Panel.Account}
 			<div class="glass left"></div>
-			<div class="center-center panel flex vertical">
+			<div class="center-center drawer flex vertical padded">
 				{#await $currentUser}
 					<div class="flex space align-middle">
 						<h2>Account</h2>
@@ -171,7 +171,7 @@
 			<div class="glass right"></div>
 		{:else if panel === Panel.Factions}
 			<div class="glass left"></div>
-			<div class="center-center panel flex vertical">
+			<div class="center-center drawer flex vertical padded">
 				{#await $currentUser}
 					<div class="flex space align-middle">
 						<h2>Factions</h2>
@@ -188,13 +188,13 @@
 			</div>
 		{:else if panel === Panel.Templates}
 			<div class="glass left"></div>
-			<div class="center-center panel">
+			<div class="center-center drawer">
 				<Templates bind:templates={state.templates} />
 			</div>
 			<div class="glass right"></div>
 		{:else if panel === Panel.Settings}
 			<div class="glass left"></div>
-			<div class="center-center panel">
+			<div class="center-center drawer">
 				<SettingsPanel bind:settings />
 			</div>
 			<div class="glass right"></div>

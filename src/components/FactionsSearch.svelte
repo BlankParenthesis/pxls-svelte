@@ -16,10 +16,13 @@
 	});
 
 </script>
-<label class="fullwidth">
-	<span class="inline-label">Factions Search: {search}</span>
-	<input type="text" class="fullwidth" on:input={updateSearch} />
+<style>
+</style>
+<label class="fullwidth flex wrap gap search">
+	<span>🔍&#xFE0E;</span>
+	<input type="text" class="grow" placeholder="Search Factions" on:input={updateSearch} />
 </label>
 <LazyList itemSource={site.searchFactions(search)} let:item={faction}>
 	<Faction {faction} {access} />
+	<p slot="empty"><small class="empty-placeholder">No factions</small></p>
 </LazyList>

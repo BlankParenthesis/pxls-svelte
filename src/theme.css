@@ -4,13 +4,12 @@
 		--page-background: #000;
 		--panel-background: #333;
 		--drawer-background: #222;
-		--drawer-border: 2px solid #000;
+		--drawer-border: 1px solid #000;
 		--button-background: #77777733;
 		--button-hover-background: #77777777;
 		--button-destructive-foreground: #ffffff;
 		--button-destructive-background: #bb4455;
 		--button-destructive-hover-background: #dd6677;
-		--text-input-border: 1px solid #222;
 		--tool-button-background: #333;
 		--tool-button-hover-background: #444;
 		--tool-button-active-foreground: #fff;
@@ -18,23 +17,28 @@
 		--color-high-contrast: #fff;
 		--color-high-contrast-outline: #000;
 		--bubble-color: #fff;
-		--bubble-background: #333;
+		--bubble-background: #3F3F3F;
+		--item-border: 1px solid #232323;
+		--item-background: #363636;
+		--item-shadow: 0 0.2em 0.4em #0002;
+		--text-input-border: 1px solid #222;
+		--text-input-background: #3F3F3F;
+		--focus-outline: 2px solid #3584e4;
 	}
 }
 
 @media (prefers-color-scheme: light) {
 	:root {
 		--foreground-color: #000;
-		--page-background: #fff;
-		--panel-background: #fff;
-		--drawer-background: #ddd;
-		--drawer-border: 1px solid #bbb;
+		--page-background: #FAFAFA;
+		--panel-background: #F2F2F2;
+		--drawer-background: #FAFAFA;
+		--drawer-border: 1px solid #EDEDED;
 		--button-background: #7777773a;
 		--button-hover-background: #7777775a;
 		--button-destructive-foreground: #ffffff;
 		--button-destructive-background: #bb4455;
 		--button-destructive-hover-background: #dd6677;
-		--text-input-border: 1px solid #777;
 		--tool-button-background: #eaeaea;
 		--tool-button-hover-background: #ccc;
 		--tool-button-active-foreground: #fff;
@@ -43,5 +47,11 @@
 		--color-high-contrast-outline: #000;
 		--bubble-color: #000;
 		--bubble-background: #fff;
+		--item-border: 1px solid #EDEDED;
+		--item-background: #FFFFFF;
+		--item-shadow: 0 0.2em 0.4em #0002;
+		--text-input-border: 1px solid #777;
+		--text-input-background: #DFDFDF;
+		--focus-outline: 2px solid #3584e4;
 	}
 }

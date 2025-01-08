@@ -79,6 +79,7 @@ body > * {
 }
 
 .fullwidth {
+	box-sizing: border-box;
 	width: 100%;
 }
 
@@ -105,4 +106,13 @@ body > * {
 
 .round {
 	border-radius: 50%;
+}
+
+.padded {
+	padding: 1em;
+}
+
+.truncate {
+	overflow: hidden;
+	text-overflow: ellipsis;
 }

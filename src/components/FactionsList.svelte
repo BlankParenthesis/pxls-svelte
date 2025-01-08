@@ -9,11 +9,11 @@
 {#await $factions}
 	<p>Loading Factions</p>
 {:then factions}
-	<ul class="flex wrap">
+	<ul class="item-list">
 		{#each factions as faction}
-			<FactionDisplay {faction} {access} />
+			<li><FactionDisplay {faction} {access} /></li>
 		{:else}
-			<small>Not in any faction</small>
+			<small class="empty-placeholder">Not in any faction</small>
 		{/each}
 	</ul>
 {/await}

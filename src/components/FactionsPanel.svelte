@@ -9,14 +9,22 @@
 	export let user: Readable<Promise<User> | undefined>;
 	export let site: Site;
 </script>
+<style>
+</style>
 <h2>Factions</h2>
 {#await $user}
 	<p>Loading</p>
 {:then user}
 	{#if typeof user !== "undefined"}
-		<FactionsList factions={user.factions()} {access} />
+		<section>
+			<h3>Your Factions</h3>
+			<FactionsList factions={user.factions()} {access} />
+		</section>
 	{/if}
 	{#if access.has("factions.list")}
-		<FactionsSearch {site} {access} />
+		<section>
+			<h3>Available Factions</h3>
+			<FactionsSearch {site} {access} />
+		</section>
 	{/if}
 {/await}

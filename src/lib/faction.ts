@@ -14,6 +14,10 @@ export class Faction {
 		readonly size: number,
 	) {}
 
+	get uri() {
+		return this.http.baseURL;
+	}
+
 	private currentMemberCache?: Readable<Promise<FactionMember | undefined> | undefined>;
 	async currentMember(): Promise<Readable<Promise<FactionMember | undefined> | undefined>> {
 		if (typeof this.currentMemberCache === "undefined") {

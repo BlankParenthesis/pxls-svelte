@@ -15,7 +15,7 @@
 	{:then member}
 		{#if typeof member === "undefined" || member.status === MemberStatus.None}
 			{#if access.has("factions.members.post")}
-				<button on:click="{() => faction.join()}">Join</button>
+				<button class="button" on:click="{() => faction.join()}">Join</button>
 			{/if}
 		{:else if member.status === MemberStatus.Owned}
 			<span>Owner</span>
@@ -25,7 +25,7 @@
 			<button>Accept Invite</button>
 		{:else if member.status === MemberStatus.Joined}
 			{#if access.has("factions.members.delete")}
-				<button on:click="{() => member.leave()}">Leave</button>
+				<button class="button destructive" on:click="{() => member.leave()}">Leave</button>
 			{/if}
 		{/if}
 	{/await}

@@ -57,23 +57,7 @@
 }
 
 input[type="text"], input[type="number"] {
-	border: var(--text-input-border);
 	cursor: text;
-}
-
-/* TODO: temporary (?) styles: */
-
-.inline-label {
-	position: absolute;
-	top: 0;
-	left: 0.5em;
-	font-size: small;
-	background: var(--panel-background);
-}
-
-.inline-label + input, .inline-label + select {
-	padding-top: 0.5em;
-	margin-top: 0.75em;
 }
 
 input[type="range"] {
@@ -96,6 +80,21 @@ input[type="range"].vertical.flipped {
 	writing-mode: vertical-rl;
 }
 
+label.search {
+	background-color: var(--text-input-background);
+	border: var(--text-input-border);
+	padding: 0.5em;
+	border-radius: 0.5em;
+	line-height: 1.5em;
+}
+
+label.search > input:focus {
+	outline: none;
+}
+
+label.search:focus-within {
+	outline: var(--focus-outline);
+}
 
 .high-contrast {
 	color: var(--color-high-contrast);
@@ -108,4 +107,36 @@ input[type="range"].vertical.flipped {
 		0px -1px 0 var(--color-high-contrast-outline),
 		-1px 0px 0 var(--color-high-contrast-outline),
 		1px 0px 0 var(--color-high-contrast-outline);
+}
+
+.empty-placeholder {
+	display: block;
+	font-style: italic;
+	opacity: 0.4;
+	font-size: large;
+	font-weight: bold;
+	padding: 0.5em 0;
+}
+
+ul.item-list {
+	text-align: center;
+}
+
+ul.item-list > li {
+	padding: 1em;
+	background: var(--item-background);
+	border: var(--item-border);
+	border-top: none;
+	box-shadow: var(--item-shadow);
+}
+
+ul.item-list > li:first-child {
+	border-top: var(--item-border);
+	border-top-left-radius: 1em;
+	border-top-right-radius: 1em;
+}
+
+ul.item-list > li:last-child {
+	border-bottom-left-radius: 1em;
+	border-bottom-right-radius: 1em;
 }

@@ -23,10 +23,16 @@
 	}
 </script>
 <style>
+	ul {
+		margin-top: 0.5em;
+		margin-bottom: 0.5em;
+	}
 </style>
-<ul>
+<ul class="item-list">
 	{#each items as item}
-		<slot {item} />
+		<li><slot {item} /></li>
+	{:else}
+		<slot name="empty" />
 	{/each}
 	{#if !done}
 		<button on:click={loadMore}>Load More</button>
