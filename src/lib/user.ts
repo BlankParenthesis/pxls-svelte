@@ -6,8 +6,9 @@ import { collect, type Parser } from "./util";
 import type { Readable } from "svelte/store";
 import { writable, type Writable } from "svelte/store";
 import { Faction } from "./faction";
+import { type Updatable } from "./cache";
 
-export class User {
+export class User implements Updatable {
 	constructor(
 		private readonly site: Site,
 		private readonly http: Requester,
@@ -91,5 +92,11 @@ export class User {
 		}).transform(({ name, created_at }) => {
 			return new User(site, http, name, created_at);
 		});
+	}
+
+	update(newValue: this): this {
+		newValue.rolesCache = this.rolesCache;
+		newValue.factionsCache = this.factionsCache;
+		return newValue;
 	}
 }

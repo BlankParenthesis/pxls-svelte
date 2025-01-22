@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { Cache } from "./cache";
+import { Cache, type Updatable } from "./cache";
 import type { Parser } from "./util";
 import type { Requester } from "./requester";
 import type { Readable } from "svelte/store";
 
-export class Reference<T> {
+export class Reference<T extends Updatable> {
 	private constructor(
-		private readonly cache: Cache<Promise<T>>,
+		private readonly cache: Cache<T>,
 		readonly uri: string,
 		private readonly view?: T,
 	) {}
@@ -29,8 +29,8 @@ export class Reference<T> {
 		}
 	}
 
-	static parser<T>(
-		cache: Cache<Promise<T>>,
+	static parser<T extends Updatable>(
+		cache: Cache<T>,
 		sub: Parser<T>,
 	): Parser<Reference<T>> {
 		return (http: Requester) => z.object({

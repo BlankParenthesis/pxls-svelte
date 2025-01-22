@@ -4,8 +4,9 @@ import { Palette } from "./palette";
 import { Shape, ShapeParser } from "../render/shape";
 import type { Requester } from "../requester";
 import type { Parser } from "../util";
+import type { Updatable } from "../cache";
 
-export class BoardInfo {
+export class BoardInfo implements Updatable {
 	constructor(
 		public name: string,
 		public readonly createdAt: Date,
@@ -27,4 +28,8 @@ export class BoardInfo {
 		});
 	}
 	/* eslint-enable camelcase */
+
+	update(newValue: this): this {
+		return newValue;
+	}
 }

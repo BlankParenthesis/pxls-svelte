@@ -1,13 +1,17 @@
 import { writable, type Readable, type Writable } from "svelte/store";
 
-export class Cache<V, K = string> {
+export interface Updatable {
+	update(newValue: this): this;
+}
+
+export class Cache<V extends Updatable, K = string> {
 	constructor(
-		private readonly generate: (key: K) => V,
+		private readonly generate: (key: K) => Promise<V>,
 	) {}
 
-	private readonly map: Map<K, Writable<V | undefined>> = new Map();
+	private readonly map: Map<K, Writable<Promise<V> | undefined>> = new Map();
 
-	get(key: K): Readable<V | undefined> {
+	get(key: K): Readable<Promise<V> | undefined> {
 		const value = this.map.get(key);
 		if (typeof value === "undefined") {
 			const newValue = writable(undefined);
@@ -17,7 +21,7 @@ export class Cache<V, K = string> {
 		return value;
 	}
 
-	fetch(key: K): Readable<V | undefined> {
+	fetch(key: K): Readable<Promise<V> | undefined> {
 		const value = this.map.get(key);
 		if (typeof value === "undefined") {
 			const newValue = writable(this.generate(key));
@@ -27,14 +31,23 @@ export class Cache<V, K = string> {
 		return value;
 	}
 
-	update(key: K, updatedValue: V): Readable<V | undefined> {
+	update(key: K, updatedValue: Promise<V>): Readable<Promise<V> | undefined> {
 		const value = this.map.get(key);
 		if (typeof value === "undefined") {
 			const newValue = writable(updatedValue);
 			this.map.set(key, newValue);
 			return newValue;
 		} else {
-			value.set(updatedValue);
+			value.update((oldValue) => {
+				if (typeof oldValue === "undefined") {
+					return updatedValue;
+				} else {
+					return Promise.all([oldValue, updatedValue])
+						.then(([oldValue, updatedValue]) => {
+							return oldValue.update(updatedValue);
+						});
+				}
+			});
 			return value;
 		}
 	}

@@ -3,6 +3,7 @@ import type { Requester } from "./requester";
 import type { Parser } from "./util";
 import type { Reference } from "./reference";
 import type { User } from "./user";
+import type { Updatable } from "./cache";
 
 export enum MemberStatus {
 	Invited,
@@ -12,7 +13,7 @@ export enum MemberStatus {
 	None,
 }
 
-export class FactionMember {
+export class FactionMember implements Updatable {
 	constructor(
 		private readonly http: Requester,
 		readonly joinIntent: { member: boolean; faction: boolean },
@@ -66,5 +67,9 @@ export class FactionMember {
 				return z.NEVER;
 			}
 		});
+	}
+
+	update(newValue: this): this {
+		return newValue;
 	}
 }

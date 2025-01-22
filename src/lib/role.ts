@@ -1,8 +1,9 @@
 import { z } from "zod";
 import type { Parser } from "./util";
 import type { Requester } from "./requester";
+import type { Updatable } from "./cache";
 
-export class Role {
+export class Role implements Updatable {
 	constructor(
 		readonly name: string,
 		readonly icon?: string,
@@ -15,5 +16,9 @@ export class Role {
 		}).transform(({ name, icon }) => {
 			return new Role(name, icon);
 		});
+	}
+
+	update(newValue: this): this {
+		return newValue;
 	}
 }

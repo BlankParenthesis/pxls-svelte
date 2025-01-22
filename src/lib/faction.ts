@@ -4,8 +4,9 @@ import type { Requester } from "./requester";
 import { get, writable, type Readable, type Writable } from "svelte/store";
 import { collect, type Parser } from "./util";
 import { FactionMember } from "./factionmember";
+import type { Updatable } from "./cache";
 
-export class Faction {
+export class Faction implements Updatable {
 	constructor(
 		private readonly site: Site,
 		private readonly http: Requester,
@@ -99,5 +100,11 @@ export class Faction {
 		}).transform(({ name, created_at, size }) => {
 			return new Faction(site, http, name, created_at, size);
 		});
+	}
+
+	update(newValue: this): this {
+		newValue.currentMemberCache = this.currentMemberCache;
+		newValue.membersCache = this.membersCache;
+		return newValue;
 	}
 }
