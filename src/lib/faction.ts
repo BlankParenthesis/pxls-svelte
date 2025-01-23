@@ -91,6 +91,10 @@ export class Faction implements Updatable {
 			.then(r => r.fetch());
 	}
 
+	delete(): Promise<void> {
+		return this.http.delete();
+	}
+
 	/* eslint-disable camelcase */
 	static parser(site: Site): Parser<Faction> {
 		return (http: Requester) => z.object({

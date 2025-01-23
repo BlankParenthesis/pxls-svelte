@@ -167,7 +167,9 @@ export class Site {
 					case "faction-updated":
 						packet.faction.fetch();
 						break;
-					case "faction-deleted": throw new Error("TODO");
+					case "faction-deleted":
+						this.factions.delete(packet.faction);
+						break;
 					case "faction-member-updated":
 						// Mark the faction current member if the faction
 						// doesn't have it set.

@@ -30,7 +30,7 @@
 </style>
 <ul class="item-list">
 	{#each items as item}
-		<li><slot {item} /></li>
+		<slot {item} />
 	{:else}
 		<slot name="empty" />
 	{/each}

@@ -51,6 +51,13 @@ export class Cache<V extends Updatable, K = string> {
 			return value;
 		}
 	}
+
+	delete(key: K) {
+		const value = this.map.get(key);
+		if (typeof value !== "undefined") {
+			value.update(() => undefined);
+		}
+	}
 }
 
 export class CacheOnce<V, K = string> {

@@ -66,7 +66,7 @@ export class Requester {
 		} else {
 			url = resolveURL(this.baseURL, location);
 		}
-		return fetch(url, { method: "delete", headers });
+		return fetch(url, { method: "delete", headers }).then(() => {});
 	}
 
 	public data(start: number, end: number): Promise<ArrayBuffer> {

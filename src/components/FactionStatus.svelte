@@ -6,6 +6,16 @@
 	export let faction: Faction;
 	export let member: Readable<Promise<FactionMember | undefined> | undefined>;
 	export let access: Set<string>;
+
+	let deleteConfirm = false;
+	async function deleteFaction() {
+		if (deleteConfirm) {
+			await faction.delete();
+			deleteConfirm = false;
+		} else {
+			deleteConfirm = true;
+		}
+	}
 </script>
 <style>
 </style>
@@ -27,6 +37,15 @@
 			{#if access.has("factions.members.delete")}
 				<button class="button destructive" on:click="{() => member.leave()}">Leave</button>
 			{/if}
+		{/if}
+		{#if access.has("factions.delete")}
+			<button class="button destructive" on:click="{deleteFaction}">
+				{#if deleteConfirm}
+					Really Delete?
+				{:else}
+					Delete
+				{/if}
+			</button>
 		{/if}
 	{/await}
 </span>

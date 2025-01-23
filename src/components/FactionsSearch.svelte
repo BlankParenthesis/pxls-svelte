@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Site } from "../lib/site";
 	import { debounce } from "../lib/util";
-	import Faction from "./Faction.svelte";
+	import FactionItem from "./FactionItem.svelte";
 	import LazyList from "./LazyList.svelte";
 
 	export let access: Set<string>;
@@ -23,6 +23,6 @@
 	<input type="text" class="grow" placeholder="Search Factions" on:input={updateSearch} />
 </label>
 <LazyList itemSource={site.searchFactions(search)} let:item={faction}>
-	<Faction {faction} {access} />
+	<FactionItem {faction} {access} />
 	<p slot="empty"><small class="empty-placeholder">No factions</small></p>
 </LazyList>

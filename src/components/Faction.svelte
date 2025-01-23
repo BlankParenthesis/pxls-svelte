@@ -1,11 +1,10 @@
 <script lang="ts">
-	import type { Readable } from "svelte/store";
 	import type { Faction } from "../lib/faction";
 	import Time from "./Time.svelte";
 	import FactionStatus from "./FactionStatus.svelte";
 	import IconPlaceholder from "./IconPlaceholder.svelte";
 
-	export let faction: Readable<Promise<Faction> | undefined>;
+	export let faction: Promise<Faction>;
 	export let access: Set<string>;
 </script>
 <style>
@@ -21,7 +20,7 @@
 	}
 </style>
 <div class="faction">
-	{#await $faction}
+	{#await faction}
 		Loading Faction
 	{:then faction}
 		{#if typeof faction !== "undefined"}
