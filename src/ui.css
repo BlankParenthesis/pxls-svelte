@@ -38,9 +38,15 @@
 
 .button {
 	border-radius: .25em;
-	padding: .25em .5em;
+	padding: .25em .75em;
 	background: var(--button-background);
 	cursor: pointer;
+}
+
+.button.large {
+	border-radius: 2em;
+	padding: 0.5em 1em;
+	font-size: large;
 }
 
 .button:hover {
@@ -54,6 +60,15 @@
 
 .button.destructive:hover {
 	background: var(--button-destructive-hover-background);
+}
+
+.button.suggested {
+	color: var(--button-suggested-foreground);
+	background: var(--button-suggested-background);
+}
+
+.button.suggested:hover {
+	background: var(--button-suggested-hover-background);
 }
 
 input[type="text"], input[type="number"] {
@@ -80,7 +95,7 @@ input[type="range"].vertical.flipped {
 	writing-mode: vertical-rl;
 }
 
-label.search {
+label.search, label.text {
 	background-color: var(--text-input-background);
 	border: var(--text-input-border);
 	padding: 0.5em;
@@ -88,11 +103,11 @@ label.search {
 	line-height: 1.5em;
 }
 
-label.search > input:focus {
+label.search > input:focus, label.text > input:focus {
 	outline: none;
 }
 
-label.search:focus-within {
+label.search:focus-within, label.text:focus-within {
 	outline: var(--focus-outline);
 }
 

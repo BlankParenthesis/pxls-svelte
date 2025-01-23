@@ -162,7 +162,8 @@ export class Site {
 							return u;
 						});
 						break;
-					case "faction-created": throw new Error("TODO");
+					case "faction-created":
+						break;
 					case "faction-updated":
 						packet.faction.fetch();
 						break;
@@ -239,6 +240,12 @@ export class Site {
 				break;
 			}
 		}
+	}
+
+	createFaction(faction: { name: string }): Promise<Reference<Faction>> {
+		const http = this.http.subpath("factions");
+		const parse = this.parsers.factionReference(http).parse;
+		return http.post(faction).then(parse);
 	}
 
 	// TODO: invalidate on auth change

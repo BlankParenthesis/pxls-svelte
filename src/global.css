@@ -54,6 +54,11 @@ body > * {
 	align-content: end;
 }
 
+.flex.center-all {
+	align-items: center;
+	justify-content: center;
+}
+
 .flex.vertical {
 	flex-direction: column;
 }
