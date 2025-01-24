@@ -50,6 +50,7 @@ void main() {
 
 	vec2 normalizedUv = mod(vUv * uBoardSize / vSize, 1.0) / PALETTE_STYLE_WIDTH;
 	vec2 styleUv = normalizedUv + indexTranslate;
+	gl_FragColor.a = templateData.a;
 	gl_FragColor.a *= texture2D(tStyle, styleUv).a;
 }
 `;

@@ -185,8 +185,6 @@ void main() {
 	}
 
 	gl_FragColor = vec4(float(best_i) / uPaletteSize);
-	//gl_FragColor = texture2D(tPalette, vec2(float(best_i) / uPaletteSize, 0.0));
-	//gl_FragColor = vec4(best_score);
 	gl_FragColor.a = pixel.a == 0.0 ? 0.0 : 1.0;
 }
 `;
