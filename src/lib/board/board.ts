@@ -84,9 +84,6 @@ export class Board {
 
 		const { cooldown, info } = await http.getRaw().then(async (r) => {
 			const headerCooldown = HeaderCooldown.parse(Object.fromEntries(r.headers.entries()));
-			if (typeof headerCooldown.pixelsAvailable === "undefined") {
-				console.debug(r);
-			}
 			const cooldown = {
 				pixelsAvailable: typeof headerCooldown.pixelsAvailable === "undefined"
 					? 0
