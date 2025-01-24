@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Template } from "../lib/render/template";
+	import { Template } from "../lib/render/template";
+	import TemplateForm from "./Template.svelte";
 
 	export let templates: Template[];
 
@@ -18,53 +19,13 @@
 	}
 </script>
 <style>
-	.template {
-		display: flex;
-	}
-
-	.template > img {
-		width: 4.75em;
-		height: 4.75em;
-		object-fit: contain;
-	}
-
-	input[type="number"] {
-		width: 5em;
-	}
 </style>
 <h2>Templates</h2>
-<ul>
-	{#each templates as template}
-		<li class="template flex">
-			<img src={template.url} alt="template preview">
-			<div class="grow flex vertical">
-				<div class="flex align-bottom">
-					<label class="grow">
-						<span class="inline-label">Title</span>
-						<input placeholder="Unnamed Template" class="fullwidth" type="text" bind:value={template.title} />
-					</label>
-					<!-- TODO: proper controls rather than just numerical inputs -->
-					<label>
-						<span class="inline-label">X</span>
-						<input type="number" bind:value={template.x} />
-					</label>
-					<label>
-						<span class="inline-label">Y</span>
-						<input type="number" bind:value={template.y} />
-					</label>
-					<label>
-						<span class="inline-label">Width</span>
-						<!-- FIXME: this does not correctly update when the template loads-->
-						<input type="number" bind:value={template.width} />
-					</label>
-					<button class="button destructive" on:click={() => deleteTemplate(template)}>Delete</button>
-				</div>
-				<label class="grow">
-					<span class="inline-label">Source URL</span>
-					<input placeholder="https://…" class="fullwidth" type="text" bind:value={template.url} />
-				</label>
-			</div>
-		</li>
-	{/each}
-</ul>
-<button class="button" on:click={addTemplate}>New Template</button>
+<section class="flex vertical align-middle gap">
+	<ul class="item-list fullwidth">
+		{#each templates as template}
+			<li><TemplateForm bind:template ondelete={() => deleteTemplate(template)}/></li>
+		{/each}
+	</ul>
+	<button class="button suggested large" on:click={addTemplate}>New Template</button>
+</section>

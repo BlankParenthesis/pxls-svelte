@@ -20,6 +20,7 @@
 		--tool-button-active-background: #47a;
 		--color-high-contrast: #fff;
 		--color-high-contrast-outline: #000;
+		--color-low-contrast: #999;
 		--bubble-color: #fff;
 		--bubble-background: #3F3F3F;
 		--item-border: 1px solid #232323;
@@ -52,6 +53,7 @@
 		--tool-button-active-background: #47a;
 		--color-high-contrast: #fff;
 		--color-high-contrast-outline: #000;
+		--color-low-contrast: #666;
 		--bubble-color: #000;
 		--bubble-background: #fff;
 		--item-border: 1px solid #EDEDED;

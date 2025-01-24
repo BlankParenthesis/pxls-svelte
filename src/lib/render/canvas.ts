@@ -264,7 +264,7 @@ export class Canvas {
 			sectors.splice(4);
 		}
 		this.renderSectors(scene as Scene, sectors, detail);
-		this.renderTemplates(this.palette, [...parameters.templates]);
+		this.renderTemplates(this.palette, [...parameters.templates.filter(t => t.show)]);
 		this.textures.prune();
 
 		return this.visibleArea();

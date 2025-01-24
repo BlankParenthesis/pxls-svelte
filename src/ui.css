@@ -41,6 +41,10 @@
 	padding: .25em .75em;
 	background: var(--button-background);
 	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5em;
 }
 
 .button.large {
@@ -95,19 +99,48 @@ input[type="range"].vertical.flipped {
 	writing-mode: vertical-rl;
 }
 
-label.search, label.text {
+input[type="checkbox"], input[type="radio"] {
+	appearance: auto;
+}
+
+label.search,
+label.text,
+label.number {
+	display: flex;
 	background-color: var(--text-input-background);
 	border: var(--text-input-border);
 	padding: 0.5em;
 	border-radius: 0.5em;
 	line-height: 1.5em;
+	white-space: nowrap;
+	gap: 0.5em;
 }
 
-label.search > input:focus, label.text > input:focus {
+label.search > input,
+label.text > input,
+label.number > input {
+	flex-grow: 1;
+}
+
+label.search > :not(input),
+label.text > :not(input),
+label.number > :not(input) {
+	color: var(--color-low-contrast);
+}
+
+label.number {
+	padding-right: 0;
+}
+
+label.search > input:focus,
+label.text > input:focus,
+label.number > input:focus {
 	outline: none;
 }
 
-label.search:focus-within, label.text:focus-within {
+label.search:focus-within,
+label.text:focus-within,
+label.number:focus-within {
 	outline: var(--focus-outline);
 }
 

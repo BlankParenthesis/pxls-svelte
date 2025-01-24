@@ -34,6 +34,7 @@ export class Template {
 
 	constructor(
 		src?: string,
+		public show: boolean = true,
 		public x: number = 0,
 		public y: number = 0,
 		public title: string = "",
