@@ -19,7 +19,7 @@
 </script>
 <style>
 </style>
-<span>
+<div class="flex gap">
 	{#await $member}
 		Loading Faction Membership
 	{:then member}
@@ -48,4 +48,4 @@
 			</button>
 		{/if}
 	{/await}
-</span>
+</div>

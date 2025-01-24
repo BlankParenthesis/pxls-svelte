@@ -11,10 +11,8 @@
 </script>
 <style>
 </style>
-<span>
-	{#await $member}
-		Loading Faction Membership
-	{:then member}
-		<FactionStatusInternal {faction} member={member?.fetch()} {access} />
-	{/await}
-</span>
+{#await $member}
+	Loading Faction Membership
+{:then member}
+	<FactionStatusInternal {faction} member={member?.fetch()} {access} />
+{/await}
