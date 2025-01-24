@@ -158,7 +158,7 @@
 		{#if canLookup}
 			<div class="flex vertical group reverse">
 				<button
-					class="button tool"
+					class="button tool flex vertical"
 					class:active={state.pointer?.type === "lookup"}
 					on:keydown={(event) => {
 						if ([" ", "Enter"].includes(event.key)) {
@@ -189,7 +189,7 @@
 		{/if}
 		<div class="flex vertical group reverse cursor-transparent">
 			<button
-				class="button tool"
+				class="button tool flex vertical"
 				class:active={settings.heatmap.enabled}
 				on:click={() => settings.heatmap.enabled = !settings.heatmap.enabled}
 			>
