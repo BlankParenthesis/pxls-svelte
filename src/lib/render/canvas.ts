@@ -6,10 +6,8 @@ import { Shape } from "./shape";
 import { Template } from "./template";
 import { CanvasTextures } from "./canvastextures";
 import { ratio, updateAttribute, type Instanceable } from "../util";
-import { type RendererOverrides } from "../settings";
 import { TemplateProgram } from "./program/template";
 import { CanvasProgram } from "./program/canvas";
-import { DebugProgram } from "./program/debug";
 
 export class ViewBox {
 	readonly bottom: number;
@@ -89,10 +87,8 @@ export class Canvas {
 	private palette: Texture;
 	private readonly renderer: Renderer;
 	private readonly program: CanvasProgram;
-	private readonly debugProgram: DebugProgram;
 	private readonly templateProgram: TemplateProgram;
 	private mesh: Mesh<InstancedQuad, CanvasProgram>;
-	private debugMesh: Mesh<InstancedQuad, DebugProgram>;
 	private templateMesh: Mesh<InstancedQuad, TemplateProgram>;
 	private textures: CanvasTextures;
 
@@ -125,12 +121,10 @@ export class Canvas {
 
 		this.textures = new CanvasTextures(gl, board, shape, () => this.update());
 		this.program = new CanvasProgram(gl);
-		this.debugProgram = new DebugProgram(gl);
 		this.templateProgram = new TemplateProgram(gl, templateStyle);
 
 		const geometry = new InstancedQuad(gl);
 		this.mesh = new Mesh(this.gl, { geometry, program: this.program });
-		this.debugMesh = new Mesh(this.gl, { geometry, program: this.debugProgram });
 		this.templateMesh = new Mesh(this.gl, { geometry, program: this.templateProgram });
 	}
 
@@ -151,7 +145,6 @@ export class Canvas {
 			const boardScale = ratio(...this.shape.size());
 			const scale = screenScale.multiply(boardScale);
 			this.program.uniforms.uAspect.value = scale;
-			this.debugProgram.uniforms.uAspect.value = scale;
 			this.templateProgram.uniforms.uAspect.value = scale;
 		}
 	}
@@ -214,7 +207,6 @@ export class Canvas {
 	private updateUniforms(
 		palette: Texture,
 		parameters: RenderParameters,
-		overrides: RendererOverrides,
 	) {
 		this.program.uniforms.uTimestampRange.value = new Vec2(parameters.timestampStart, parameters.timestampEnd);
 		this.program.uniforms.uHeatmapDim.value = 1 - parameters.heatmapDim;
@@ -224,31 +216,22 @@ export class Canvas {
 		this.templateProgram.uniforms.tPalette.value = palette;
 		this.templateProgram.uniforms.uPaletteSize.value = palette.width;
 
-		this.debugProgram.uniforms.uOutline.value = overrides.debugOutline;
-		this.debugProgram.uniforms.uOutlineStripe.value = overrides.debugOutlineStripe;
-
 		const view = new Mat3(...parameters.transform);
 		this.program.uniforms.uView.value = view;
-		this.debugProgram.uniforms.uView.value = view;
 		this.templateProgram.uniforms.uView.value = view;
 
 		const [width, height] = this.shape.size();
 		this.templateProgram.uniforms.uBoardSize.value = new Vec2(width, height);
 	}
 
-	render(parameters: RenderParameters, overrides: RendererOverrides): ViewBox {
-		this.updateUniforms(this.palette, parameters, overrides);
+	render(parameters: RenderParameters): ViewBox {
+		this.updateUniforms(this.palette, parameters);
 
 		type Scene = Mesh<InstancedQuad, Program & Instanceable>;
-		const scene = (overrides.debug ? this.debugMesh : this.mesh);
+		const scene = this.mesh;
 		const visible = this.visibleArea();
 
-		let detail: number;
-		if (typeof overrides.detailLevel === "undefined") {
-			detail = this.detailLevel(visible);
-		} else {
-			detail = overrides.detailLevel;
-		}
+		let detail = this.detailLevel(visible);
 		detail = Math.max(1, Math.min(detail, this.shape.depth - 1));
 
 		const [width, height] = this.shape.slice(0, detail).size();
@@ -258,11 +241,8 @@ export class Canvas {
 		);
 
 		const sectors = this.visibleSectors(visible, detail);
-		if (typeof overrides.detailLevel === "undefined") {
-			console.assert(sectors.length <= 4, "More than 4 sectors were visible");
-		} else if (!overrides.debug) {
-			sectors.splice(4);
-		}
+		console.assert(sectors.length <= 4, "More than 4 sectors were visible");
+		sectors.splice(4);
 		this.renderSectors(scene as Scene, sectors, detail);
 		this.renderTemplates(this.palette, [...parameters.templates.filter(t => t.show)]);
 		this.textures.prune();

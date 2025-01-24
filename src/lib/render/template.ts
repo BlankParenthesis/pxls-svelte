@@ -28,8 +28,8 @@ export const Templates = z.array(z.object({
 	title: z.string(),
 	x: z.number(),
 	y: z.number(),
-	width: z.number().positive(),
-	height: z.number().positive().optional().default(0),
+	width: z.number().min(0),
+	height: z.number().min(0).optional().nullable().default(0),
 	show: z.boolean(),
 	conversion: z.number(),
 })).transform(ts => ts.map(t => new Template(

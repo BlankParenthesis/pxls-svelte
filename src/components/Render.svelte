@@ -3,14 +3,12 @@
 	import { get, writable, type Readable } from "svelte/store";
 	import type { Board } from "../lib/board/board";
 	import { Canvas, ViewBox, type RenderParameters } from "../lib/render/canvas";
-	import { type RendererOverrides } from "../lib/settings";
 	import { Vec2 } from "ogl";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
 
 	export let board: Board;
-	export let overrides: RendererOverrides;
 	export let parameters: RenderParameters;
 
 	export let size: Vec2;
@@ -32,7 +30,7 @@
 
 	export function paint() {
 		if (canvas) {
-			return canvas.render(parameters, overrides);
+			return canvas.render(parameters);
 		} else {
 			return ViewBox.default();
 		}

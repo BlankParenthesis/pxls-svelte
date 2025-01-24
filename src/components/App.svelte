@@ -7,10 +7,19 @@
 	import type { Reference } from "../lib/reference";
 	import Login from "./Login.svelte";
 	import Splash from "./layout/Splash.svelte";
+	import { persistentWritable } from "../lib/storage/persistent";
+	import { Settings } from "../lib/settings";
 
 	const connecting = Site.connect(new URL(import.meta.env.VITE_TARGET_SITE));
 	let select: (board: Reference<BoardInfo>) => void;
 	const boardSelect = new Promise<Reference<BoardInfo>>(resolve => select = resolve);
+
+	let settings = persistentWritable(
+		"settings",
+		Settings.parse,
+		d => d,
+		Settings.parse({}),
+	);
 </script>
 {#await connecting}
 	<Splash>
@@ -30,7 +39,7 @@
 				<progress max=1 value=0.8 />
 			</Splash>
 		{:then board}
-			<Canvas {site} {board}/>
+			<Canvas {site} {board} bind:settings={$settings} />
 		{:catch e}
 			<Splash>
 				<h2>Loading error</h2>
@@ -64,7 +73,7 @@
 						<progress max=1 value=0.8 />
 					</Splash>
 				{:then board}
-					<Canvas {site} {board} />
+					<Canvas {site} {board} bind:settings={$settings} />
 				{:catch e}
 					<Splash>
 						<h2>Failed to load board</h2>

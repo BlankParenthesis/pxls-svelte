@@ -16,7 +16,6 @@
 	import Lookup from "./Lookup.svelte";
 	import Ui from "./Ui.svelte";
 	import type { Site } from "../lib/site";
-	import templateStyleSource from "../assets/template_style_dotted_1_1.webp";
 	import { onMount } from "svelte";
 	import { linearRegression } from "../lib/util";
 
@@ -24,6 +23,7 @@
 
 	export let site: Site;
 	export let board: Board;
+	export let settings: Settings;
 
 	const info = board.info;
 	let shape = $info.shape;
@@ -48,7 +48,6 @@
 		};
 	}
 
-	$: overrides = settings.debug.render;
 	let parameters = {
 		transform: new Mat3().identity(),
 		templates: [] as Template[],
@@ -106,34 +105,6 @@
 	}
 
 	const RETICULE_SIZE = 60;
-
-	// TODO: make persistent
-	let settings: Settings = {
-		debug: {
-			render: {
-				debug: false,
-				debugOutline: 0.05,
-				debugOutlineStripe: 0.1,
-				zoom: false,
-			},
-		},
-		heatmap: {
-			enabled: false,
-			duration: 3600, // one hour
-			position: -1, // "now" (`-1 + 1` seconds ago)
-			dimming: 0.75,
-		},
-		template: {
-			style: templateStyleSource,
-		},
-		input: {
-			scrollSensitivity: 1.15,
-			dragVelocityAccumulation: 200,
-			dragVelocitySensitivity: 0.96,
-			dragVelocityFriction: 1 - 1 / 250,
-			bounceStrength: 1 / 5000,
-		},
-	};
 
 	let state: AppState = {
 		pointer: undefined,
@@ -746,7 +717,7 @@
 		hardClamp();
 	}
 
-	$: if (parameters && overrides) {
+	$: if (parameters) {
 		renderQueued = true;
 	}
 
@@ -799,7 +770,6 @@
 		bind:this={render}
 		{board}
 		{parameters}
-		{overrides}
 		size={boardSize}
 		{templateStyle}
 		on:pointerenter={() => setPointerOnBoard(true)}
