@@ -129,9 +129,9 @@ export class Authentication {
 			throw new Error("Fragment authentication response not supported");
 		}
 
-		const tokenStore = persistentWritable("token", TokenStorage.parse);
+		const tokenStore = persistentWritable("token", TokenStorage.parse, t => t);
 		const defaultState = { state: "", challenge: "" };
-		const stateStore = persistentWritable("loginstate", StateStorage.parse, defaultState);
+		const stateStore = persistentWritable("loginstate", StateStorage.parse, t => t, defaultState);
 
 		const authentication = new Authentication(
 			config as SiteAuth,

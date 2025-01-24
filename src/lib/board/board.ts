@@ -11,6 +11,8 @@ import { navigationState } from "../../components/Login.svelte";
 import type { Parser } from "../util";
 import { UserCount } from "../usercount";
 import { Pixel as PixelResponse } from "../pixel";
+import { persistentWritable } from "../storage/persistent";
+import { Templates } from "../render/template";
 
 const HeaderNumber = z.number().int().min(0);
 
@@ -109,6 +111,7 @@ export class Board {
 	protected readonly initialCache: DataCache;
 	public readonly info: Readable<BoardInfo>;
 	public readonly cooldown: Readable<Cooldown>;
+	public readonly templates: Writable<Templates>;
 
 	private readonly parsers: {
 		pixel: Parser<Pixel | undefined>;
@@ -170,6 +173,22 @@ export class Board {
 			pixel: Pixel.parser(this.site.access(), this.info, this.site.parsers.userReference),
 			userCount: UserCount.parser(),
 		};
+		const templateKey = `templates[${http.baseURL}]`;
+		this.templates = persistentWritable(
+			templateKey,
+			Templates.parse,
+			templates => templates.map(t => ({
+				src: t.url,
+				show: t.show,
+				x: t.x,
+				y: t.y,
+				title: t.title,
+				width: t.width,
+				height: t.height,
+				conversion: t.conversion,
+			})),
+			[],
+		);
 	}
 
 	onUpdate(callback: (packet: BoardUpdate) => void) {

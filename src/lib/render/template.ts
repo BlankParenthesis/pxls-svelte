@@ -2,6 +2,7 @@ import { Mesh, Renderer, RenderTarget, Texture, Vec2, type OGLRenderingContext }
 import { InstancedQuad } from "./gl";
 import { ConversionProgram, Conversion } from "./program/conversion";
 import { updateAttribute } from "../util";
+import { z } from "zod";
 
 let mesh: Mesh | undefined;
 let program: ConversionProgram | undefined;
@@ -21,6 +22,27 @@ function scene(gl: OGLRenderingContext): { mesh: Mesh; program: ConversionProgra
 
 	return { mesh, program };
 }
+
+export const Templates = z.array(z.object({
+	src: z.string(),
+	title: z.string(),
+	x: z.number(),
+	y: z.number(),
+	width: z.number().positive(),
+	height: z.number().positive().optional().default(0),
+	show: z.boolean(),
+	conversion: z.number(),
+})).transform(ts => ts.map(t => new Template(
+	t.src,
+	t.show,
+	t.x,
+	t.y,
+	t.title,
+	t.width,
+	t.height,
+	t.conversion,
+)));
+export type Templates = z.infer<typeof Templates>;
 
 export class Template {
 	private base?: Texture;

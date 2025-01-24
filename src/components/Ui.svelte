@@ -189,7 +189,7 @@
 		{:else if panel === Panel.Templates}
 			<div class="glass left"></div>
 			<div class="center-center drawer flex vertical padded">
-				<Templates bind:templates={state.templates} />
+				<Templates bind:templates={board.templates} />
 			</div>
 			<div class="glass right"></div>
 		{:else if panel === Panel.Settings}

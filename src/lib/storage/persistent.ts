@@ -6,14 +6,16 @@ export interface PersistentWritable<T> extends Writable<T> {
 	reset: () => void;
 }
 
-export function persistentWritable<T>(
+export function persistentWritable<T, Stored = T>(
 	key: string,
 	parser: (j: unknown) => T,
+	serialize: (t: T) => Stored,
 	defaultValue: T,
 ): PersistentWritable<T>;
-export function persistentWritable<T>(
+export function persistentWritable<T, Stored = T>(
 	key: string,
 	parser: (j: unknown) => T,
+	serialize: (t: T) => Stored,
 ): PersistentWritable<T | undefined>;
 /**
  * Creates a store which keeps values after page load by using localstorage.
@@ -22,9 +24,10 @@ export function persistentWritable<T>(
  * @param defaultValue the value that should be used if no value is present in storage
  * @returns the store
  */
-export function persistentWritable<T>(
+export function persistentWritable<T, Stored = T>(
 	key: string,
 	parser: (j: unknown) => T,
+	serialize: (t: T) => Stored,
 	defaultValue?: undefined extends T ? T | undefined : T,
 ): PersistentWritable<T> {
 	if (usedKeys.has(key)) {
@@ -47,7 +50,7 @@ export function persistentWritable<T>(
 	const { set, update, subscribe } = store;
 
 	const newSet = (value: T) => {
-		localStorage.setItem(key, JSON.stringify(value));
+		localStorage.setItem(key, JSON.stringify(serialize(value)));
 		set(value);
 	};
 

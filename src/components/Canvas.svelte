@@ -57,7 +57,7 @@
 		heatmapDim: 0,
 	} as RenderParameters;
 
-	$: parameters.templates = state.templates;
+	board.templates.subscribe(ts => parameters.templates = ts);
 
 	let boardSize = new Vec2(1, 1);
 
@@ -141,7 +141,6 @@
 			color: false,
 			cooldown: false,
 		},
-		templates: [],
 	};
 
 	let pointerOnBoard = false;

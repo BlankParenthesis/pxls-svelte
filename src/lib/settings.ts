@@ -1,5 +1,4 @@
 import type { Pointer } from "./pointer";
-import type { Template } from "./render/template";
 
 export type RendererOverrides = {
 	detailLevel?: number;
@@ -36,7 +35,6 @@ export type Settings = {
 export interface AppState {
 	pointer?: Pointer;
 	adminOverrides: AdminOverrides;
-	templates: Template[];
 }
 
 export type AdminOverrides = {
