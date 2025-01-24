@@ -41,8 +41,8 @@ void main() {
 	float index = floor(templateData.r * 255.0 + 0.5);
 	vec2 indexTranslate = vec2(
 		mod(index, PALETTE_STYLE_WIDTH),
-		// flip y position but not inter-pixel
-		floor(index / PALETTE_STYLE_WIDTH - 1.0) + PALETTE_STYLE_WIDTH
+		// y is upside down in gl
+		PALETTE_STYLE_WIDTH - floor(index / PALETTE_STYLE_WIDTH + 1.0)
 	) / PALETTE_STYLE_WIDTH;
 
 	gl_FragColor = texture2D(tPalette, vec2((index + 0.5) / uPaletteSize, 0.5));
@@ -67,7 +67,11 @@ export class TemplateProgram extends Program implements Instanceable {
 			magFilter: gl.NEAREST,
 		});
 
-		styleImage.onload = () => templateStyle.image = styleImage;
+		styleImage.onload = () => {
+			// NOTE: we need to clone the image otherwise ogl will assume it
+			// hasn't changed.
+			templateStyle.image = styleImage.cloneNode() as HTMLImageElement;
+		};
 
 		super(gl, {
 			vertex: QUAD_VERTEX_SHADER,

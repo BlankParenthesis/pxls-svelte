@@ -16,7 +16,7 @@
 	import Lookup from "./Lookup.svelte";
 	import Ui from "./Ui.svelte";
 	import type { Site } from "../lib/site";
-	import templateStyleSource from "../assets/large_template_style.webp";
+	import templateStyleSource from "../assets/template_style_dotted_1_1.webp";
 	import { onMount } from "svelte";
 	import { linearRegression } from "../lib/util";
 
@@ -86,7 +86,7 @@
 	$: [boardWidth, boardHeight] = shape.size();
 
 	const templateStyle = new Image();
-	$: templateStyle.src = settings.template.source;
+	$: templateStyle.src = settings.template.style;
 
 	$: canvasnow = (Math.round($now) - $info.createdAt.valueOf()) / 1000;
 
@@ -107,6 +107,7 @@
 
 	const RETICULE_SIZE = 60;
 
+	// TODO: make persistent
 	let settings: Settings = {
 		debug: {
 			render: {
@@ -123,7 +124,7 @@
 			dimming: 0.75,
 		},
 		template: {
-			source: templateStyleSource,
+			style: templateStyleSource,
 		},
 		input: {
 			scrollSensitivity: 1.15,

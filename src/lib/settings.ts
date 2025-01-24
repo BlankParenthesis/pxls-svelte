@@ -21,7 +21,7 @@ export type Settings = {
 		dimming: number;
 	};
 	template: {
-		source: string;
+		style: string;
 	};
 	input: {
 		scrollSensitivity: number;

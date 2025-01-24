@@ -41,6 +41,10 @@ body > * {
 	justify-content: space-between;
 }
 
+.flex.distribute {
+	justify-content: space-evenly;
+}
+
 .flex.align-top {
 	align-items: start;
 }
@@ -120,4 +124,15 @@ body > * {
 .truncate {
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.invisible {
+	opacity: 0;
+	height: 1em;
+	margin-bottom: -1.5em;
+}
+
+p.compact {
+	margin-block-start: 0.5em;
+	margin-block-end: 0.5em;
 }

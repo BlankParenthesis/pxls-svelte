@@ -29,6 +29,8 @@
 		--text-input-border: 1px solid #222;
 		--text-input-background: #3F3F3F;
 		--focus-outline: 2px solid #3584e4;
+		--radio-input-active-foreground: #fff;
+		--radio-input-active-background: #47a;
 	}
 }
 
@@ -62,5 +64,7 @@
 		--text-input-border: 1px solid #777;
 		--text-input-background: #DFDFDF;
 		--focus-outline: 2px solid #3584e4;
+		--radio-input-active-foreground: #fff;
+		--radio-input-active-background: #47a;
 	}
 }

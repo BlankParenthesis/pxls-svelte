@@ -135,14 +135,27 @@ label.number {
 
 label.search > input:focus,
 label.text > input:focus,
-label.number > input:focus {
+label.number > input:focus,
+label.radio > input:focus {
 	outline: none;
 }
 
 label.search:focus-within,
 label.text:focus-within,
-label.number:focus-within {
+label.number:focus-within,
+label.radio:focus-within {
 	outline: var(--focus-outline);
+}
+
+label.radio.button {
+	border-radius: 1em;
+	padding: 1em;
+	font-weight: bold;
+}
+
+label.radio.selected {
+	color: var(--radio-input-active-foreground);
+	background: var(--radio-input-active-background);
 }
 
 .high-contrast {
