@@ -221,6 +221,8 @@ export class Canvas {
 		this.program.uniforms.tPalette.value = palette;
 		this.program.uniforms.uPaletteSize.value = palette.width;
 		this.templateProgram.uniforms.uHeatmapDim.value = 1 - parameters.heatmapDim;
+		this.templateProgram.uniforms.tPalette.value = palette;
+		this.templateProgram.uniforms.uPaletteSize.value = palette.width;
 
 		this.debugProgram.uniforms.uOutline.value = overrides.debugOutline;
 		this.debugProgram.uniforms.uOutlineStripe.value = overrides.debugOutlineStripe;
