@@ -169,6 +169,20 @@ export class Site {
 						break;
 					case "faction-deleted":
 						this.factions.delete(packet.faction);
+						this.factionMembers.delete(packet.faction + "members/current");
+						get(this.currentUser()).then(async (currentUser) => {
+							if (typeof currentUser === "undefined") {
+								return;
+							}
+							const user = await get(currentUser.fetch());
+							if (typeof user === "undefined") {
+								return;
+							}
+							const factions = await get(user.factions());
+							if (factions.some(f => typeof get(f) === "undefined")) {
+								user.updatefactions();
+							}
+						});
 						break;
 					case "faction-member-updated":
 						// Mark the faction current member if the faction
@@ -178,11 +192,13 @@ export class Site {
 							get(packet.faction.fetch()),
 							get(this.currentUser()),
 						]).then(([member, faction, currentUser]) => {
-							if (member?.user?.uri === currentUser.uri) {
-								faction?.initCurrentMember(member);
-								get(currentUser.fetch())?.then((u) => {
-									u.updatefactions();
-								});
+							if (typeof currentUser !== "undefined") {
+								if (member?.user?.uri === currentUser.uri) {
+									faction?.setCurrentMember(packet.member);
+									get(currentUser.get())?.then((u) => {
+										u.updatefactions();
+									});
+								}
 							}
 						});
 

@@ -31,11 +31,11 @@
 					<div class="flex space">
 						<h5 class="truncate">{faction.name}</h5>
 						{#if access.has("factions.members.get")}
-							{#await faction.currentMember()}
-								<span>Loading Faction Members</span>
-							{:then member}
-								<FactionStatus {faction} {member} {access} />
-							{/await}
+							<FactionStatus
+								{faction}
+								{access}
+								member={faction.currentMember()}
+							/>
 						{/if}
 					</div>
 					<div class="flex space gap">

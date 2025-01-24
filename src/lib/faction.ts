@@ -5,6 +5,7 @@ import { get, writable, type Readable, type Writable } from "svelte/store";
 import { collect, type Parser } from "./util";
 import { FactionMember } from "./factionmember";
 import type { Updatable } from "./cache";
+import type { Reference } from "./reference";
 
 export class Faction implements Updatable {
 	constructor(
@@ -19,28 +20,30 @@ export class Faction implements Updatable {
 		return this.http.baseURL;
 	}
 
-	private currentMemberCache?: Readable<Promise<FactionMember | undefined> | undefined>;
-	async currentMember(): Promise<Readable<Promise<FactionMember | undefined> | undefined>> {
+	private currentMemberCache?: Writable<Promise<Reference<FactionMember> | undefined>>;
+	currentMember(): Readable<Promise<Reference<FactionMember> | undefined>> {
 		if (typeof this.currentMemberCache === "undefined") {
 			const parse = this.site.parsers.factionMemberReference(this.http).parse;
-			const reference = await this.http.get("members/current")
+			const reference = this.http.get("members/current")
 				.then((data) => {
 					if (typeof data === "undefined") {
-						return writable(Promise.resolve(undefined));
+						return undefined;
 					} else {
-						return parse(data).fetch();
+						return parse(data);
 					}
 				});
 
-			this.currentMemberCache = reference;
+			this.currentMemberCache = writable(reference);
 		}
 
 		return this.currentMemberCache;
 	}
 
-	initCurrentMember(member: FactionMember) {
+	setCurrentMember(member: Reference<FactionMember>) {
 		if (typeof this.currentMemberCache === "undefined") {
 			this.currentMemberCache = writable(Promise.resolve(member));
+		} else {
+			this.currentMemberCache.set(Promise.resolve(member));
 		}
 	}
 

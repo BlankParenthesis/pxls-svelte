@@ -52,11 +52,16 @@ export class Cache<V extends Updatable, K = string> {
 		}
 	}
 
-	delete(key: K) {
+	delete(key: K): Promise<V> | undefined {
 		const value = this.map.get(key);
+		let cachedValue = undefined;
 		if (typeof value !== "undefined") {
-			value.update(() => undefined);
+			value.update((old) => {
+				cachedValue = old;
+				return undefined;
+			});
 		}
+		return cachedValue;
 	}
 }
 
