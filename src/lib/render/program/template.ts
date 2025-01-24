@@ -65,6 +65,7 @@ export class TemplateProgram extends Program implements Instanceable {
 			width: 32,
 			height: 32,
 			magFilter: gl.NEAREST,
+			minFilter: gl.NEAREST,
 		});
 
 		styleImage.onload = () => {
