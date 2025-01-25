@@ -3,6 +3,24 @@
 
 	export let template: Template;
 	export let ondelete: () => void;
+
+	enum CopyStatus {
+		None,
+		Pending,
+		Failure,
+		Success,
+	}
+
+	let copyStatus = CopyStatus.None;
+	let copytimeout: number;
+	async function copy() {
+		clearTimeout(copytimeout);
+		copyStatus = CopyStatus.Pending;
+		await navigator.clipboard.writeText(template.link.toString())
+			.then(() => copyStatus = CopyStatus.Success)
+			.catch(() => copyStatus = CopyStatus.Failure);
+		copytimeout = setTimeout(() => copyStatus = CopyStatus.None, 2000);
+	}
 </script>
 <style>
 	.template {
@@ -39,6 +57,17 @@
 			<label class="grow text">
 				<input placeholder="Template Name" class="fullwidth" type="text" bind:value={template.title} />
 			</label>
+			<button class="button" on:click={copy}>
+				{#if copyStatus === CopyStatus.None}
+					Copy Link
+				{:else if copyStatus === CopyStatus.Pending}
+					Copying Link…
+				{:else if copyStatus === CopyStatus.Failure}
+					Error Copying
+				{:else if copyStatus === CopyStatus.Success}
+					Link Copied
+				{/if}
+			</button>
 		</div>
 		<!-- TODO: proper controls rather than just numerical inputs -->
 		<div class="grow flex gap">

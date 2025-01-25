@@ -4,7 +4,7 @@
 	import type { Activation, LookupPointer, PlacingPointer } from "../lib/pointer";
 	import type { Board } from "../lib/board/board";
 	import { ViewBox, type RenderParameters } from "../lib/render/canvas";
-	import type { Template } from "../lib/render/template";
+	import { Template } from "../lib/render/template";
 	import Render from "./Render.svelte";
 	import Reticule from "./Reticule.svelte";
 	import { now } from "./Time.svelte";
@@ -18,6 +18,8 @@
 	import type { Site } from "../lib/site";
 	import { onMount } from "svelte";
 	import { linearRegression } from "../lib/util";
+	import { urlWritable } from "../lib/storage/url";
+	import { parse as parseConversion } from "../lib/render/program/conversion";
 
 	let render: Render;
 
@@ -55,6 +57,59 @@
 		timestampEnd: 0,
 		heatmapDim: 0,
 	} as RenderParameters;
+
+	let hotloadTemplateName = urlWritable("tname", null, true);
+	let hotloadTemplateX = urlWritable("tx", null, true);
+	let hotloadTemplateY = urlWritable("ty", null, true);
+	let hotloadTemplateWidth = urlWritable("tw", null, true);
+	let hotloadTemplateHeight = urlWritable("th", null, true);
+	let hotloadTemplateConversion = urlWritable("tconv", null, true);
+	let hotloadTemplateSource = urlWritable("tsrc", null, true);
+
+	hotloadTemplateSource.subscribe((source) => {
+		function intoInt(value: string | null): number | undefined {
+			if (value === null) {
+				return undefined;
+			}
+			let number = parseInt(value);
+			if (isNaN(number)) {
+				return undefined;
+			} else {
+				return number;
+			}
+		}
+
+		if (source === null) {
+			return;
+		}
+		let name: string | null;
+		let x: string | null;
+		let y: string | null;
+		let width: string | null;
+		let height: string | null;
+		let conversion: string | null;
+		// Extract and reset all the other parameters.
+		// They need to be reset because otherwise they'll persist the next
+		// time the source is entered this session.
+		hotloadTemplateName.update(v => (name = v) && null);
+		hotloadTemplateX.update(v => (x = v) && null);
+		hotloadTemplateY.update(v => (y = v) && null);
+		hotloadTemplateWidth.update(v => (width = v) && null);
+		hotloadTemplateHeight.update(v => (height = v) && null);
+		hotloadTemplateConversion.update(v => (conversion = v) && null);
+
+		board.templates.update(ts => [...ts, new Template(
+			board.uri,
+			source,
+			true,
+			intoInt(x),
+			intoInt(y),
+			name === null ? undefined : name,
+			intoInt(width),
+			intoInt(height),
+			conversion === null ? undefined : parseConversion(conversion),
+		)]);
+	});
 
 	board.templates.subscribe(ts => parameters.templates = ts);
 

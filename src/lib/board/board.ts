@@ -134,6 +134,10 @@ export class Board {
 		}
 	}
 
+	get uri(): URL {
+		return this.http.baseURL;
+	}
+
 	private constructor(
 		private readonly site: Site,
 		private readonly http: Requester,
@@ -176,7 +180,7 @@ export class Board {
 		const templateKey = `templates[${http.baseURL}]`;
 		this.templates = persistentWritable(
 			templateKey,
-			Templates.parse,
+			Templates(this.uri).parse,
 			templates => templates.map(t => ({
 				src: t.url,
 				show: t.show,

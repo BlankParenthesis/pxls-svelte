@@ -214,3 +214,16 @@ export class ConversionProgram extends Program {
 export enum Conversion {
 	CIEDE2000,
 }
+
+export function parse(value: string): Conversion | undefined {
+	switch (value) {
+		case "CIEDE2000": return Conversion.CIEDE2000;
+		default: return undefined;
+	}
+}
+
+export function serialize(conversion: Conversion): string {
+	switch (conversion) {
+		case Conversion.CIEDE2000: return "CIEDE2000";
+	}
+}

@@ -23,7 +23,7 @@ function scene(gl: OGLRenderingContext): { mesh: Mesh; program: ConversionProgra
 	return { mesh, program };
 }
 
-export const Templates = z.array(z.object({
+export const Templates = (board: URL) => z.array(z.object({
 	src: z.string(),
 	title: z.string(),
 	x: z.number(),
@@ -33,6 +33,7 @@ export const Templates = z.array(z.object({
 	show: z.boolean(),
 	conversion: z.number(),
 })).transform(ts => ts.map(t => new Template(
+	board,
 	t.src,
 	t.show,
 	t.x,
@@ -42,7 +43,7 @@ export const Templates = z.array(z.object({
 	t.height === null ? undefined : t.height,
 	t.conversion,
 )));
-export type Templates = z.infer<typeof Templates>;
+export type Templates = z.infer<ReturnType<typeof Templates>>;
 
 export class Template {
 	private base?: Texture;
@@ -55,6 +56,7 @@ export class Template {
 	private currentConversion: Conversion;
 
 	constructor(
+		private boardUrl: URL,
 		src?: string,
 		public show: boolean = true,
 		public x: number = 0,
@@ -121,6 +123,27 @@ export class Template {
 
 	get conversion(): Conversion {
 		return this.currentConversion;
+	}
+
+	get link(): URL {
+		const parameters = {
+			board: this.boardUrl.pathname,
+			tname: this.title,
+			tx: this.x,
+			ty: this.y,
+			tw: this.width,
+			th: this.height,
+			tconv: this.conversion,
+			tsrc: this.url,
+		};
+
+		const url = new URL(location.href);
+		url.hash = Object.entries(parameters)
+			.filter(([_, v]) => typeof v !== "undefined")
+			.map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+			.join("&");
+
+		return url;
 	}
 
 	prepare(

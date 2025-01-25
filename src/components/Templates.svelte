@@ -2,6 +2,7 @@
 	import { type Writable } from "svelte/store";
 	import { Template } from "../lib/render/template";
 	import TemplateForm from "./Template.svelte";
+	import { Board } from "../lib/board/board";
 	import none from "../assets/template_style_none.webp";
 	import dotted11 from "../assets/template_style_dotted_1_1.webp";
 	import dotted22 from "../assets/template_style_dotted_2_2.webp";
@@ -12,9 +13,10 @@
 
 	export let templates: Writable<Template[]>;
 	export let selectedStyle: string;
+	export let board: Board;
 
 	function addTemplate() {
-		templates.update(ts => [...ts, new Template()]);
+		templates.update(ts => [...ts, new Template(board.uri)]);
 	}
 
 	// TODO: option to undo deleted template
