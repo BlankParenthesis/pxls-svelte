@@ -39,7 +39,7 @@ export const Templates = z.array(z.object({
 	t.y,
 	t.title,
 	t.width,
-	t.height,
+	t.height === null ? undefined : t.height,
 	t.conversion,
 )));
 export type Templates = z.infer<typeof Templates>;
