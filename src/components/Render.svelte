@@ -4,6 +4,7 @@
 	import type { Board } from "../lib/board/board";
 	import { Canvas, ViewBox, type RenderParameters } from "../lib/render/canvas";
 	import { Vec2 } from "ogl";
+	import { SafeImage } from "../lib/render/safeimage";
 
 	let canvasElement: HTMLCanvasElement;
 	let canvas: Canvas;
@@ -12,7 +13,7 @@
 	export let parameters: RenderParameters;
 
 	export let size: Vec2;
-	export let templateStyle: HTMLImageElement;
+	export let templateStyle: SafeImage;
 
 	const aspectwrite = writable(new Vec2(1, 1));
 

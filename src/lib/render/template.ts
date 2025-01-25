@@ -3,6 +3,7 @@ import { InstancedQuad } from "./gl";
 import { ConversionProgram, Conversion } from "./program/conversion";
 import { updateAttribute } from "../util";
 import { z } from "zod";
+import { SafeImage } from "./safeimage";
 
 let mesh: Mesh | undefined;
 let program: ConversionProgram | undefined;
@@ -49,7 +50,7 @@ export class Template {
 	private base?: Texture;
 	private processed?: RenderTarget;
 
-	private readonly image: HTMLImageElement;
+	private readonly image: SafeImage;
 
 	private currentWidth: number;
 	private currentHeight: number;
@@ -66,8 +67,7 @@ export class Template {
 		initialHeight: number = 0,
 		initialConversion: Conversion = Conversion.CIEDE2000,
 	) {
-		this.image = new Image();
-		this.image.crossOrigin = "anonymous";
+		this.image = new SafeImage();
 		this.image.onload = () => {
 			this.base = undefined;
 			this.processed = undefined;
@@ -83,15 +83,16 @@ export class Template {
 	}
 
 	set url(value: string | undefined) {
-		if (typeof value === "undefined") {
-			this.image.removeAttribute("src");
-		} else {
-			this.image.src = value;
-		}
+		this.image.src = value;
 	}
 
 	get url(): string {
-		return this.image.src;
+		const url = this.image.src;
+		if (typeof url === "undefined") {
+			return "";
+		} else {
+			return url;
+		}
 	}
 
 	set width(value: number) {
@@ -166,7 +167,7 @@ export class Template {
 		const gl = renderer.gl;
 
 		if (typeof this.base === "undefined") {
-			const image = this.image;
+			const image = this.image.image;
 			const { width, height } = image;
 			const format = gl.RGBA;
 			this.base = new Texture(gl, {

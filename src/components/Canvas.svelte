@@ -20,6 +20,7 @@
 	import { linearRegression } from "../lib/util";
 	import { urlWritable } from "../lib/storage/url";
 	import { parse as parseConversion } from "../lib/render/program/conversion";
+	import { SafeImage } from "../lib/render/safeimage";
 
 	let render: Render;
 
@@ -139,7 +140,7 @@
 
 	$: [boardWidth, boardHeight] = shape.size();
 
-	const templateStyle = new Image();
+	const templateStyle = new SafeImage();
 	$: templateStyle.src = settings.template.style;
 
 	$: canvasnow = (Math.round($now) - $info.createdAt.valueOf()) / 1000;

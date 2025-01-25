@@ -1,6 +1,7 @@
 import { type OGLRenderingContext, Program, Texture, Vec2, Mat3 } from "ogl";
 import { QUAD_VERTEX_SHADER } from "../gl";
 import type { Instanceable } from "../../util";
+import type { SafeImage } from "../safeimage";
 
 type TemplateUniforms = {
 	uView: { value: Mat3 };
@@ -59,7 +60,7 @@ export class TemplateProgram extends Program implements Instanceable {
 	public readonly uniforms: TemplateUniforms;
 	public readonly maxParallelism: number = 7;
 
-	constructor(gl: OGLRenderingContext, styleImage: HTMLImageElement) {
+	constructor(gl: OGLRenderingContext, styleImage: SafeImage) {
 		// NOTE: this would be more efficient as a single channel texture,
 		// webgl doesn't support conversion and it's hard to do in js.
 		const templateStyle = new Texture(gl, {
@@ -72,7 +73,7 @@ export class TemplateProgram extends Program implements Instanceable {
 		styleImage.onload = () => {
 			// NOTE: we need to clone the image otherwise ogl will assume it
 			// hasn't changed.
-			templateStyle.image = styleImage.cloneNode() as HTMLImageElement;
+			templateStyle.image = styleImage.image.cloneNode() as HTMLImageElement;
 		};
 
 		super(gl, {

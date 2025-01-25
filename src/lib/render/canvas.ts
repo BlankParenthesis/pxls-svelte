@@ -8,6 +8,7 @@ import { CanvasTextures } from "./canvastextures";
 import { ratio, updateAttribute, type Instanceable } from "../util";
 import { TemplateProgram } from "./program/template";
 import { CanvasProgram } from "./program/canvas";
+import type { SafeImage } from "./safeimage";
 
 export class ViewBox {
 	readonly bottom: number;
@@ -103,7 +104,7 @@ export class Canvas {
 		private shape: Shape,
 		palette: Palette,
 		canvas: HTMLCanvasElement,
-		templateStyle: HTMLImageElement,
+		templateStyle: SafeImage,
 	) {
 		this.renderer = new Renderer({
 			canvas,
