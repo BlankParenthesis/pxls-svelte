@@ -43,9 +43,14 @@
 	];
 </script>
 <style>
+	.style-select {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(10em, 1fr))
+	}
+
 	.preview {
 		border: var(--text-input-border);
-		width: 10em;
+		width: 8em;
 		height: 8em;
 		object-fit: cover;
 		display: flex;
@@ -60,7 +65,7 @@
 <h2>Templates</h2>
 <h3>Style</h3>
 <section class="flex vertical gap">
-	<form on:submit={e => e.preventDefault()} class="flex wrap gap distribute">
+	<form on:submit={e => e.preventDefault()} class="style-select gap">
 		{#each TEMPLATE_STYLES as style}
 			<label class="radio button flex vertical center-all" class:selected={style.source === selectedStyle}>
 				<img class="preview" src={style.preview} alt="Template style: {style.name}" />
