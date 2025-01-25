@@ -33,7 +33,6 @@
 .drawer {
 	background: var(--drawer-background);
 	border: var(--drawer-border);
-	touch-action: none;
 	overflow: scroll;
 }
 
