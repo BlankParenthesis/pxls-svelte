@@ -181,16 +181,7 @@ export class Board {
 		this.templates = persistentWritable(
 			templateKey,
 			Templates(this.uri).parse,
-			templates => templates.map(t => ({
-				src: t.url,
-				show: t.show,
-				x: t.x,
-				y: t.y,
-				title: t.title,
-				width: t.width,
-				height: t.height,
-				conversion: t.conversion,
-			})),
+			templates => templates.map(t => t.serialize()),
 			[],
 		);
 	}

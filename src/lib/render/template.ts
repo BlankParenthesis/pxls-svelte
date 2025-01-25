@@ -131,8 +131,8 @@ export class Template {
 			tname: this.title,
 			tx: this.x,
 			ty: this.y,
-			tw: this.width,
-			th: this.height,
+			tw: this.currentWidth,
+			th: this.currentHeight,
 			tconv: this.conversion,
 			tsrc: this.url,
 		};
@@ -144,6 +144,19 @@ export class Template {
 			.join("&");
 
 		return url;
+	}
+
+	serialize() {
+		return {
+			src: this.url,
+			show: this.show,
+			x: this.x,
+			y: this.y,
+			title: this.title,
+			width: this.currentWidth,
+			height: this.currentHeight,
+			conversion: this.conversion,
+		};
 	}
 
 	prepare(
