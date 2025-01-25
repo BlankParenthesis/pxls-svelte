@@ -54,10 +54,18 @@ export function persistentWritable<T, Stored = T>(
 		set(value);
 	};
 
+	const newUpdate = (callback: (o: T) => T) => {
+		update((previous) => {
+			const value = callback(previous);
+			localStorage.setItem(key, JSON.stringify(serialize(value)));
+			return value;
+		});
+	};
+
 	const reset = () => {
 		localStorage.removeItem(key);
 		set(defaultValue as T);
 	};
 
-	return { set: newSet, update, subscribe, reset };
+	return { set: newSet, update: newUpdate, subscribe, reset };
 }
