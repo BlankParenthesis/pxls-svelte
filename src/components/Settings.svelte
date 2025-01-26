@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { type Settings } from "../lib/settings";
+	import { type Settings } from "../lib/settings";
 
 	export let settings: Settings;
 </script>

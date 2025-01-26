@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { LookupData as DataType } from "../lib/pointer";
-	import LookupData from "./LookupData.svelte";
+	import BoardPopup from "./BoardPopup.svelte";
+	import Pixel from "./Pixel.svelte";
+	import Unwrap from "./Unwrap.svelte";
 
 	export let finalizer: Promise<{ data: DataType; complete: () => void }>;
 </script>
@@ -45,14 +47,38 @@
 {:then { complete, data }}
 	{#await data.dismissal}
 		<div class="reticule cursor-transparent">
-			<LookupData lookup={data.lookup} />
+			<Unwrap store={data.lookup} let:value>
+				{#if typeof value === "undefined"}
+					<BoardPopup><small>Lookup Outdated</small></BoardPopup>
+				{:else}
+					{#await value}
+						<p>Loading Pixel…</p>
+					{:then pixel}
+						<BoardPopup><Pixel {pixel} /></BoardPopup>
+					{:catch}
+						<p>Lookup Error</p>
+					{/await}
+				{/if}
+			</Unwrap>
 		</div>
 	{:then}
 		<div
 			class="reticule complete cursor-transparent"
 			on:animationend={complete}
 		>
-			<LookupData lookup={data.lookup} />
+			<Unwrap store={data.lookup} let:value>
+				{#if typeof value === "undefined"}
+					<BoardPopup><small>Lookup Outdated</small></BoardPopup>
+				{:else}
+					{#await value}
+						<p>Loading Pixel…</p>
+					{:then pixel}
+						<BoardPopup><Pixel {pixel} /></BoardPopup>
+					{:catch}
+						<p>Lookup Error</p>
+					{/await}
+				{/if}
+			</Unwrap>
 		</div>
 	{/await}
 {:catch complete}

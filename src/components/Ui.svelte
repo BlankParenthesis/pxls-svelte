@@ -15,6 +15,7 @@
 	import Pixelstack from "./Pixelstack.svelte";
 	import FactionsPanel from "./FactionsPanel.svelte";
 	import Ticker, { Mode as TickerMode } from "./Ticker.svelte";
+	import Unwrap from "./Unwrap.svelte";
 
 	export let settings: Settings;
 	export let site: Site;
@@ -159,27 +160,13 @@
 		{#if panel === Panel.Account}
 			<div class="glass left"></div>
 			<div class="center-center drawer flex vertical padded">
-				{#await $currentUser}
-					<div class="flex space align-middle">
-						<h2>Account</h2>
-						<p>Loading</p>
-					</div>
-				{:then user}
-					<Account {access} {auth} {site} user={user.fetch()}/>
-				{/await}
+				<Account {site} {auth} {access} />
 			</div>
 			<div class="glass right"></div>
 		{:else if panel === Panel.Factions}
 			<div class="glass left"></div>
 			<div class="center-center drawer flex vertical padded">
-				{#await $currentUser}
-					<div class="flex space align-middle">
-						<h2>Factions</h2>
-						<p>Loading</p>
-					</div>
-				{:then user}
-					<FactionsPanel {access} {site} user={user.fetch()}/>
-				{/await}
+				<FactionsPanel {access} {site}/>
 			</div>
 			<div class="glass right"></div>
 		{:else if panel === Panel.Place}

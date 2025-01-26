@@ -1,11 +1,3 @@
-<script lang="ts">
-	import type { Readable } from "svelte/store";
-	import { Pixel } from "../lib/pixel";
-	import Time, { Mode as TimeMode } from "./Time.svelte";
-	import LookupUser from "./LookupUser.svelte";
-
-	export let lookup: Readable<Promise<Pixel | undefined> | undefined>;
-</script>
 <style>
 	.bubble {
 		position: absolute;
@@ -63,23 +55,6 @@
 </style>
 <div class="arrow-shadow"></div>
 <div class="bubble fully-cursor-transparent">
-	{#if typeof $lookup === "undefined"}
-		Outdated lookup
-	{:else}
-		{#await $lookup }
-			Loading Pixel…
-		{:then pixel }
-			{#if typeof pixel === "undefined"}
-				Never placed
-			{:else}
-				{#if typeof pixel.user !== "undefined"}
-					<LookupUser user={pixel.user} />
-				{/if}
-				<Time time={pixel.modified} mode={TimeMode.Relative} />
-			{/if}
-		{:catch}
-			<div>Lookup Error</div>
-		{/await}
-	{/if}
+	<slot />
 </div>
 <div class="arrow"></div>

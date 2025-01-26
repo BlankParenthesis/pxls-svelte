@@ -1,18 +1,21 @@
 <script lang="ts">
 	import type { Readable } from "svelte/store";
-	import { Role as RawRole } from "../lib/role";
-	import Role from "./Role.svelte";
+	import { Role } from "../lib/role";
+	import RoleDisplay from "./Role.svelte";
+	import Unwrap from "./Unwrap.svelte";
 
-	export let roles: Readable<Promise<Array<Readable<Promise<RawRole> | undefined>>>>;
+	export let roles: Array<Readable<Promise<Role> | undefined>>;
 </script>
 <style>
 </style>
-{#await $roles}
-	Loading Roles
-{:then roles}
-	<ul class="roles flex wrap">
-		{#each roles as role}
-			<Role {role} />
-		{/each}
-	</ul>
-{/await}
+<ul class="roles flex wrap">
+	{#each roles as role}
+		<Unwrap store={role} let:value>
+			{#await value then role}
+				{#if typeof role !== "undefined"}
+					<li><RoleDisplay {role} /></li>
+				{/if}
+			{/await}
+		</Unwrap>
+	{/each}
+</ul>

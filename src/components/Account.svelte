@@ -1,14 +1,12 @@
 <script lang="ts">
-	import type { Readable } from "svelte/store";
 	import type { Authentication } from "../lib/authentication";
-	import type { User as UserData } from "../lib/user";
 	import Login from "./Login.svelte";
 	import CurrentUser from "./CurrentUser.svelte";
+	import Unwrap from "./Unwrap.svelte";
 	import type { Site } from "../lib/site";
 
 	export let site: Site;
 	export let auth: Authentication;
-	export let user: Readable<Promise<UserData> | undefined>;
 	export let access: Set<string>;
 </script>
 <style>
@@ -26,13 +24,20 @@
 	<h2>Account</h2>
 	<Login {auth} />
 </div>
-{#await $user}
-	<h3>Loading User Data</h3>
-{:then user}
-	{#if typeof user === "undefined"}
-		Unexpected missing user data
-	{:else}
-		<CurrentUser {user} {access} />
-		<!-- TODO: stats -->
-	{/if}
-{/await}
+<Unwrap store={site.currentUser()} let:value>
+	{#await value}
+		<p>Loading</p>
+	{:then userReference}
+		<Unwrap store={userReference.fetch()} let:value>
+			{#await value}
+				<p>Loading User Data</p>
+			{:then user}
+				{#if typeof user === "undefined"}
+					<p>Unexpected missing user data</p>
+				{:else}
+					<CurrentUser {user} {access}/>
+				{/if}
+			{/await}
+		</Unwrap>
+	{/await}
+</Unwrap>
