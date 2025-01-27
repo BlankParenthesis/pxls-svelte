@@ -8,6 +8,7 @@
 	import { onDestroy } from "svelte";
 	import { Pixel } from "../lib/pixel";
 	import pointertracking, { TrackingAxis } from "../lib/actions/pointertracking";
+	import { play as playSound, Sound } from "../lib/sound";
 
 	export let board: Board;
 	export let state: AppState;
@@ -36,8 +37,10 @@
 	function selectColor(index: number) {
 		const color = $info.palette.get(index);
 		if (typeof color === "undefined") {
+			playSound(Sound.Error);
 			throw new Error("invalid color");
 		}
+		playSound(Sound.Select);
 
 		const colorString = "#" + colorToHex(color.value);
 		state.pointer = {
@@ -60,6 +63,9 @@
 							}
 						});
 				}
+				playSound(Sound.PlaceBegin);
+				task.then(() => playSound(Sound.PlaceOk))
+					.catch(() => playSound(Sound.PlaceError));
 				return {
 					type: "place",
 					color: colorString,
@@ -79,6 +85,7 @@
 
 	function deselectColor() {
 		if (state.pointer?.type === "place") {
+			playSound(Sound.Deselect);
 			state.pointer = undefined;
 		}
 	}

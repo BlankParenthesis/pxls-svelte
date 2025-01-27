@@ -7,6 +7,7 @@
 	import { ActivationFinalizer, type LookupData } from "../lib/pointer";
 	import pointertracking from "../lib/actions/pointertracking";
 	import { DRAG_DISTANCE_THRESHOLD } from "../lib/util";
+	import { play as playSound, Sound } from "../lib/sound";
 
 	export let board: Board;
 	export let state: AppState;
@@ -50,6 +51,7 @@
 	}
 
 	function selectInspect() {
+		playSound(Sound.Select);
 		state.pointer = {
 			type: "lookup",
 			quickActivate: true,
@@ -104,6 +106,7 @@
 
 	function deselectInspect() {
 		if (state.pointer?.type === "lookup") {
+			playSound(Sound.Deselect);
 			state.pointer = undefined;
 		}
 	}
@@ -191,7 +194,10 @@
 			<button
 				class="button tool flex vertical"
 				class:active={settings.heatmap.enabled}
-				on:click={() => settings.heatmap.enabled = !settings.heatmap.enabled}
+				on:click={() => {
+					settings.heatmap.enabled = !settings.heatmap.enabled;
+					playSound(Sound.Click);
+				}}
 			>
 				<div class="icon large">🔥</div>
 				<small>Activity</small>
@@ -250,21 +256,30 @@
 				<button
 					class="button tool"
 					class:active={state.adminOverrides.color}
-					on:click={() => state.adminOverrides.color = !state.adminOverrides.color}
+					on:click={() => {
+						state.adminOverrides.color = !state.adminOverrides.color;
+						playSound(Sound.Click);
+					}}
 				>Enable Admin Colors</button>
 			{/if}
 			{#if canIgnoreCooldown}
 				<button
 					class="button tool"
 					class:active={state.adminOverrides.cooldown}
-					on:click={() => state.adminOverrides.cooldown = !state.adminOverrides.cooldown}
+					on:click={() => {
+						state.adminOverrides.cooldown = !state.adminOverrides.cooldown;
+						playSound(Sound.Click);
+					}}
 				>Ignore Cooldown</button>
 			{/if}
 			{#if canIgnoreMask}
 				<button
 					class="button tool"
 					class:active={state.adminOverrides.mask}
-					on:click={() => state.adminOverrides.mask = !state.adminOverrides.mask}
+					on:click={() => {
+						state.adminOverrides.mask = !state.adminOverrides.mask;
+						playSound(Sound.Click);
+					}}
 				>Place Anywhere</button>
 			{/if}
 		</div>

@@ -15,7 +15,8 @@
 	import Pixelstack from "./Pixelstack.svelte";
 	import FactionsPanel from "./FactionsPanel.svelte";
 	import Ticker, { Mode as TickerMode } from "./Ticker.svelte";
-	import Unwrap from "./Unwrap.svelte";
+	import { play as playSound, Sound } from "../lib/sound";
+	import { get } from "svelte/store";
 
 	export let settings: Settings;
 	export let site: Site;
@@ -50,7 +51,13 @@
 
 	let panel = Panel.None;
 
-	const currentUser = site.currentUser();
+	let lastPixels = get(cooldown).pixelsAvailable;
+	cooldown.subscribe((c) => {
+		if (lastPixels < c.pixelsAvailable) {
+			playSound(Sound.Cooldown);
+		}
+		lastPixels = c.pixelsAvailable;
+	});
 </script>
 <style>
 	.grid-5 {
