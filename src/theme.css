@@ -17,7 +17,7 @@
 		--tool-button-background: #333;
 		--tool-button-hover-background: #444;
 		--tool-button-active-foreground: #fff;
-		--tool-button-active-background: #47a;
+		--tool-button-active-background: #3584E4;
 		--color-high-contrast: #fff;
 		--color-high-contrast-outline: #000;
 		--color-low-contrast: #999;
@@ -30,7 +30,7 @@
 		--text-input-background: #3F3F3F;
 		--focus-outline: 2px solid #3584e4;
 		--radio-input-active-foreground: #fff;
-		--radio-input-active-background: #47a;
+		--radio-input-active-background: #3584E4;
 	}
 }
 
@@ -52,7 +52,7 @@
 		--tool-button-background: #eaeaea;
 		--tool-button-hover-background: #ccc;
 		--tool-button-active-foreground: #fff;
-		--tool-button-active-background: #47a;
+		--tool-button-active-background: #3584E4;
 		--color-high-contrast: #fff;
 		--color-high-contrast-outline: #000;
 		--color-low-contrast: #666;
@@ -65,6 +65,6 @@
 		--text-input-background: #DFDFDF;
 		--focus-outline: 2px solid #3584e4;
 		--radio-input-active-foreground: #fff;
-		--radio-input-active-background: #47a;
+		--radio-input-active-background: #3584E4;
 	}
 }
