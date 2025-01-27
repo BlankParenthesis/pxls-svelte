@@ -33,9 +33,9 @@
 		});
 	}
 
-	let customSource = "";
+	let customSource = [none, dotted11, dotted22].includes(selectedStyle) ? "" : selectedStyle;
 
-	const TEMPLATE_STYLES = [
+	$: TEMPLATE_STYLES = [
 		{ name: "None", source: none, preview: nonePreview },
 		{ name: "Small Squares", source: dotted11, preview: dotted11Preview, default: true },
 		{ name: "Large Squares", source: dotted22, preview: dotted22Preview },
@@ -82,7 +82,7 @@
 	</form>
 	<label class="text">
 		<span>Custom Style Source:</span>
-		<input type="text" placeholder="https://…" />
+		<input type="text" bind:value={customSource} placeholder="https://…" />
 	</label>
 </section>
 <h3>Designs</h3>
