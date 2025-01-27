@@ -8,15 +8,21 @@
 		max-width: 12em;
 		/* 4em = 2×the width of the arrow */
 		min-width: 4em;
-		box-sizing: border-box;
+		box-sizing: content-box;
 		border-style: solid;
 		border-width: 2px;
-		padding: .25em;
+		padding: .5em;
+		border-radius: 0.5em;
 		text-align: center;
 		color: var(--bubble-color);
 		border-color: var(--bubble-background);
 		background: var(--bubble-background);
 		box-shadow: 0 2px 5px #00000077;
+		/*
+			Hack to allow the element to grow up the specified max size rather
+			than constrain itself to the parent.
+		*/
+		margin-right: -12em;
 	}
 
 	.arrow, .arrow-shadow {
