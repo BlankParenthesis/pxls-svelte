@@ -85,6 +85,11 @@ export class Requester {
 		}
 
 		const url = resolveURL(this.baseURL, location + "?" + query.join("&"));
+		if (url.protocol === "http:") {
+			url.protocol = "ws:";
+		} else {
+			url.protocol = "wss:";
+		}
 		const socket = new WebSocket(url);
 		await new Promise((resolve, reject) => {
 			let unsubscribe = () => {};
