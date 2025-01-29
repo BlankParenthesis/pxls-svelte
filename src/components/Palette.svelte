@@ -218,7 +218,7 @@
 		gap: 0.5em;
 
 		flex-wrap: nowrap;
-		overflow-x: scroll;
+		overflow-x: auto;
 		justify-content: start;
 		/*
 			Not massively supported, but decent support.

@@ -33,7 +33,7 @@
 .drawer {
 	background: var(--drawer-background);
 	border: var(--drawer-border);
-	overflow: scroll;
+	overflow: auto;
 }
 
 .button {
