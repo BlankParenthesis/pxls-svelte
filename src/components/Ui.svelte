@@ -75,6 +75,7 @@
 		gap: 0.25em;
 		display: flex;
 		flex-direction: column;
+		align-items: center;
 	}
 
 	.switcher-button > small {
