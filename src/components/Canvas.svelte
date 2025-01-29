@@ -284,6 +284,13 @@
 	function grabBoard(points: Array<Vec2>) {
 		if (typeof grabAnchor !== "undefined") {
 			releaseBoard();
+			grabDistance = Infinity;
+		} else {
+			if (points.length > 1) {
+				grabDistance = Infinity;
+			} else {
+				grabDistance = 0;
+			}
 		}
 
 		let center = calculateCenter(points);
@@ -316,11 +323,6 @@
 		grabAnchor = { center, spacing, transform };
 
 		lastGrabCenter = center;
-		if (points.length > 1) {
-			grabDistance = Infinity;
-		} else {
-			grabDistance = 0;
-		}
 	}
 
 	let lastSize = boardSize;
