@@ -98,9 +98,7 @@ export class Board {
 			};
 		});
 
-		if (typeof socket === "undefined") {
-			socket = await http.socket("events", events);
-		} else {
+		if (typeof socket !== "undefined") {
 			socket.removeEventListener("message", missEvent);
 		}
 		return new Board(site, http, socket, info, cooldown, missedEvents);
