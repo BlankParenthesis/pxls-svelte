@@ -92,23 +92,29 @@ export class Requester {
 		}
 		const socket = new WebSocket(url);
 		await new Promise((resolve, reject) => {
+			let heartbeat: number;
 			let unsubscribe = () => {};
 			socket.onclose = () => {
+				clearInterval(heartbeat);
 				unsubscribe();
 				reject(new Error("Socket closed"));
 			};
 			socket.onerror = () => reject(new Error("Socket error"));
 
-			if (typeof token !== "undefined") {
-				socket.onopen = () => {
+			socket.onopen = () => {
+				heartbeat = setInterval(() => {
+					socket.send(JSON.stringify({ type: "ping" }));
+				}, 30 * 1000);
+
+				if (typeof token !== "undefined") {
 					unsubscribe = this.token.subscribe((token) => {
 						socket.send(JSON.stringify({
 							type: "authenticate",
 							token: token,
 						}));
 					});
-				};
-			}
+				}
+			};
 
 			function onmessage(message: MessageEvent) {
 				try {
