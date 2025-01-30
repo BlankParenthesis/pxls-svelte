@@ -1,15 +1,14 @@
 <script lang="ts">
-	import { type Readable } from "svelte/store";
-	import { Faction } from "../lib/faction";
 	import FactionDisplay from "./Faction.svelte";
 	import Unwrap from "./Unwrap.svelte";
+	import { CurrentFaction } from "../lib/user";
 
-	export let factions: Array<Readable<Promise<Faction> | undefined>>;
+	export let factions: Array<CurrentFaction>;
 	export let access: Set<string>;
 </script>
 <ul class="item-list">
 	{#each factions as faction}
-		<Unwrap store={faction} let:value>
+		<Unwrap store={faction.faction.fetch()} let:value>
 			{#await value}
 				<li>Loading Faction…</li>
 			{:then faction}

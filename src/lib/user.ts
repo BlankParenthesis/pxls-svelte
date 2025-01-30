@@ -4,9 +4,25 @@ import type { Site } from "./site";
 import { Role } from "./role";
 import { collect, type Parser } from "./util";
 import type { Readable } from "svelte/store";
-import { writable, type Writable } from "svelte/store";
+import { get, writable, type Writable } from "svelte/store";
 import { Faction } from "./faction";
+import { FactionMember } from "./factionmember";
 import { type Updatable } from "./cache";
+import type { Reference } from "./reference";
+
+export const CurrentFaction = function (
+	factionParser: Parser<Reference<Faction>>,
+	memberParser: Parser<Reference<FactionMember>>,
+) {
+	return (http: Requester) => z.object({
+		faction: z.unknown().pipe(factionParser(http)),
+		member: z.unknown().pipe(memberParser(http)),
+	}).transform((current) => {
+		get(current.faction.fetch())?.then(f => f.setCurrentMember(current.member));
+		return current;
+	});
+};
+export type CurrentFaction = z.infer<ReturnType<ReturnType<typeof CurrentFaction>>>;
 
 export class User implements Updatable {
 	constructor(
@@ -50,8 +66,8 @@ export class User implements Updatable {
 		}
 	}
 
-	private factionsCache?: Writable<Promise<Array<Readable<Promise<Faction> | undefined>>>>;
-	factions(): Readable<Promise<Array<Readable<Promise<Faction> | undefined>>>> {
+	private factionsCache?: Writable<Promise<Array<CurrentFaction>>>;
+	factions(): Readable<Promise<Array<CurrentFaction>>> {
 		if (typeof this.factionsCache === "undefined") {
 			this.factionsCache = writable(collect(this.fetchFactions()));
 		}
@@ -70,14 +86,14 @@ export class User implements Updatable {
 
 	async *fetchFactions() {
 		// TODO: check permissions
-		const parse = this.site.parsers.factionsPage(this.http).parse;
-		let factions = await this.http.get("factions").then(parse);
+		const parse = this.site.parsers.currentFactionsPage(this.http).parse;
+		let currentFactions = await this.http.get("factions").then(parse);
 		while (true) {
-			for (const reference of factions.items) {
-				yield reference.fetch();
+			for (const reference of currentFactions.items) {
+				yield reference;
 			}
-			if (factions.next) {
-				factions = await this.http.get(factions.next).then(parse);
+			if (currentFactions.next) {
+				currentFactions = await this.http.get(currentFactions.next).then(parse);
 			} else {
 				break;
 			}

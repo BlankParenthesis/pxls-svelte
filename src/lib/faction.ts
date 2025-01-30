@@ -21,19 +21,28 @@ export class Faction implements Updatable {
 	}
 
 	private currentMemberCache?: Writable<Promise<Reference<FactionMember> | undefined>>;
+	fetchCurrentMember(): Readable<Promise<Reference<FactionMember> | undefined>> {
+		const parse = this.site.parsers.factionMemberReference(this.http).parse;
+		const reference = this.http.get("members/current")
+			.then((data) => {
+				if (typeof data === "undefined") {
+					return undefined;
+				} else {
+					return parse(data);
+				}
+			});
+
+		if (typeof this.currentMemberCache === "undefined") {
+			this.currentMemberCache = writable(reference);
+		} else {
+			this.currentMemberCache.set(reference);
+		}
+		return this.currentMemberCache;
+	}
+
 	currentMember(): Readable<Promise<Reference<FactionMember> | undefined>> {
 		if (typeof this.currentMemberCache === "undefined") {
-			const parse = this.site.parsers.factionMemberReference(this.http).parse;
-			const reference = this.http.get("members/current")
-				.then((data) => {
-					if (typeof data === "undefined") {
-						return undefined;
-					} else {
-						return parse(data);
-					}
-				});
-
-			this.currentMemberCache = writable(reference);
+			this.currentMemberCache = writable(Promise.resolve(undefined));
 		}
 
 		return this.currentMemberCache;

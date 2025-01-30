@@ -6,7 +6,7 @@ import { BoardInfo } from "./board/info";
 import { resolveURL, type Parser } from "./util";
 import { SiteAuthUnverified, Authentication } from "./authentication";
 import { Requester } from "./requester";
-import { User } from "./user";
+import { CurrentFaction, User } from "./user";
 import { Role } from "./role";
 import { parser as eventsParser } from "./events";
 import { get, writable, type Readable, type Writable } from "svelte/store";
@@ -98,6 +98,8 @@ export class Site {
 		board: Parser<BoardInfo>;
 		boardReference: Parser<Reference<BoardInfo>>;
 		boardsPage: Parser<Page<Reference<BoardInfo>>>;
+		currentFaction: Parser<CurrentFaction>;
+		currentFactionsPage: Parser<Page<CurrentFaction>>;
 	};
 
 	private constructor(
@@ -128,6 +130,9 @@ export class Site {
 			const boardReference = Reference.parser(this.boardInfos, board);
 			const boardsPage = Page.parser(boardReference);
 
+			const currentFaction = CurrentFaction(factionReference, factionMemberReference);
+			const currentFactionsPage = Page.parser(currentFaction);
+
 			this.parsers = {
 				faction,
 				factionReference,
@@ -144,6 +149,8 @@ export class Site {
 				board,
 				boardReference,
 				boardsPage,
+				currentFaction,
+				currentFactionsPage,
 			};
 		}
 
@@ -179,7 +186,7 @@ export class Site {
 								return;
 							}
 							const factions = await get(user.factions());
-							if (factions.some(f => typeof get(f) === "undefined")) {
+							if (factions.some(f => f.faction.uri === packet.faction)) {
 								user.updatefactions();
 							}
 						});
