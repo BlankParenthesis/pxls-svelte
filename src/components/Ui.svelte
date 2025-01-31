@@ -49,7 +49,7 @@
 		Settings,
 	}
 
-	let panel = Panel.None;
+	let panel = Panel.Place;
 
 	let lastPixels = get(cooldown).pixelsAvailable;
 	cooldown.subscribe((c) => {
@@ -159,7 +159,7 @@
 				</button>
 			</nav>
 
-			{#if panel === Panel.Place}
+			{#if panel === Panel.Place && access.has("boards.pixels.post")}
 				<div class="drawer">
 					<Palette bind:state {board} />
 				</div>
@@ -177,7 +177,7 @@
 				<FactionsPanel {access} {site}/>
 			</div>
 			<div class="glass right"></div>
-		{:else if panel === Panel.Place}
+		{:else if panel === Panel.Place && access.has("boards.pixels.post")}
 			<div class="center-center cursor-transparent end">
 				<Tools {board} {access} bind:state bind:settings />
 			</div>
