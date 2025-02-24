@@ -101,10 +101,10 @@ export class User implements Updatable {
 	}
 
 	/* eslint-disable camelcase */
-	static parser(site: Site): Parser<User> {
+	static parser(site: Site, parseTime: (time: number) => Date): Parser<User> {
 		return (http: Requester) => z.object({
 			"name": z.string(),
-			"created_at": z.number().int().min(0).transform(unix => new Date(unix * 1000)),
+			"created_at": z.number().int().min(0).transform(parseTime),
 		}).transform(({ name, created_at }) => {
 			return new User(site, http, name, created_at);
 		});

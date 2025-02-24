@@ -108,10 +108,10 @@ export class Faction implements Updatable {
 	}
 
 	/* eslint-disable camelcase */
-	static parser(site: Site): Parser<Faction> {
+	static parser(site: Site, parseTime: (time: number) => Date): Parser<Faction> {
 		return (http: Requester) => z.object({
 			name: z.string(),
-			created_at: z.number().int().min(0).transform(unix => new Date(unix * 1000)),
+			created_at: z.number().int().min(0).transform(parseTime),
 			size: z.number(),
 		}).transform(({ name, created_at, size }) => {
 			return new Faction(site, http, name, created_at, size);

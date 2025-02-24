@@ -16,19 +16,19 @@ import { Templates } from "../render/template";
 
 const HeaderNumber = z.number().int().min(0);
 
-const HeaderCooldown = z.object({
+const HeaderCooldown = (parseDate: (time: number) => Date) => z.object({
 	"pxls-pixels-available": z.string()
 		.transform(s => HeaderNumber.parse(parseInt(s)))
 		.optional(),
 	"pxls-next-available": z.string()
 		.transform(s => HeaderNumber.parse(parseInt(s)))
-		.transform(s => new Date(s * 1000))
+		.transform(parseDate)
 		.optional(),
 }).transform(h => ({
 	pixelsAvailable: h["pxls-pixels-available"],
 	nextTimestamp: h["pxls-next-available"],
 }));
-export type HeaderCooldown = z.infer<typeof HeaderCooldown>;
+export type HeaderCooldown = z.infer<ReturnType<typeof HeaderCooldown>>;
 export type Cooldown = {
 	pixelsAvailable: number;
 	nextTimestamp: Date | undefined;
@@ -81,27 +81,38 @@ export class Board {
 			socket = await http.socket("events", events);
 			socket.addEventListener("message", missEvent);
 		}
-		const parser = BoardInfo.parser();
-		const parse = parser(http).parse;
 
-		const { cooldown, info } = await http.getRaw().then(async (r) => {
-			const headerCooldown = HeaderCooldown.parse(Object.fromEntries(r.headers.entries()));
+		const { cooldown, info, clockDelta, parseTime } = await http.getRaw().then(async (r) => {
+			const headers = Object.fromEntries(r.headers.entries());
+			const serverTime = new Date(headers.date);
+			const clockDelta = writable(Date.now() - serverTime.getTime());
+			let delta = 0;
+			clockDelta.subscribe(v => delta = v);
+			const parseTime = (time: number) => new Date(time * 1000 + delta);
+
+			const headerCooldown = HeaderCooldown(parseTime).parse(headers);
 			const cooldown = {
 				pixelsAvailable: typeof headerCooldown.pixelsAvailable === "undefined"
 					? 0
 					: headerCooldown.pixelsAvailable,
 				nextTimestamp: headerCooldown.nextTimestamp,
 			} as Cooldown;
+
+			const parser = BoardInfo.parser(parseTime);
+			const parse = parser(http).parse;
+
 			return {
 				cooldown: writable(cooldown),
 				info: writable(parse(await r.json())),
+				clockDelta,
+				parseTime,
 			};
 		});
 
 		if (typeof socket !== "undefined") {
 			socket.removeEventListener("message", missEvent);
 		}
-		return new Board(site, http, socket, info, cooldown, missedEvents);
+		return new Board(site, http, socket, info, cooldown, clockDelta, parseTime, missedEvents);
 	}
 
 	protected readonly colorsCache: DataCache;
@@ -143,6 +154,8 @@ export class Board {
 		private readonly socket: WebSocket | undefined,
 		private readonly infoStore: Writable<BoardInfo>,
 		private readonly cooldownStore: Writable<Cooldown>,
+		private readonly clockDelta: Writable<number>,
+		public readonly parseTime: (time: number) => Date,
 		missedEvents: Array<MessageEvent>,
 	) {
 		this.info = { subscribe: infoStore.subscribe };
@@ -151,7 +164,7 @@ export class Board {
 			pixelsAvailable: p.count,
 			nextTimestamp: typeof p.next === "undefined"
 				? undefined
-				: new Date(p.next * 1000),
+				: parseTime(p.next),
 		}));
 
 		for (const event of missedEvents) {
@@ -173,7 +186,7 @@ export class Board {
 		this.initialCache = new DataCache(this.http.subpath("data/initial"));
 
 		this.parsers = {
-			pixel: Pixel.parser(this.site.access(), this.info, this.site.parsers.userReference),
+			pixel: Pixel.parser(this.site.access(), this.info, this.site.parsers.userReference, this.parseTime),
 			userCount: UserCount.parser(),
 		};
 		const templateKey = `templates[${http.baseURL}]`;

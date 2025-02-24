@@ -16,10 +16,10 @@ export class BoardInfo implements Updatable {
 	) {}
 
 	/* eslint-disable camelcase */
-	static parser(): Parser<BoardInfo> {
+	static parser(parseTime: (time: number) => Date): Parser<BoardInfo> {
 		return (http: Requester) => z.object({
 			name: z.string(),
-			created_at: z.number().int().min(0).transform(unix => new Date(unix * 1000)),
+			created_at: z.number().int().min(0).transform(parseTime),
 			shape: ShapeParser,
 			max_pixels_available: z.number().int().min(0),
 			palette: Palette,

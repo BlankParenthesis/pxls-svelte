@@ -28,12 +28,23 @@ export type SiteInfo = z.infer<typeof SiteInfo>;
 
 export class Site {
 	static async connect(location: URL): Promise<Site> {
+		const clockDelta = writable(0);
+		let delta = 0;
+		clockDelta.subscribe(v => delta = v);
+		const parseTime = (time: number) => new Date(time + delta);
 		const info: SiteInfo = await fetch(resolveURL(location, "info"))
 			.then((r) => {
 				if (r.status === 403) {
 					console.warn("No info access, presuming no extensions");
 					return { extensions: [] };
 				} else {
+					const dateHeader = r.headers.get("date");
+					if (dateHeader !== null) {
+						const serverTime = new Date(dateHeader);
+						clockDelta.set(Date.now() - serverTime.getTime());
+					} else {
+						console.error("Unable to compute time delta with server");
+					}
 					return r.json();
 				}
 			})
@@ -79,7 +90,7 @@ export class Site {
 			socket = await http.socket("events", events);
 		}
 
-		return new Site(http, info, auth, socket);
+		return new Site(http, info, auth, clockDelta, parseTime, socket);
 	}
 
 	readonly parsers: {
@@ -106,15 +117,17 @@ export class Site {
 		private readonly http: Requester,
 		public readonly info: SiteInfo,
 		public readonly auth: Authentication,
+		private readonly clockDelta: Writable<number>,
+		public readonly parseTime: (time: number) => Date,
 		private readonly socket?: WebSocket,
 	) {
 		// parsers
 		{
-			const faction = Faction.parser(this);
+			const faction = Faction.parser(this, this.parseTime);
 			const factionReference = Reference.parser(this.factions, faction);
 			const factionsPage = Page.parser(factionReference);
 
-			const user = User.parser(this);
+			const user = User.parser(this, this.parseTime);
 			const userReference = Reference.parser(this.users, user);
 			const usersPage = Page.parser(userReference);
 
@@ -126,7 +139,7 @@ export class Site {
 			const factionMemberReference = Reference.parser(this.factionMembers, factionMember);
 			const factionMembersPage = Page.parser(factionMemberReference);
 
-			const board = BoardInfo.parser();
+			const board = BoardInfo.parser(parseTime);
 			const boardReference = Reference.parser(this.boardInfos, board);
 			const boardsPage = Page.parser(boardReference);
 

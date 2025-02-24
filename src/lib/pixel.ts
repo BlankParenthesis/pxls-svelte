@@ -18,6 +18,7 @@ export class Pixel {
 		access: Readable<Promise<Set<string>>>,
 		info: Readable<BoardInfo>,
 		sub: Parser<Reference<User>>,
+		parseTime: (time: number) => Date,
 	): Parser<Pixel | undefined> {
 		let epoch = 0;
 		info.subscribe(i => epoch = i.createdAt.valueOf());
@@ -26,7 +27,7 @@ export class Pixel {
 		return (http: Requester) => z.object({
 			position: z.number().int().min(0),
 			color: z.number().int().min(0),
-			modified: z.number().int().min(0).transform(pixel => new Date(epoch + pixel * 1000)),
+			modified: z.number().int().min(0).transform(pixel => parseTime(epoch / 1000 + pixel)),
 			user: z.unknown(),
 		}).transform(({ position, color, modified, user }, context) => {
 			const { success, data, error } = sub(http).optional().safeParse(user);
