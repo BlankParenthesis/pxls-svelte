@@ -54,7 +54,16 @@
 					// TODO: this doesn't seem to error correctly
 					task = new Promise((_, err) => err("Invalid Location"));
 				} else {
-					task = board.place(position, index, state.adminOverrides)
+					const [sector, offset] = $info.shape.positionToSector(position);
+					const existingColor = board.colors(sector).then(c => c[offset]);
+					task = existingColor
+						.then((color) => {
+							if (color === index) {
+								throw new Error("Color Matches");
+							} else {
+								return board.place(position, index, state.adminOverrides);
+							}
+						})
 						.then((pixel) => {
 							if (typeof pixel === "undefined") {
 								throw new Error("Placing failed");
