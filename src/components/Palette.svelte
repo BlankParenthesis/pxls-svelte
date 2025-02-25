@@ -13,6 +13,7 @@
 	export let board: Board;
 	export let state: AppState;
 	const info = board.info; // TODO: listen to the palette directly
+	const cooldown = board.cooldown;
 
 	// how much scrolling should be preferred over placing when dragging.
 	// greater than one is higher preference, lower is less.
@@ -53,6 +54,8 @@
 				if (typeof position === "undefined") {
 					// TODO: this doesn't seem to error correctly
 					task = new Promise((_, err) => err("Invalid Location"));
+				} else if ($cooldown.pixelsAvailable === 0) {
+					task = new Promise((_, err) => err("No Pixels"));
 				} else {
 					const [sector, offset] = $info.shape.positionToSector(position);
 					const existingColor = board.colors(sector).then(c => c[offset]);
