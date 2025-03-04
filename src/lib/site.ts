@@ -31,7 +31,7 @@ export class Site {
 		const clockDelta = writable(0);
 		let delta = 0;
 		clockDelta.subscribe(v => delta = v);
-		const parseTime = (time: number) => new Date(time + delta);
+		const parseTime = (time: number) => new Date(time * 1000 + delta);
 		const info: SiteInfo = await fetch(resolveURL(location, "info"))
 			.then((r) => {
 				if (r.status === 403) {
