@@ -1,12 +1,3 @@
-<script lang="ts" context="module">
-	// global variable to track if the page wants to navigate away
-	// this is currently needed because navigating will disconnect the sockets,
-	// triggering a page reload.
-	// Possibly one of the ugliest hacks here, but the reload trick for socket
-	// disconnect is a close second and both should get cleared up at the same
-	// time so 🤷.
-	export const navigationState = { navigating: false };
-</script>
 <script lang="ts">
 	import type { Authentication } from "../lib/authentication";
 
@@ -16,7 +7,6 @@
 
 	async function login() {
 		const url = await auth.generateLoginUrl();
-		navigationState.navigating = true;
 		document.location.href = url.href;
 	}
 </script>

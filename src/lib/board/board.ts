@@ -7,8 +7,7 @@ import { get, writable, type Readable, type Writable } from "svelte/store";
 import type { AdminOverrides } from "../settings";
 import { Pixel } from "../pixel";
 import type { Site } from "../site";
-import { navigationState } from "../../components/Login.svelte";
-import type { Parser } from "../util";
+import { sleep, type Parser } from "../util";
 import { UserCount } from "../usercount";
 import { Pixel as PixelResponse } from "../pixel";
 import { persistentWritable } from "../storage/persistent";
@@ -52,30 +51,12 @@ export class Board {
 			throw new Error("Forbidden from viewing board data");
 		}
 
-		const events = [];
-
-		if (access.has("boards.events.cooldown")) {
-			events.push("cooldown");
-		}
-
-		if (access.has("boards.events.data.colors")) {
-			console.warn("Not allowed to listen to board changes");
-			events.push("data.colors");
-		}
-
-		if (extensions.has("board_timestamps") && access.has("boards.events.data.timestamps")) {
-			events.push("data.timestamps");
-		}
-
-		if (extensions.has("board_lifecycle") && access.has("boards.events.info")) {
-			events.push("info");
-		}
-
 		const missedEvents = [] as Array<MessageEvent>;
 		function missEvent(e: MessageEvent) {
 			missedEvents.push(e);
 		}
 
+		const events = Board.events(extensions, access);
 		let socket;
 		if (events.length > 0) {
 			socket = await http.socket("events", events);
@@ -113,6 +94,29 @@ export class Board {
 			socket.removeEventListener("message", missEvent);
 		}
 		return new Board(site, http, socket, info, cooldown, clockDelta, parseTime, missedEvents);
+	}
+
+	private static events(extensions: Set<string>, access: Set<string>) {
+		const events = [];
+
+		if (access.has("boards.events.cooldown")) {
+			events.push("cooldown");
+		}
+
+		if (access.has("boards.events.data.colors")) {
+			console.warn("Not allowed to listen to board changes");
+			events.push("data.colors");
+		}
+
+		if (extensions.has("board_timestamps") && access.has("boards.events.data.timestamps")) {
+			events.push("data.timestamps");
+		}
+
+		if (extensions.has("board_lifecycle") && access.has("boards.events.info")) {
+			events.push("info");
+		}
+
+		return events;
 	}
 
 	protected readonly colorsCache: DataCache;
@@ -171,14 +175,8 @@ export class Board {
 			this.processMessage(event);
 		}
 
-		socket?.addEventListener("message", e => this.processMessage(e));
-
-		socket?.addEventListener("close", () => {
-			// TODO: as with socket, proper state handling to recover from this
-			if (!navigationState.navigating) {
-				document.location.reload();
-			}
-		});
+		socket?.addEventListener("message", this.processMessage.bind(this));
+		socket?.addEventListener("close", this.reconnect.bind(this));
 
 		this.colorsCache = new DataCache(this.http.subpath("data/colors"));
 		this.timestampsCache = new DataCache32(this.http.subpath("data/timestamps"));
@@ -196,6 +194,76 @@ export class Board {
 			templates => templates.map(t => t.serialize()),
 			[],
 		);
+	}
+
+	private async reconnect() {
+		let retries = 0;
+		const MAX_RETRIES = 5;
+		let socket;
+		do {
+			const backoffSeconds = 3 ** retries;
+			await sleep(1000 * backoffSeconds);
+
+			try {
+				const access = get(this.site.access());
+				const events = Board.events(this.site.info.extensions, await access);
+				if (events.length > 0) {
+					socket = await this.http.socket("events", events);
+				}
+			} catch (_) {
+				if (retries === MAX_RETRIES) {
+					throw new Error("Failed to reconnect site socket");
+				}
+				retries += 1;
+			}
+		} while (typeof socket === "undefined");
+		socket?.addEventListener("message", this.processMessage.bind(this));
+		socket?.addEventListener("close", this.reconnect.bind(this));
+
+		// An update could come through the socket while we fetch info.
+		// If it does, it will always be at least as updated as our request but
+		// possibly more so. Because of this, only update if there was no such
+		// event:
+		const updates = { info: false, cooldown: false };
+		const unsubInfo = this.infoStore.subscribe(() => updates.info = true);
+		const unsubCooldown = this.cooldown.subscribe(() => updates.cooldown = true);
+
+		const { info, cooldown } = await this.http.getRaw().then(async (response) => {
+			const headers = response.headers;
+			const headerCooldown = HeaderCooldown(this.parseTime).parse(headers);
+			const cooldown = {
+				pixelsAvailable: typeof headerCooldown.pixelsAvailable === "undefined"
+					? 0
+					: headerCooldown.pixelsAvailable,
+				nextTimestamp: headerCooldown.nextTimestamp,
+			} as Cooldown;
+
+			const parser = BoardInfo.parser(this.parseTime);
+			const info = parser(this.http).parse(await response.json());
+			return { info, cooldown };
+		});
+
+		unsubInfo();
+		unsubCooldown();
+		if (!updates.info) {
+			this.infoStore.set(info);
+		}
+		if (!updates.cooldown) {
+			this.cooldownStore.set(cooldown);
+		}
+
+		const [width, height] = get(this.info).shape.size();
+		const canvasSize = width * height;
+		this.queueUpdate({
+			type: "board-update",
+			data: {
+				colors: [{ position: 0, length: canvasSize }],
+				mask: [{ position: 0, length: canvasSize }],
+				timestamps: [{ position: 0, length: canvasSize }],
+				initial: [{ position: 0, length: canvasSize }],
+			},
+		});
+		// TODO: clear and reload other caches where necessary
 	}
 
 	onUpdate(callback: (packet: BoardUpdate) => void) {
