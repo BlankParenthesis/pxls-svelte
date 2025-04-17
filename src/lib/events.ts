@@ -56,3 +56,4 @@ export function parser(context: Requester, parsers: {
 		))
 		.parse;
 }
+export type Event = ReturnType<ReturnType<typeof parser>>;

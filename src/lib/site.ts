@@ -3,12 +3,12 @@ import { z } from "zod";
 import { Extension } from "./extensions";
 import { Permissions } from "./permissions";
 import { BoardInfo } from "./board/info";
-import { resolveURL, type Parser } from "./util";
+import { resolveURL, sleep, type Parser } from "./util";
 import { SiteAuthUnverified, Authentication } from "./authentication";
 import { Requester } from "./requester";
 import { CurrentFaction, User } from "./user";
 import { Role } from "./role";
-import { parser as eventsParser } from "./events";
+import { parser as eventsParser, type Event } from "./events";
 import { get, writable, type Readable, type Writable } from "svelte/store";
 import { Faction } from "./faction";
 import { FactionMember } from "./factionmember";
@@ -16,7 +16,6 @@ import { Cache, CacheOnce } from "./cache";
 import { Page } from "./page";
 import { Reference } from "./reference";
 import { Board } from "./board/board";
-import { navigationState } from "../components/Login.svelte";
 
 const SiteInfo = z.object({
 	name: z.string().nullable().optional(),
@@ -63,9 +62,19 @@ export class Site {
 		const access = await http.get("access")
 			.then(j => Permissions.parse(j));
 
+		let socket;
+		const events = Site.events(info.extensions, access);
+		if (events.length !== 0) {
+			socket = await http.socket("events", events);
+		}
+
+		return new Site(http, info, auth, clockDelta, parseTime, socket);
+	}
+
+	static events(extensions: Set<string>, access: Set<string>) {
 		const events = [];
 
-		if (info.extensions.has("users")) {
+		if (extensions.has("users")) {
 			if (access.has("events.users.current")) {
 				events.push("users.current");
 
@@ -75,7 +84,7 @@ export class Site {
 			}
 		}
 
-		if (info.extensions.has("factions")) {
+		if (extensions.has("factions")) {
 			if (access.has("events.factions.current")) {
 				events.push("factions.current");
 
@@ -85,12 +94,7 @@ export class Site {
 			}
 		}
 
-		let socket;
-		if (events.length !== 0) {
-			socket = await http.socket("events", events);
-		}
-
-		return new Site(http, info, auth, clockDelta, parseTime, socket);
+		return events;
 	}
 
 	readonly parsers: {
@@ -112,6 +116,8 @@ export class Site {
 		currentFaction: Parser<CurrentFaction>;
 		currentFactionsPage: Parser<Page<CurrentFaction>>;
 	};
+
+	private readonly eventsParser: (message: unknown) => Event;
 
 	private constructor(
 		private readonly http: Requester,
@@ -165,77 +171,105 @@ export class Site {
 				currentFaction,
 				currentFactionsPage,
 			};
+
+			this.eventsParser = eventsParser(this.http, this.parsers);
 		}
 
-		const parseEvent = eventsParser(this.http, this.parsers);
+		socket?.addEventListener("message", this.handleMessage.bind(this));
+		socket?.addEventListener("close", this.reconnect.bind(this));
+	}
 
-		socket?.addEventListener("message", (e) => {
+	private async reconnect() {
+		let retries = 0;
+		const MAX_RETRIES = 5;
+		let socket;
+		do {
+			const backoffSeconds = 3 ** retries;
+			await sleep(1000 * backoffSeconds);
+
 			try {
-				const packet = parseEvent(JSON.parse(e.data) as unknown);
-				switch (packet.type) {
-					case "user-updated":
-						packet.user.fetch();
-						break;
-					case "user-roles-updated":
-						get(this.users.fetch(packet.user))?.then((u) => {
-							u.updateRoles();
-							return u;
-						});
-						break;
-					case "faction-created":
-						break;
-					case "faction-updated":
-						packet.faction.fetch();
-						break;
-					case "faction-deleted":
-						this.factions.delete(packet.faction);
-						this.factionMembers.delete(packet.faction + "members/current");
-						get(this.currentUser()).then(async (currentUser) => {
-							if (typeof currentUser === "undefined") {
-								return;
-							}
-							const user = await get(currentUser.fetch());
-							if (typeof user === "undefined") {
-								return;
-							}
-							const factions = await get(user.factions());
-							if (factions.some(f => f.faction.uri === packet.faction)) {
-								user.updatefactions();
-							}
-						});
-						break;
-					case "faction-member-updated":
-						// Mark the faction current member if the faction
-						// doesn't have it set.
-						Promise.all([
-							get(packet.member.fetch()),
-							get(packet.faction.fetch()),
-							get(this.currentUser()),
-						]).then(([member, faction, currentUser]) => {
-							if (typeof currentUser !== "undefined") {
-								if (member?.user?.uri === currentUser.uri) {
-									faction?.setCurrentMember(packet.member);
-									get(currentUser.get())?.then((u) => {
-										u.updatefactions();
-									});
-								}
-							}
-						});
-
-						break;
+				const access = this.http.get("access")
+					.then(j => Permissions.parse(j));
+				const events = Site.events(this.info.extensions, await access);
+				if (events.length > 0) {
+					socket = await this.http.socket("events", events);
 				}
-			} catch (e) {
-				console.error("Failed to parse packet", e);
+			} catch (_) {
+				if (retries === MAX_RETRIES) {
+					throw new Error("Failed to reconnect site socket");
+				}
+				retries += 1;
 			}
-		});
+		} while (typeof socket === "undefined");
+		socket?.addEventListener("message", this.handleMessage.bind(this));
+		socket?.addEventListener("close", this.reconnect.bind(this));
 
-		socket?.addEventListener("close", () => {
-			// TODO: proper state handling to recover from this
-			// for now, just do as pxls: reload the page.
-			if (!navigationState.navigating) {
-				document.location.reload();
-			}
+		this.accessCache?.update(() => {
+			return this.http.get("access")
+				.then(j => Permissions.parse(j));
 		});
+		// TODO: clear and reload other caches where necessary
+	}
+
+	private handleMessage(message: MessageEvent) {
+		let packet;
+		try {
+			packet = this.eventsParser(JSON.parse(message.data) as unknown);
+		} catch (error) {
+			throw new Error(`Failed to parse message "${message.data}": ${error}`);
+		}
+		switch (packet.type) {
+			case "user-updated":
+				packet.user.fetch();
+				break;
+			case "user-roles-updated":
+				get(this.users.fetch(packet.user))?.then((u) => {
+					u.updateRoles();
+					return u;
+				});
+				break;
+			case "faction-created":
+				break;
+			case "faction-updated":
+				packet.faction.fetch();
+				break;
+			case "faction-deleted":
+				this.factions.delete(packet.faction);
+				this.factionMembers.delete(packet.faction + "members/current");
+				get(this.currentUser()).then(async (currentUser) => {
+					if (typeof currentUser === "undefined") {
+						return;
+					}
+					const user = await get(currentUser.fetch());
+					if (typeof user === "undefined") {
+						return;
+					}
+					const factions = await get(user.factions());
+					if (factions.some(f => f.faction.uri === packet.faction)) {
+						user.updatefactions();
+					}
+				});
+				break;
+			case "faction-member-updated":
+				// Mark the faction current member if the faction
+				// doesn't have it set.
+				Promise.all([
+					get(packet.member.fetch()),
+					get(packet.faction.fetch()),
+					get(this.currentUser()),
+				]).then(([member, faction, currentUser]) => {
+					if (typeof currentUser !== "undefined") {
+						if (member?.user?.uri === currentUser.uri) {
+							faction?.setCurrentMember(packet.member);
+							get(currentUser.get())?.then((u) => {
+								u.updatefactions();
+							});
+						}
+					}
+				});
+
+				break;
+		}
 	}
 
 	readonly users = new Cache((location: string) => {

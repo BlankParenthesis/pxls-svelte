@@ -158,3 +158,7 @@ export function linearRegression(points: Array<[number, number]>) {
 export type Parser<T> = (context: Requester) => ZodType<T, ZodTypeDef, unknown>;
 
 export const DRAG_DISTANCE_THRESHOLD = 10;
+
+export function sleep(durationMilliseconds: number) {
+	return new Promise(r => setTimeout(r, durationMilliseconds));
+}
