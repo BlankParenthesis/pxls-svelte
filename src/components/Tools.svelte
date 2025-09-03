@@ -21,6 +21,8 @@
 
 	const canLookup = access.has("boards.pixels.get");
 
+	let undos = board.undos();
+
 	// https://www.desmos.com/calculator/mlugvy8kwy
 	const DURATION_KNOWN_POINT = 0.25;
 	const DURATION_KNOWN_POINT_VALUE = 3600;
@@ -281,6 +283,14 @@
 						playSound(Sound.Click);
 					}}
 				>Place Anywhere</button>
+			{/if}
+			{#if $undos.length > 0}
+				<button
+					class="button tool"
+					on:click={() => {
+						board.undo($undos[$undos.length - 1].position);
+					}}
+				>Undo</button>
 			{/if}
 		</div>
 	{/if}

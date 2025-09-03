@@ -38,7 +38,7 @@ export class Requester {
 		});
 	}
 
-	public post(data: Record<string, unknown>, location?: string): Promise<{ uri: string; view: unknown }> {
+	public post(data: Record<string, unknown>, location?: string): Promise<{ uri: string; headers: Headers; view: unknown }> {
 		const headers = this.headers() as Record<string, string>;
 		headers["content-type"] = "application/json";
 		let url: URL;
@@ -49,12 +49,13 @@ export class Requester {
 		}
 		return fetch(url, { method: "post", headers, body: JSON.stringify(data) })
 			.then(async (r) => {
-				const uri = r.headers.get("location");
+				const headers = r.headers;
+				const uri = headers.get("location");
 				if (uri === null) {
 					throw new Error("invalid post response (missing location)");
 				}
 				const view = await r.json() as unknown;
-				return { uri, view };
+				return { uri, view, headers };
 			});
 	}
 

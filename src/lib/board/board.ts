@@ -434,9 +434,27 @@ export class Board {
 		}
 
 		try {
-			const request = this.http.post({ color, ...extra }, `pixels/${position}`);
+			const response = await this.http.post({ color, ...extra }, `pixels/${position}`);
 			const parse = this.parsers.pixel(this.http).parse;
-			return parse((await request).view);
+			const data = parse(response.view);
+			const undoHeader = response.headers.get("pxls-undo-deadline");
+			if (undoHeader !== null) {
+				const boardEpoch = get(this.info).createdAt;
+				const deadline = this.parseTime(boardEpoch.getTime() / 1000 + parseInt(undoHeader));
+				const undo = { position, deadline };
+				const now = Date.now();
+
+				if (typeof this.undoTimeout !== "undefined") {
+					clearTimeout(this.undoTimeout);
+				}
+
+				setTimeout(() => this.pruneUndos(), deadline.getTime() - now);
+
+				get(this.undosState).push(undo);
+				// NOTE: triggers a refresh on undoState which we just updated.
+				this.pruneUndos();
+			}
+			return data;
 		} catch (_) {
 			return undefined;
 		}
@@ -458,5 +476,42 @@ export class Board {
 		}
 
 		return this.userCountCache;
+	}
+
+	private undoTimeout: number | undefined;
+	private undosState: Writable<Array<{ position: number; deadline: Date }>> = writable([]);
+	undos(): Readable<Array<{ position: number; deadline: Date }>> {
+		return this.undosState;
+	}
+
+	private pruneUndos() {
+		const now = Date.now();
+		return this.undosState.update((undos) => {
+			return undos.filter(u => u.deadline.getTime() > now);
+		});
+	}
+
+	async undo(position: number): Promise<void> {
+		let resolve: (v: unknown) => void;
+		let reject: (v: unknown) => void;
+		const promise = new Promise((good, bad) => {
+			resolve = good;
+			reject = bad;
+		});
+
+		this.undosState.update((undos) => {
+			const undoIndex = undos.findLastIndex(undo => undo.position === position);
+
+			if (undoIndex !== -1) {
+				const undo = undos.splice(undoIndex, 1)[0];
+				this.http.delete(`pixels/${undo.position}`).then(resolve);
+			} else {
+				reject(new Error("Tried to undo an unknown pixel"));
+			}
+
+			return undos;
+		});
+
+		await promise;
 	}
 }
