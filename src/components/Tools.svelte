@@ -160,6 +160,14 @@
 </style>
 <div class="flex reverse space cursor-transparent">
 	<div class="user-tools tool-group flex align-bottom cursor-transparent">
+		{#if $undos.length > 0}
+			<button
+				class="button tool"
+				on:click={() => {
+					board.undo($undos[$undos.length - 1].position);
+				}}
+			>Undo</button>
+		{/if}
 		{#if canLookup}
 			<div class="flex vertical group reverse">
 				<button
@@ -283,14 +291,6 @@
 						playSound(Sound.Click);
 					}}
 				>Place Anywhere</button>
-			{/if}
-			{#if $undos.length > 0}
-				<button
-					class="button tool"
-					on:click={() => {
-						board.undo($undos[$undos.length - 1].position);
-					}}
-				>Undo</button>
 			{/if}
 		</div>
 	{/if}
