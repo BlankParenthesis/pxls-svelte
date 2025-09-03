@@ -20,6 +20,7 @@
 	const hasAdminTool = canIgnoreCooldown || canUseStaffColors || canIgnoreMask;
 
 	const canLookup = access.has("boards.pixels.get");
+	const canUndo = access.has("boards.pixels.undo");
 
 	let undos = board.undos();
 
@@ -160,7 +161,7 @@
 </style>
 <div class="flex reverse space cursor-transparent">
 	<div class="user-tools tool-group flex align-bottom cursor-transparent">
-		{#if $undos.length > 0}
+		{#if canUndo && $undos.length > 0}
 			<button
 				class="button tool"
 				on:click={() => {
