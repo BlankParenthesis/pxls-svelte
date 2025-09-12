@@ -6,9 +6,11 @@
 	import none from "../assets/template_style_none.webp";
 	import dotted11 from "../assets/template_style_dotted_1_1.webp";
 	import dotted22 from "../assets/template_style_dotted_2_2.webp";
+	import numbers from "../assets/template_style_numbers.webp";
 	import nonePreview from "../assets/template_style_none_preview.webp";
 	import dotted11Preview from "../assets/template_style_dotted_1_1_preview.webp";
 	import dotted22Preview from "../assets/template_style_dotted_2_2_preview.webp";
+	import numbersPreview from "../assets/template_style_numbers_preview.webp";
 	import customPreview from "../assets/template_style_custom_preview.webp";
 
 	export let templates: Writable<Template[]>;
@@ -39,13 +41,14 @@
 		{ name: "None", source: none, preview: nonePreview },
 		{ name: "Small Squares", source: dotted11, preview: dotted11Preview, default: true },
 		{ name: "Large Squares", source: dotted22, preview: dotted22Preview },
+		{ name: "Numbers", source: numbers, preview: numbersPreview },
 		{ name: "Custom", source: customSource, preview: customPreview },
 	];
 </script>
 <style>
 	.style-select {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(10em, 1fr))
+		grid-template-columns: repeat(auto-fill, minmax(9em, 1fr))
 	}
 
 	.preview {

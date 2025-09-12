@@ -301,7 +301,7 @@
 		{#if !color.system_only || state.adminOverrides.color }
 			<li>
 				<button
-					class="color"
+					class="flex center-all color high-contrast"
 					class:selected={selectedColor === index}
 					style="--color: #{colorToHex(color.value)}"
 					on:keydown={(event) => {
@@ -327,7 +327,7 @@
 						},
 						onCancel: () => deselectColor(),
 					}}
-				/>
+				>{index}</button>
 			</li>
 		{/if}
 	{/each}
