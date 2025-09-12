@@ -54,7 +54,7 @@
 				if (typeof position === "undefined") {
 					// TODO: this doesn't seem to error correctly
 					task = new Promise((_, err) => err("Invalid Location"));
-				} else if ($cooldown.pixelsAvailable === 0) {
+				} else if ($cooldown.pixelsAvailable === 0 && !state.adminOverrides.cooldown) {
 					task = new Promise((_, err) => err("No Pixels"));
 				} else {
 					const [sector, offset] = $info.shape.positionToSector(position);
