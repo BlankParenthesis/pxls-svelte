@@ -5,7 +5,9 @@
 	function iconPlaceholder(name: string): string {
 		let placeholder = name.split(/ +/g)
 			.filter(s => s.length > 0)
-			.map(s => s[0])
+			.map(s => s.codePointAt(0))
+			.filter(s => typeof s !== "undefined")
+			.map(c => String.fromCodePoint(c))
 			.join("")
 			.toUpperCase();
 
