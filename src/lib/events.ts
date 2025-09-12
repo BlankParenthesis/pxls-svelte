@@ -5,6 +5,7 @@ import type { Faction } from "./faction";
 import type { FactionMember } from "./factionmember";
 import type { Requester } from "./requester";
 import type { Parser } from "./util";
+import { Permissions } from "./permissions";
 
 const UserUpdated = (sub: ZodType<Reference<User>, ZodTypeDef, unknown>) => z.object({
 	type: z.literal("user-updated"),
@@ -31,6 +32,14 @@ const FactionDeleted = z.object({
 	faction: z.string(),
 });
 
+/* eslint-disable camelcase */
+const AccessUpdate = z.object({
+	type: z.literal("access-update"),
+	user_id: z.string().optional(),
+	permissions: Permissions,
+});
+/* eslint-enable camelcase */
+
 const FactionMemberUpdated = (
 	factionParser: ZodType<Reference<Faction>, ZodTypeDef, unknown>,
 	memberParser: ZodType<Reference<FactionMember>, ZodTypeDef, unknown>,
@@ -54,6 +63,7 @@ export function parser(context: Requester, parsers: {
 			parsers.factionReference(context),
 			parsers.factionMemberReference(context),
 		))
+		.or(AccessUpdate)
 		.parse;
 }
 export type Event = ReturnType<ReturnType<typeof parser>>;

@@ -74,6 +74,10 @@ export class Site {
 	static events(extensions: Set<string>, access: Set<string>) {
 		const events = [];
 
+		if (access.has("events.access")) {
+			events.push("access");
+		}
+
 		if (extensions.has("users")) {
 			if (access.has("events.users.current")) {
 				events.push("users.current");
@@ -268,6 +272,11 @@ export class Site {
 					}
 				});
 
+				break;
+			case "access-update":
+				if (typeof this.accessCache !== "undefined") {
+					this.accessCache.set(Promise.resolve(packet.permissions))
+				}
 				break;
 		}
 	}
