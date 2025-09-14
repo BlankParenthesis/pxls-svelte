@@ -10,19 +10,28 @@ import { FactionMember } from "./factionmember";
 import { type Updatable } from "./cache";
 import type { Reference } from "./reference";
 
-export const CurrentFaction = function (
+export const FactionMembership = function (
 	factionParser: Parser<Reference<Faction>>,
-	memberParser: Parser<Reference<FactionMember>>,
+	memberParser: Parser<FactionMember>,
 ) {
 	return (http: Requester) => z.object({
 		faction: z.unknown().pipe(factionParser(http)),
-		member: z.unknown().pipe(memberParser(http)),
-	}).transform((current) => {
-		get(current.faction.fetch())?.then(f => f.setCurrentMember(current.member));
-		return current;
+		member: z.object({
+			uri: z.string(),
+			view: z.unknown().optional(),
+		}),
+	}).transform(({ faction, member }) => {
+		get(faction.get())?.then((f) => {
+			if (typeof member.view !== "undefined") {
+				const view = memberParser(http.subpath(member.uri)).parse(member.view);
+				f.members.update(member.uri, Promise.resolve(view));
+			}
+		});
+
+		return { faction, member: member.uri };
 	});
 };
-export type CurrentFaction = z.infer<ReturnType<ReturnType<typeof CurrentFaction>>>;
+export type FactionMembership = z.infer<ReturnType<ReturnType<typeof FactionMembership>>>;
 
 export class User implements Updatable {
 	constructor(
@@ -66,8 +75,8 @@ export class User implements Updatable {
 		}
 	}
 
-	private factionsCache?: Writable<Promise<Array<CurrentFaction>>>;
-	factions(): Readable<Promise<Array<CurrentFaction>>> {
+	private factionsCache?: Writable<Promise<Array<FactionMembership>>>;
+	factions(): Readable<Promise<Array<FactionMembership>>> {
 		if (typeof this.factionsCache === "undefined") {
 			this.factionsCache = writable(collect(this.fetchFactions()));
 		}
@@ -86,7 +95,7 @@ export class User implements Updatable {
 
 	async *fetchFactions() {
 		// TODO: check permissions
-		const parse = this.site.parsers.currentFactionsPage(this.http).parse;
+		const parse = this.site.parsers.factionMembershipPage(this.http).parse;
 		let currentFactions = await this.http.get("factions").then(parse);
 		while (true) {
 			for (const reference of currentFactions.items) {

@@ -6,6 +6,7 @@ import type { FactionMember } from "./factionmember";
 import type { Requester } from "./requester";
 import type { Parser } from "./util";
 import { Permissions } from "./permissions";
+import { get } from "svelte/store";
 
 const UserUpdated = (sub: ZodType<Reference<User>, ZodTypeDef, unknown>) => z.object({
 	type: z.literal("user-updated"),
@@ -41,18 +42,31 @@ const AccessUpdate = z.object({
 /* eslint-enable camelcase */
 
 const FactionMemberUpdated = (
-	factionParser: ZodType<Reference<Faction>, ZodTypeDef, unknown>,
-	memberParser: ZodType<Reference<FactionMember>, ZodTypeDef, unknown>,
+	context: Requester,
+	factionParser: Parser<Reference<Faction>>,
+	memberParser: Parser<FactionMember>,
 ) => z.object({
 	type: z.literal("faction-member-updated"),
-	faction: z.unknown().pipe(factionParser),
-	member: z.unknown().pipe(memberParser),
+	faction: z.unknown().pipe(factionParser(context)),
+	member: z.object({
+		uri: z.string(),
+		view: z.unknown().optional(),
+	}),
+}).transform(({ type, faction, member }) => {
+	get(faction.get())?.then((f) => {
+		if (typeof member.view !== "undefined") {
+			const view = memberParser(context.subpath(member.uri)).parse(member.view);
+			f.members.update(member.uri, Promise.resolve(view));
+		}
+	});
+
+	return { type, faction, member: member.uri };
 });
 
 export function parser(context: Requester, parsers: {
 	userReference: Parser<Reference<User>>;
 	factionReference: Parser<Reference<Faction>>;
-	factionMemberReference: Parser<Reference<FactionMember>>;
+	factionMember: Parser<FactionMember>;
 }) {
 	return UserUpdated(parsers.userReference(context))
 		.or(UserRolesUpdated)
@@ -60,8 +74,9 @@ export function parser(context: Requester, parsers: {
 		.or(FactionUpdated(parsers.factionReference(context)))
 		.or(FactionDeleted)
 		.or(FactionMemberUpdated(
-			parsers.factionReference(context),
-			parsers.factionMemberReference(context),
+			context,
+			parsers.factionReference,
+			parsers.factionMember,
 		))
 		.or(AccessUpdate)
 		.parse;

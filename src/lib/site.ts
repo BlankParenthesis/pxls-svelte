@@ -6,7 +6,7 @@ import { BoardInfo } from "./board/info";
 import { resolveURL, sleep, type Parser } from "./util";
 import { SiteAuthUnverified, Authentication } from "./authentication";
 import { Requester } from "./requester";
-import { CurrentFaction, User } from "./user";
+import { FactionMembership, User } from "./user";
 import { Role } from "./role";
 import { parser as eventsParser, type Event } from "./events";
 import { get, writable, type Readable, type Writable } from "svelte/store";
@@ -112,13 +112,11 @@ export class Site {
 		roleReference: Parser<Reference<Role>>;
 		rolesPage: Parser<Page<Reference<Role>>>;
 		factionMember: Parser<FactionMember>;
-		factionMemberReference: Parser<Reference<FactionMember>>;
-		factionMembersPage: Parser<Page<Reference<FactionMember>>>;
 		board: Parser<BoardInfo>;
 		boardReference: Parser<Reference<BoardInfo>>;
 		boardsPage: Parser<Page<Reference<BoardInfo>>>;
-		currentFaction: Parser<CurrentFaction>;
-		currentFactionsPage: Parser<Page<CurrentFaction>>;
+		factionMembership: Parser<FactionMembership>;
+		factionMembershipPage: Parser<Page<FactionMembership>>;
 	};
 
 	private readonly eventsParser: (message: unknown) => Event;
@@ -146,15 +144,13 @@ export class Site {
 			const rolesPage = Page.parser(roleReference);
 
 			const factionMember = FactionMember.parser(userReference);
-			const factionMemberReference = Reference.parser(this.factionMembers, factionMember);
-			const factionMembersPage = Page.parser(factionMemberReference);
 
 			const board = BoardInfo.parser(parseTime);
 			const boardReference = Reference.parser(this.boardInfos, board);
 			const boardsPage = Page.parser(boardReference);
 
-			const currentFaction = CurrentFaction(factionReference, factionMemberReference);
-			const currentFactionsPage = Page.parser(currentFaction);
+			const factionMembership = FactionMembership(factionReference, factionMember);
+			const factionMembershipPage = Page.parser(factionMembership);
 
 			this.parsers = {
 				faction,
@@ -167,13 +163,11 @@ export class Site {
 				roleReference,
 				rolesPage,
 				factionMember,
-				factionMemberReference,
-				factionMembersPage,
 				board,
 				boardReference,
 				boardsPage,
-				currentFaction,
-				currentFactionsPage,
+				factionMembership,
+				factionMembershipPage,
 			};
 
 			this.eventsParser = eventsParser(this.http, this.parsers);
@@ -239,7 +233,6 @@ export class Site {
 				break;
 			case "faction-deleted":
 				this.factions.delete(packet.faction);
-				this.factionMembers.delete(packet.faction + "members/current");
 				get(this.currentUser()).then(async (currentUser) => {
 					if (typeof currentUser === "undefined") {
 						return;
@@ -255,27 +248,21 @@ export class Site {
 				});
 				break;
 			case "faction-member-updated":
-				// Mark the faction current member if the faction
-				// doesn't have it set.
-				Promise.all([
-					get(packet.member.fetch()),
-					get(packet.faction.fetch()),
-					get(this.currentUser()),
-				]).then(([member, faction, currentUser]) => {
-					if (typeof currentUser !== "undefined") {
-						if (member?.user?.uri === currentUser.uri) {
-							faction?.setCurrentMember(packet.member);
-							get(currentUser.get())?.then((u) => {
-								u.updatefactions();
+				get(packet.faction.fetch())?.then((f) => {
+					get(f.members.get(packet.member))?.then((m) => {
+						if (typeof m.user !== "undefined") {
+							get(this.currentUser()).then((u) => {
+								if (m.user?.uri === u.uri) {
+									f.updateCurrentMember(packet.member);
+								}
 							});
 						}
-					}
+					});
 				});
-
 				break;
 			case "access-update":
 				if (typeof this.accessCache !== "undefined") {
-					this.accessCache.set(Promise.resolve(packet.permissions))
+					this.accessCache.set(Promise.resolve(packet.permissions));
 				}
 				break;
 		}
@@ -296,13 +283,6 @@ export class Site {
 	readonly factions = new Cache((location) => {
 		const http = this.http.subpath(location);
 		const parse = this.parsers.faction(http).parse;
-		return this.http.get(location).then(parse);
-	});
-
-	readonly factionMembers = new Cache((location) => {
-		const http = this.http.subpath(location);
-		const parse = this.parsers.factionMember(http).parse;
-		// TODO: default on 404
 		return this.http.get(location).then(parse);
 	});
 

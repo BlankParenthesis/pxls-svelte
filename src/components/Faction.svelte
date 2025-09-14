@@ -31,11 +31,11 @@
 					<Unwrap store={faction.currentMember()} let:value>
 						{#await value}
 							<p>Loading Memership…</p>
-						{:then memberReference}
-							{#if typeof memberReference === "undefined"}
+						{:then memberId}
+							{#if typeof memberId === "undefined"}
 								<FactionStatus {faction} {access} member={undefined} />
 							{:else}
-								<Unwrap store={memberReference.fetch()} let:value>
+								<Unwrap store={faction.members.fetch(memberId)} let:value>
 									{#await value}
 										<p>Loading Memership…</p>
 									{:then member}

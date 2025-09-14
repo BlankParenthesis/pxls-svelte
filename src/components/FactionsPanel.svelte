@@ -50,9 +50,9 @@
 						<Unwrap store={user.factions()} let:value>
 							{#await value}
 								<li>Loading Faction…</li>
-							{:then factions}
-								{#if typeof factions !== "undefined"}
-									<FactionsList {factions} {access} />
+							{:then memberships}
+								{#if typeof memberships !== "undefined"}
+									<FactionsList factions={memberships.map(m => m.faction)} {access} />
 								{/if}
 							{/await}
 						</Unwrap>

@@ -2,80 +2,87 @@ import { z } from "zod";
 import type { Site } from "./site";
 import type { Requester } from "./requester";
 import { get, writable, type Readable, type Writable } from "svelte/store";
-import { collect, type Parser } from "./util";
+import { type Parser } from "./util";
 import { FactionMember } from "./factionmember";
-import type { Updatable } from "./cache";
-import type { Reference } from "./reference";
+import { Cache, type Updatable } from "./cache";
+import { Reference } from "./reference";
+import { Page } from "./page";
+
+const CurrentFactionMember = (factionMemberParser: Parser<FactionMember>) => {
+	return (http: Requester) => z.object({
+		uri: z.string(),
+		view: z.unknown(),
+	}).transform(({ uri, view }) => ({
+		uri,
+		view: z.unknown().pipe(factionMemberParser(http.subpath(uri))).optional().parse(view),
+	}));
+};
+type CurrentFactionMember = z.infer<ReturnType<ReturnType<typeof CurrentFactionMember>>>;
 
 export class Faction implements Updatable {
+	private parsers: {
+		factionMemberReference: Parser<Reference<FactionMember>>;
+		factionMembersPage: Parser<Page<Reference<FactionMember>>>;
+		currentFactionMember: Parser<CurrentFactionMember>;
+	};
+
 	constructor(
 		private readonly site: Site,
 		private readonly http: Requester,
 		readonly name: string,
 		readonly createdAt: Date,
 		readonly size: number,
-	) {}
+	) {
+		const factionMemberReference = Reference.parser(this.members, site.parsers.factionMember);
+		const factionMembersPage = Page.parser(factionMemberReference);
+		const currentFactionMember = CurrentFactionMember(site.parsers.factionMember);
+		this.parsers = { factionMemberReference, factionMembersPage, currentFactionMember };
+	}
 
 	get uri() {
 		return this.http.baseURL;
 	}
 
-	private currentMemberCache?: Writable<Promise<Reference<FactionMember> | undefined>>;
-	fetchCurrentMember(): Readable<Promise<Reference<FactionMember> | undefined>> {
-		const parse = this.site.parsers.factionMemberReference(this.http).parse;
-		const reference = this.http.get("members/current")
-			.then((data) => {
-				if (typeof data === "undefined") {
-					return undefined;
-				} else {
-					return parse(data);
-				}
-			});
-
+	// TODO: wipe on user change
+	private currentMemberCache?: Writable<Promise<string | undefined>>;
+	currentMember(): Readable<Promise<string | undefined>> {
 		if (typeof this.currentMemberCache === "undefined") {
+			const reference = this.http.get("members/current")
+				.then((data) => {
+					if (typeof data === "undefined") {
+						return undefined;
+					} else {
+						const parse = this.parsers.currentFactionMember(this.http).parse;
+						return parse(data).uri;
+					}
+				});
+
 			this.currentMemberCache = writable(reference);
-		} else {
-			this.currentMemberCache.set(reference);
-		}
-		return this.currentMemberCache;
-	}
-
-	currentMember(): Readable<Promise<Reference<FactionMember> | undefined>> {
-		if (typeof this.currentMemberCache === "undefined") {
-			this.currentMemberCache = writable(Promise.resolve(undefined));
 		}
 
 		return this.currentMemberCache;
 	}
 
-	setCurrentMember(member: Reference<FactionMember>) {
+	updateCurrentMember(currentMember: string) {
 		if (typeof this.currentMemberCache === "undefined") {
-			this.currentMemberCache = writable(Promise.resolve(member));
+			this.currentMemberCache = writable(Promise.resolve(currentMember));
 		} else {
-			this.currentMemberCache.set(Promise.resolve(member));
+			this.currentMemberCache.set(Promise.resolve(currentMember));
 		}
 	}
 
-	private membersCache?: Writable<Promise<Array<Readable<Promise<FactionMember> | undefined>>>>;
-	members(): Readable<Promise<Array<Readable<Promise<FactionMember> | undefined>>>> {
-		if (typeof this.membersCache === "undefined") {
-			this.membersCache = writable(collect(this.fetchMembers()));
-		}
+	private membersCache = new Cache((location) => {
+		const http = this.http.subpath(location);
+		const parse = this.site.parsers.factionMember(http).parse;
+		return this.http.get(location).then(parse);
+	});
 
+	get members() {
 		return this.membersCache;
 	}
 
-	updateMembers() {
-		const newMembers = collect(this.fetchMembers());
-		if (typeof this.membersCache === "undefined") {
-			this.membersCache = writable(newMembers);
-		} else {
-			this.membersCache.set(newMembers);
-		}
-	}
-
 	async *fetchMembers() {
-		const parse = this.site.parsers.factionMembersPage(this.http).parse;
+		const parse = this.parsers.factionMembersPage(this.http).parse;
 		// TODO: check permissions
 		let members = await this.http.get("members").then(parse);
 		while (true) {
@@ -96,7 +103,7 @@ export class Faction implements Updatable {
 			owner: false,
 		};
 
-		const parse = this.site.parsers.factionMemberReference(this.http).parse;
+		const parse = this.parsers.factionMemberReference(this.http).parse;
 
 		return await this.http.post(data, "members")
 			.then(parse)
@@ -119,8 +126,8 @@ export class Faction implements Updatable {
 	}
 
 	update(newValue: this): this {
+		newValue.membersCache = this.members;
 		newValue.currentMemberCache = this.currentMemberCache;
-		newValue.membersCache = this.membersCache;
 		return newValue;
 	}
 }
