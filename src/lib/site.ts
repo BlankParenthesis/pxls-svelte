@@ -254,6 +254,10 @@ export class Site {
 							get(this.currentUser()).then((u) => {
 								if (m.user?.uri === u.uri) {
 									f.updateCurrentMember(packet.member);
+
+									get(u.fetch())?.then((c) => {
+										c.updatefactions();
+									});
 								}
 							});
 						}
