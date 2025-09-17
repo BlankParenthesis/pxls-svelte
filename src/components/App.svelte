@@ -15,7 +15,7 @@
 	let select: (board: Reference<BoardInfo>) => void;
 	const boardSelect = new Promise<Reference<BoardInfo>>(resolve => select = resolve);
 
-	let hotloadBoard = urlWritable("board", null, true);
+	let hotloadBoard = urlWritable("board", null, false);
 
 	let settings = persistentWritable(
 		"settings",
