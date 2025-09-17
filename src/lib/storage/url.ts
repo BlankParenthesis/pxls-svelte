@@ -1,7 +1,7 @@
 import type { Writable, Subscriber, Unsubscriber } from "svelte/store";
 import { getFragment, setFragment } from "../util";
 
-const usedKeys = new Set();
+const existingStores = new Map();
 
 type URLValue = string | null;
 
@@ -29,10 +29,11 @@ export function urlWritable(
 	defaultValue: URLValue = null,
 	hidden = false,
 ): Writable<string | null> {
-	if (usedKeys.has(key)) {
-		throw new Error(`"${key}" already has a url store`);
+	if (existingStores.has(key)) {
+		// TODO: this probably isn't the safest, but slight brokenness is probably better than the page no longer working
+		// throw new Error(`"${key}" already has a url store`);
+		return existingStores.get(key);
 	}
-	usedKeys.add(key);
 
 	let value = getFragment()[key] || defaultValue;
 
@@ -65,5 +66,7 @@ export function urlWritable(
 
 	set(value);
 
-	return { set, update, subscribe };
+	const store = { set, update, subscribe };
+	existingStores.set(key, store);
+	return store;
 }
