@@ -306,7 +306,7 @@ export class Authentication {
 		// TODO: if we have an old token, we can pass that as id_token_hint and
 		// set prompt = none to possibly bypass authentication.
 		const params = {
-			"scope": "openid basic profile",
+			"scope": "openid profile",
 			"response_type": "code",
 			"state": state.state,
 			"client_id": this.config.client_id,
