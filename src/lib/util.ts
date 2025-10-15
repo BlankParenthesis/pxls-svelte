@@ -39,6 +39,35 @@ export function resolveURL(base: URL, path: string): URL {
 	}
 }
 
+type QueryMap = { [k: string]: string };
+/**
+ * @returns an object containing th key value pairs from the current url query
+ */
+export function getQuery(): QueryMap {
+	const entries = document.location.search.replace(/^[?]/, "")
+		.split("&")
+		.map(p => p.split("="))
+		.filter(e => e.length === 2)
+		.map(([k, v]) => [k, decodeURIComponent(v)]);
+
+	return Object.fromEntries(entries);
+}
+/**
+ * @param values an object containing the key value pairs to set in the current url query
+ */
+export function setQuery(values: QueryMap) {
+	const query = Object.entries(values)
+		.map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+		.join("&");
+
+	const currentPath = document.location.origin + document.location.pathname;
+	if (query.length === 0) {
+		history.replaceState(null, "", new URL(document.location.hash, currentPath));
+	} else {
+		history.replaceState(null, "", new URL("?" + query + document.location.hash, currentPath));
+	}
+}
+
 type FragmentMap = { [k: string]: string };
 /**
  * @returns an object containing th key value pairs from the current url fragment
@@ -62,9 +91,9 @@ export function setFragment(values: FragmentMap) {
 
 	const currentPath = document.location.origin + document.location.pathname;
 	if (fragment.length === 0) {
-		history.replaceState(null, "", new URL(currentPath));
+		history.replaceState(null, "", new URL(document.location.search, currentPath));
 	} else {
-		history.replaceState(null, "", new URL("#" + fragment, currentPath));
+		history.replaceState(null, "", new URL(document.location.search + "#" + fragment, currentPath));
 	}
 }
 

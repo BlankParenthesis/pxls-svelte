@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { base64urlsafe, getFragment, randomString, resolveURL, setFragment } from "./util";
+import { base64urlsafe, randomString, resolveURL, getQuery, setQuery } from "./util";
 import { derived, get, type Readable } from "svelte/store";
 import { persistentWritable, type PersistentWritable } from "./storage/persistent";
 
@@ -60,27 +60,24 @@ const StateStorage = z.object({
 });
 type StateStorage = z.infer<typeof StateStorage>;
 
-const FragmentLogin = z.object({
+const Login = z.object({
 	state: z.string(),
-	session_state: z.string(),
-	iss: z.string(),
 	code: z.string(),
 });
-type FragmentLogin = z.infer<typeof FragmentLogin>;
+type Login = z.infer<typeof Login>;
 
-const FragmentError = z.object({
+const LoginError = z.object({
 	state: z.string(),
 	error: z.string(),
 	error_description: z.string().optional(),
 	error_uri: z.string().optional(),
-	iss: z.string().optional(),
 });
-type FragmentError = z.infer<typeof FragmentError>;
+type LoginError = z.infer<typeof LoginError>;
 
-const FragmentState = FragmentLogin
-	.or(FragmentError)
+const LoginState = Login
+	.or(LoginError)
 	.or(z.object({}).transform(() => undefined));
-type FragmentState = z.infer<typeof FragmentState>;
+type LoginState = z.infer<typeof LoginState>;
 
 const TokenStorage = z.object({
 	token: z.string(),
@@ -100,14 +97,14 @@ type Token = z.infer<typeof Token>;
 /* eslint-enable camelcase */
 
 export class Authentication {
-	private static takeReturnedFragment(): FragmentState {
-		const fragment = getFragment();
-		const state = FragmentState.parse(fragment);
+	private static takeReturnedQuery(): LoginState {
+		const query = getQuery();
+		const state = LoginState.parse(query);
 		// clean up the url
 		for (const key in state) {
-			delete fragment[key];
+			delete query[key];
 		}
-		setFragment(fragment);
+		setQuery(query);
 		return state;
 	}
 
@@ -140,7 +137,7 @@ export class Authentication {
 			stateStore,
 		);
 
-		const login = Authentication.takeReturnedFragment();
+		const login = Authentication.takeReturnedQuery();
 		if (typeof login === "undefined") {
 			const token = get(tokenStore);
 			if (typeof token !== "undefined" && token.expiry <= Date.now()) {
@@ -248,7 +245,7 @@ export class Authentication {
 		/* eslint-enable camelcase */
 	}
 
-	private async fetchToken(login: FragmentLogin): Promise<TokenStorage> {
+	private async fetchToken(login: Login): Promise<TokenStorage> {
 		const { state, challenge } = get(this.stateStore);
 		if (state !== state) {
 			throw new Error("Login state mismatch");
@@ -269,7 +266,7 @@ export class Authentication {
 
 		/* eslint-disable camelcase */
 		return {
-			token: token.access_token,
+			token: token.id_token,
 			refresh_token: token.refresh_token,
 			expiry: Date.now() + token.expires_in * 1000,
 		};
@@ -310,7 +307,6 @@ export class Authentication {
 		// set prompt = none to possibly bypass authentication.
 		const params = {
 			"scope": "openid basic profile",
-			"response_mode": "fragment",
 			"response_type": "code",
 			"state": state.state,
 			"client_id": this.config.client_id,
